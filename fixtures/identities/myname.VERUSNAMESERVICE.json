@@ -1,0 +1,14 @@
+{
+  "identity": "myname.VERUSNAMESERVICE@",
+  "contentmultimap": {
+    "VNS.vrsc::record": [
+      {
+        "version": 1,
+        "type": "A",
+        "name": "@",
+        "value": "198.51.100.25",
+        "ttl": 300
+      }
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "name": "vns",
+  "version": "0.1.0",
+  "description": "VerusID-native naming layer MVP",
+  "type": "module",
+  "private": false,
+  "bin": {
+    "vns": "./dist/cli/index.js"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "dev:rpc": "tsx watch src/index.ts",
+    "dev:mock": "cross-env VNS_MODE=mock tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "start:rpc": "node dist/index.js",
+    "start:mock": "cross-env VNS_MODE=mock node dist/index.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fastify/sensible": "^6.0.3",
+    "commander": "^14.0.3",
+    "dotenv": "^17.4.2",
+    "fastify": "^5.6.2",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "cross-env": "^10.1.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.14"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.23.0"
+}

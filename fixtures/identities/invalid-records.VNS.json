@@ -1,0 +1,28 @@
+{
+  "identity": "invalid-records.VNS@",
+  "contentmultimap": {
+    "VNS.vrsc::record": [
+      {
+        "version": 2,
+        "type": "A",
+        "name": "@",
+        "value": "203.0.113.42",
+        "ttl": 300
+      },
+      {
+        "version": 1,
+        "type": "A",
+        "name": "@",
+        "value": "not-an-ip",
+        "ttl": 300
+      },
+      {
+        "version": 1,
+        "type": "TXT",
+        "name": "@",
+        "value": "valid=record",
+        "ttl": 300
+      }
+    ]
+  }
+}

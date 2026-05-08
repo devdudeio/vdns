@@ -1,0 +1,50 @@
+{
+  "identity": "myname.VNS@",
+  "contentmultimap": {
+    "VNS.vrsc::record": [
+      {
+        "version": 1,
+        "type": "A",
+        "name": "@",
+        "value": "203.0.113.42",
+        "ttl": 300
+      },
+      {
+        "version": 1,
+        "type": "AAAA",
+        "name": "@",
+        "value": "2001:db8::1",
+        "ttl": 300
+      },
+      {
+        "version": 1,
+        "type": "CNAME",
+        "name": "www",
+        "value": "example.pages.dev",
+        "ttl": 300
+      },
+      {
+        "version": 1,
+        "type": "TXT",
+        "name": "@",
+        "value": "vns=verus",
+        "ttl": 300
+      },
+      {
+        "version": 1,
+        "type": "REDIRECT",
+        "name": "@",
+        "url": "https://example.com",
+        "status": 302,
+        "ttl": 300
+      },
+      {
+        "version": 1,
+        "type": "TLSA",
+        "name": "@",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "ttl": 300
+      }
+    ]
+  }
+}
