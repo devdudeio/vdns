@@ -9,3 +9,5 @@ coredns/coredns-vns
 .env.*.local
 !.env.example
 !.env.mock.example
+!.env.vdns.local.example
+.vdns/

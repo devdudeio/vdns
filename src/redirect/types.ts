@@ -1,0 +1,23 @@
+import type { ResolveResult, VnsRecord } from "../core/types.js";
+
+export type RedirectRecord = Extract<VnsRecord, { type: "REDIRECT" }>;
+
+export type RedirectResolverErrorKind = "upstream" | "timeout" | "invalid-response";
+
+export class RedirectResolverError extends Error {
+  constructor(readonly kind: RedirectResolverErrorKind, message: string) {
+    super(message);
+    this.name = "RedirectResolverError";
+  }
+}
+
+export type RedirectResolverClient = {
+  resolveRedirect(hostname: string): Promise<RedirectRecord | null>;
+};
+
+export type RedirectResolveDebug = {
+  hostname: string;
+  resolverUrl: string;
+  result: ResolveResult | null;
+  selectedRecord: RedirectRecord | null;
+};

@@ -1,6 +1,6 @@
-# VNS Record Schema
+# vDNS Record Schema
 
-VNS maps a `.vrsc` domain to a VerusID sub-identity, then reads DNS and web records from that identity's `contentmultimap`.
+vDNS maps a `.vrsc` domain to a VerusID sub-identity, then reads DNS and web records from that identity's `contentmultimap`. The schema and code still use VNS names for compatibility with the current package and VDXF key layout.
 
 ## Configurable Namespace
 

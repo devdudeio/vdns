@@ -1,8 +1,8 @@
-# VNS
+# vDNS
 
-VNS is a VerusID-native naming layer. It maps `.vrsc` domains to Verus sub-identities and reads DNS/web records from VerusID `contentmultimap` data using a VDXF-based record schema.
+vDNS turns VerusID identities into locally resolvable DNS records. It maps `.vrsc` domains to Verus sub-identities and reads DNS/web records from VerusID `contentmultimap` data using a VDXF-based record schema.
 
-This repository currently contains the Step 3 MVP foundation: schema, fixtures, resolver core, mock-backed HTTP API, read-only Verus JSON-RPC mode, and a guarded local `vns` CLI for inspecting and preparing VerusID `contentmultimap` updates.
+The implementation still uses VNS for package names, code internals, schemas, and environment variables. This repository currently contains the macOS MVP foundation: schema, fixtures, resolver core, mock-backed HTTP API, read-only Verus JSON-RPC mode, guarded local `vns` CLI writes, a CoreDNS plugin, macOS split-DNS helpers, and a local redirect service.
 
 ## Scope
 
@@ -12,15 +12,16 @@ Implemented now:
 - configurable root identity and TLD
 - mock fixture-backed resolver
 - Fastify HTTP resolver API
+- separate local Fastify redirect service for `.vrsc` `REDIRECT` records
 - read-only Verus JSON-RPC client for `getidentity`, `getinfo`, and `getblockchaininfo`
 - redacted debug endpoints for config, raw identity payloads, and RPC health
 - local `vns` CLI for VDXF key inspection, raw identity reads, VNS record inspection, and guarded `updateidentity` writes
 - CoreDNS plugin MVP that adapts DNS queries to the HTTP resolver
 - macOS split-DNS helper scripts for routing `.vrsc` lookups to a local CoreDNS resolver
+- macOS vDNS scripts for starting, checking, demoing, and stopping the local stack
 
 Not implemented yet:
 
-- local redirect service
 - local TLS/CA
 - desktop client
 - payment/product logic
@@ -40,6 +41,17 @@ Not implemented yet:
 | `VERUS_RPC_PASSWORD` | unset | Optional RPC password |
 | `VERUS_RPC_TIMEOUT_MS` | `10000` | RPC request timeout in milliseconds |
 
+Local redirect service configuration:
+
+| Env var | Default | Description |
+| --- | --- | --- |
+| `VNS_REDIRECT_HOST` | `127.0.0.1` | Redirect service listen host |
+| `VNS_REDIRECT_PORT` | `8081` | Redirect service listen port |
+| `VNS_RESOLVER_URL` | `http://127.0.0.1:8080` | Existing VNS HTTP resolver base URL |
+| `VNS_TLD` | `vrsc` | TLD handled by this redirect service |
+| `VNS_REDIRECT_DEFAULT_STATUS` | `302` | Fallback redirect status when a record status is not `301` or `302` |
+| `VNS_REDIRECT_TIMEOUT_MS` | `5000` | Resolver request timeout in milliseconds |
+
 ## Install And Run
 
 ```sh
@@ -49,6 +61,94 @@ pnpm build
 ```
 
 Runtime defaults to RPC mode. `pnpm dev` and `pnpm start` require `VERUS_RPC_URL` from the shell or `.env.local`; use `pnpm dev:mock` for fixture mode.
+
+## macOS Local vDNS Quickstart
+
+This is the polished MVP path for local `.vrsc` resolution on macOS:
+
+```text
+VerusID records -> HTTP resolver -> CoreDNS -> macOS split-DNS -> local port 80 redirect
+```
+
+Build and run the normal checks first:
+
+```sh
+pnpm build
+pnpm test
+```
+
+Create local configuration and edit the RPC values:
+
+```sh
+cp .env.vdns.local.example .env.local
+$EDITOR .env.local
+```
+
+At minimum, set `VERUS_RPC_URL` and replace `VERUS_RPC_PASSWORD=replace_me` for your local Verus RPC node. `.env.local` is ignored by git.
+
+The demo assumes these records exist under `VNS_ROOT_IDENTITY=fum@` and `VNS_TLD=vrsc`:
+
+```text
+google.fum@:   A @ -> 142.250.181.238
+chainvue.fum@: A @ -> 127.0.0.1
+chainvue.fum@: REDIRECT @ -> http://chainvue.io/ status 302
+```
+
+The `vns` CLI can prepare those writes:
+
+```sh
+node dist/cli/index.js record set google.fum@ A @ 142.250.181.238 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
+node dist/cli/index.js record set chainvue.fum@ A @ 127.0.0.1 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
+node dist/cli/index.js record set chainvue.fum@ REDIRECT @ http://chainvue.io/ --status 302 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
+```
+
+Start the local vDNS stack:
+
+```sh
+pnpm vdns:up
+```
+
+`vdns:up` starts the built HTTP resolver, starts `coredns/coredns-vns` on `127.0.0.1:1053`, installs `/etc/resolver/vrsc` if needed, and starts the built redirect service on `127.0.0.1:80`. It may prompt for `sudo` when installing split-DNS or binding port 80.
+
+Check status and run the demo:
+
+```sh
+pnpm vdns:status
+pnpm vdns:demo
+```
+
+Expected checks:
+
+```sh
+dscacheutil -q host -a name google.vrsc
+dscacheutil -q host -a name chainvue.vrsc
+curl -i --max-time 10 http://chainvue.vrsc
+```
+
+`chainvue.vrsc` should return `302` with `Location: http://chainvue.io/`.
+
+Stop local services:
+
+```sh
+pnpm vdns:down
+```
+
+This stops the resolver, CoreDNS, and port 80 redirect service, while leaving `/etc/resolver/vrsc` installed.
+
+Manual fallback commands:
+
+```sh
+pnpm build
+node dist/index.js
+cd coredns && ./run-local-resolver.sh
+sudo scripts/macos/install-vrsc-resolver.sh
+sudo scripts/macos/start-redirect-port80.sh
+scripts/macos/diagnose-vdns.sh
+scripts/macos/test-chainvue-redirect.sh
+sudo scripts/macos/stop-redirect-port80.sh
+```
+
+See [docs/mvp-checkpoint.md](docs/mvp-checkpoint.md) for the checkpoint details.
 
 After `pnpm build`, the CLI entrypoint is available at:
 
@@ -80,6 +180,45 @@ curl http://localhost:8080/resolve-domain/myname.vrsc
 ```
 
 The response identity will be `myname.VERUSNAMESERVICE@`.
+
+Run the local redirect service in a second terminal:
+
+```sh
+VNS_RESOLVER_URL=http://127.0.0.1:8080 VNS_REDIRECT_PORT=8081 pnpm redirect:dev
+```
+
+For a local web redirect, `chainvue.fum@` should contain `REDIRECT @ -> http://chainvue.io/` and `A @ -> 127.0.0.1`, and macOS split-DNS should resolve `chainvue.vrsc` to `127.0.0.1`. Then test:
+
+```sh
+curl http://127.0.0.1:8081/health
+curl "http://127.0.0.1:8081/debug/resolve?host=chainvue.vrsc"
+curl -i -H "Host: chainvue.vrsc" http://127.0.0.1:8081/
+```
+
+The redirect service only returns HTTP redirects. It does not proxy, fetch target content, rewrite HTML, follow redirects, or expose resolver/RPC credentials. Browser use without a port requires listening on port 80 or a later local forwarding/LaunchDaemon setup. HTTPS and local CA support are not implemented yet.
+
+For normal local HTTP on macOS:
+
+```sh
+pnpm build
+sudo scripts/macos/start-redirect-port80.sh
+curl -i --max-time 10 http://chainvue.vrsc
+```
+
+Stop the port 80 redirect service with:
+
+```sh
+sudo scripts/macos/stop-redirect-port80.sh
+```
+
+Diagnose the full VNS/CoreDNS/macOS resolver/redirect path:
+
+```sh
+scripts/macos/diagnose-vdns.sh
+scripts/macos/test-chainvue-redirect.sh
+```
+
+See [docs/redirect-service.md](docs/redirect-service.md) for the complete redirect service flow and limitations.
 
 Run against a read-only public Verus testnet RPC endpoint:
 
@@ -414,6 +553,50 @@ dig google.vrsc A +short
 dig google.com A +short
 ```
 
+Some command-line DNS tools may bypass macOS split-DNS behavior. For `.vrsc`, prefer:
+
+```sh
+dscacheutil -q host -a name google.vrsc
+dns-sd -G v4 google.vrsc
+dig @127.0.0.1 -p 1053 google.vrsc A +short
+```
+
+## Making `http://*.vrsc` Work On macOS
+
+macOS split-DNS and CoreDNS make `chainvue.vrsc` resolve to `127.0.0.1`. A normal URL like `http://chainvue.vrsc` then connects to port `80`, not port `8081`.
+
+If the redirect service is running on `8081`, this Host-header test can pass:
+
+```sh
+curl -i -H "Host: chainvue.vrsc" http://127.0.0.1:8081/
+```
+
+while this still fails because no redirect service is listening on `127.0.0.1:80`:
+
+```sh
+curl -i --max-time 10 http://chainvue.vrsc
+```
+
+Start the built redirect service directly on port `80`:
+
+```sh
+pnpm build
+sudo scripts/macos/start-redirect-port80.sh
+```
+
+Stop it:
+
+```sh
+sudo scripts/macos/stop-redirect-port80.sh
+```
+
+Diagnose and test:
+
+```sh
+scripts/macos/diagnose-vdns.sh
+scripts/macos/test-chainvue-redirect.sh
+```
+
 Uninstall the managed resolver file:
 
 ```sh
@@ -438,10 +621,6 @@ CGO_ENABLED=0 go test ./...
 Limitations:
 
 - This is not system-wide DNS.
-- Query the CoreDNS server manually with `dig` for now.
+- Use `dscacheutil`, `dns-sd`, or direct `dig @127.0.0.1 -p 1053` checks for `.vrsc` resolver diagnostics.
 - Browser HTTPS and `.vrsc` local CA support are not part of this step.
 - Production deployment later needs local resolver setup, caching policy, rate limits, and likely DoH/DoT.
-
-## Suggested Next Ticket
-
-Add a local redirect service for VNS `REDIRECT` records.

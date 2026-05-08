@@ -26,6 +26,8 @@ function makeClient(
   });
   const client = new VerusRpcClient({
     url: "https://api.verustest.net/",
+    user: "",
+    password: "",
     timeoutMs: 1000,
     fetch: fetchImpl,
     ...options

@@ -1,6 +1,6 @@
 # VNS CLI
 
-The `vns` CLI is a local operator tool for inspecting Verus identities, resolving VNS VDXF keys, and preparing guarded `updateidentity` writes.
+The `vns` CLI is the local operator tool behind vDNS. It inspects Verus identities, resolves VNS VDXF keys, and prepares guarded `updateidentity` writes that the vDNS resolver later serves as DNS-compatible records.
 
 Build it first:
 

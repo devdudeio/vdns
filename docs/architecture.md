@@ -1,6 +1,8 @@
-# VNS Step 2 Architecture
+# vDNS Architecture
 
-VNS Step 2 is a small resolver foundation:
+vDNS is the public local-resolution workflow: VerusID records become DNS-compatible answers on the local machine. VNS remains the internal package, schema, plugin, and environment-variable terminology.
+
+The current resolver foundation is:
 
 ```text
 HTTP client
@@ -96,9 +98,6 @@ Step 2 includes:
 
 Future milestones include:
 
-- CoreDNS plugin
-- real local DNS server
-- local redirect service
 - local TLS/CA
 - desktop client
 - real VDXF key registration, publishing, and mapping adapters
