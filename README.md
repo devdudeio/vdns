@@ -15,11 +15,11 @@ Implemented now:
 - read-only Verus JSON-RPC client for `getidentity`, `getinfo`, and `getblockchaininfo`
 - redacted debug endpoints for config, raw identity payloads, and RPC health
 - local `vns` CLI for VDXF key inspection, raw identity reads, VNS record inspection, and guarded `updateidentity` writes
+- CoreDNS plugin MVP that adapts DNS queries to the HTTP resolver
+- macOS split-DNS helper scripts for routing `.vrsc` lookups to a local CoreDNS resolver
 
 Not implemented yet:
 
-- CoreDNS plugin
-- real local DNS server
 - local redirect service
 - local TLS/CA
 - desktop client
@@ -244,6 +244,204 @@ If a stored DataDescriptor has `objectdata: null`, the value is incorrectly enco
 echo "<hex>" | xxd -r -p | jq .
 ```
 
+## CoreDNS Plugin MVP
+
+The CoreDNS plugin is a thin DNS adapter. It receives DNS queries, calls the existing VNS HTTP resolver, and converts normalized VNS records into DNS answers. It does not talk to Verus RPC directly.
+
+Supported DNS record types in this MVP:
+
+- `A`
+- `AAAA`
+- `CNAME`
+- `TXT`
+
+`REDIRECT` records are not DNS records and are not returned by the plugin. `TLSA` is reserved for a later step.
+
+Manual flow:
+
+1. Start the VNS HTTP resolver in RPC mode:
+
+```sh
+VNS_MODE=rpc \
+VNS_ROOT_IDENTITY=fum@ \
+VNS_TLD=vrsc \
+VERUS_RPC_URL=http://192.168.0.106:18843 \
+VERUS_RPC_USER=... \
+VERUS_RPC_PASSWORD=... \
+pnpm dev
+```
+
+2. Verify the HTTP resolver:
+
+```sh
+curl http://127.0.0.1:8080/resolve-domain/google.vrsc | jq .
+```
+
+3. Build a custom CoreDNS binary with the VNS plugin:
+
+```sh
+cd coredns
+./build-coredns.sh
+```
+
+The build script clones pinned CoreDNS source, injects the local `vns` plugin into `plugin.cfg`, adds a local Go `replace`, and writes `coredns/coredns-vns`.
+
+4. Run CoreDNS in `.vrsc`-only mode:
+
+```sh
+./run-vrsc-only.sh
+```
+
+5. Query it directly:
+
+```sh
+dig @127.0.0.1 -p 1053 google.vrsc A
+```
+
+Expected answer:
+
+```text
+google.vrsc. 300 IN A 142.250.181.238
+```
+
+For a name that currently has only a VNS `REDIRECT` record:
+
+```sh
+dig @127.0.0.1 -p 1053 chainvue.vrsc A
+```
+
+That should return `NOERROR` with no answers, because `REDIRECT` is not an `A` record.
+
+In `.vrsc`-only mode, normal DNS names are not forwarded:
+
+```sh
+dig @127.0.0.1 -p 1053 google.com A
+```
+
+This may return `REFUSED` or no useful answer, depending on the CoreDNS response path. That is expected for isolated plugin testing.
+
+## CoreDNS Local Resolver Mode
+
+Local resolver mode handles `.vrsc` through VNS and forwards every other DNS name to normal upstream resolvers.
+
+Run it after building `coredns-vns`:
+
+```sh
+cd coredns
+./run-local-resolver.sh
+```
+
+Test `.vrsc`:
+
+```sh
+dig @127.0.0.1 -p 1053 google.vrsc A +short
+```
+
+Expected:
+
+```text
+142.250.181.238
+```
+
+Test normal DNS forwarding:
+
+```sh
+dig @127.0.0.1 -p 1053 google.com A +short
+```
+
+Expected: one or more public Google `A` records from upstream DNS.
+
+You can run both checks with:
+
+```sh
+./test-local-resolver.sh
+```
+
+CoreDNS configuration files:
+
+- [coredns/Corefile.vrsc-only.example](coredns/Corefile.vrsc-only.example): `.vrsc` only on port `1053`.
+- [coredns/Corefile.local-resolver.example](coredns/Corefile.local-resolver.example): `.vrsc` via VNS plus public DNS forwarding on port `1053`.
+- [coredns/Corefile.local-resolver-53.example](coredns/Corefile.local-resolver-53.example): same as local resolver mode, but on port `53`.
+- [coredns/Corefile.local-resolver.env.example](coredns/Corefile.local-resolver.env.example): same localhost-bound pattern with CoreDNS environment variable substitution.
+
+Port `53` usually requires elevated privileges/admin/root and may conflict with the operating system DNS service. This repo does not install or configure system-wide DNS.
+
+Docker Desktop users can set `resolver_url http://host.docker.internal:8080`; local non-Docker runs should use `http://127.0.0.1:8080`.
+
+## macOS Split-DNS Setup For `.vrsc`
+
+macOS can route only `.vrsc` lookups to the local CoreDNS/VNS resolver with `/etc/resolver/vrsc`. Normal DNS names stay on the system resolver path.
+
+Start the VNS HTTP resolver in RPC mode:
+
+```sh
+VNS_MODE=rpc \
+VNS_ROOT_IDENTITY=fum@ \
+VNS_TLD=vrsc \
+VERUS_RPC_URL=http://192.168.0.106:18843 \
+VERUS_RPC_USER=... \
+VERUS_RPC_PASSWORD=... \
+pnpm dev
+```
+
+Start CoreDNS local resolver mode in another terminal:
+
+```sh
+cd coredns
+./build-coredns.sh
+./run-local-resolver.sh
+```
+
+The local resolver Corefile binds CoreDNS to `127.0.0.1:1053`. From the repo root, install the macOS split-DNS resolver file:
+
+```sh
+sudo scripts/macos/install-vrsc-resolver.sh
+```
+
+Equivalent package scripts are available:
+
+```sh
+pnpm macos:resolver:install
+pnpm macos:resolver:status
+pnpm macos:resolver:uninstall
+```
+
+Verify split-DNS routing:
+
+```sh
+scutil --dns | grep -A5 'domain   : vrsc'
+dig google.vrsc A +short
+dig google.com A +short
+```
+
+Uninstall the managed resolver file:
+
+```sh
+sudo scripts/macos/uninstall-vrsc-resolver.sh
+```
+
+Troubleshooting:
+
+- Confirm CoreDNS is listening on `127.0.0.1:1053` with `scripts/macos/status-vrsc-resolver.sh`.
+- Confirm `/etc/resolver/vrsc` exists and contains `nameserver 127.0.0.1` and `port 1053`.
+- Confirm `scutil --dns` shows a `vrsc` resolver.
+- Confirm the VNS HTTP resolver is running at `http://127.0.0.1:8080`.
+- Do not edit `/etc/resolv.conf`; macOS manages that file.
+
+Plugin tests:
+
+```sh
+cd coredns/plugin/vns
+CGO_ENABLED=0 go test ./...
+```
+
+Limitations:
+
+- This is not system-wide DNS.
+- Query the CoreDNS server manually with `dig` for now.
+- Browser HTTPS and `.vrsc` local CA support are not part of this step.
+- Production deployment later needs local resolver setup, caching policy, rate limits, and likely DoH/DoT.
+
 ## Suggested Next Ticket
 
-Adapt resolver reads to consume DataDescriptor-wrapped real VDXF `contentmultimap` records end to end.
+Add a local redirect service for VNS `REDIRECT` records.

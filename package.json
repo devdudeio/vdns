@@ -16,7 +16,10 @@
     "start": "node dist/index.js",
     "start:rpc": "node dist/index.js",
     "start:mock": "cross-env VNS_MODE=mock node dist/index.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "macos:resolver:install": "sudo scripts/macos/install-vrsc-resolver.sh",
+    "macos:resolver:uninstall": "sudo scripts/macos/uninstall-vrsc-resolver.sh",
+    "macos:resolver:status": "scripts/macos/status-vrsc-resolver.sh"
   },
   "dependencies": {
     "@fastify/sensible": "^6.0.3",

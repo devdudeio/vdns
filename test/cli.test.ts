@@ -245,6 +245,7 @@ describe("vns CLI", () => {
     ], client);
     const jsonOutputs = parseJsonOutputs(result.stdout);
     const payload = jsonOutputs[0];
+    const verifyOutput = jsonOutputs[1];
 
     expect(client.getRawIdentity).toHaveBeenCalledWith("chainvue.fum@");
     expect(client.getIdentity).toHaveBeenCalledWith("chainvue.fum@");
@@ -259,6 +260,11 @@ describe("vns CLI", () => {
     expect(result.stdout).toContain("Verifying target identity: chainvue.fum@");
     expect(result.stdout).toContain("Parent: i4KtZ8jeMipNJfAdmfxkzQZKmaGpjvhYKe");
     expect(result.stdout).toContain("Identity address: i7Mki7dLpVxdanKubmZJksuJBLtUqY4MyS");
+    expect(verifyOutput).toMatchObject({
+      identity: "chainvue.fum@",
+      vnsRecordKey: "id:fum.vrsc::vns.record"
+    });
+    expect(verifyOutput.identity).not.toBe("chainvue@");
     expect(result.exitCode).toBeUndefined();
   });
 
@@ -299,6 +305,7 @@ describe("vns CLI", () => {
     ], client);
     const jsonOutputs = parseJsonOutputs(result.stdout);
     const payload = jsonOutputs[0];
+    const verifyOutput = jsonOutputs[1];
 
     expect(client.getRawIdentity).toHaveBeenCalledWith("chainvue.fum@");
     expect(client.getIdentity).toHaveBeenCalledWith("chainvue.fum@");
@@ -313,6 +320,8 @@ describe("vns CLI", () => {
     });
     expect(result.stdout).toContain("Target identity: chainvue.fum@");
     expect(result.stdout).toContain("Verifying target identity: chainvue.fum@");
+    expect(verifyOutput.identity).toBe("chainvue.fum@");
+    expect(verifyOutput.identity).not.toBe("chainvue@");
     expect(result.exitCode).toBeUndefined();
   });
 
@@ -465,6 +474,42 @@ describe("vns CLI", () => {
     expect(client.updateIdentity).not.toHaveBeenCalled();
     expect(result.stderr).toContain("Cannot derive parent i-address for chainvue.fum@");
     expect(result.exitCode).toBe(1);
+  });
+
+  it("inspect chainvue.fum@ outputs the normalized target identity", async () => {
+    const client = makeClient({
+      identity: "chainvue@",
+      contentmultimap: {
+        "id:fum.vrsc::vns.record": [
+          { version: 1, type: "REDIRECT", name: "@", url: "http://chainvue.io/", status: 302, ttl: 300 }
+        ]
+      }
+    });
+    const result = await run(["record", "inspect", "chainvue.fum@", "--root", "fum@", "--tld", "vrsc"], client);
+    const payload = JSON.parse(result.stdout);
+
+    expect(client.getIdentity).toHaveBeenCalledWith("chainvue.fum@");
+    expect(payload.identity).toBe("chainvue.fum@");
+    expect(payload.identity).not.toBe("chainvue@");
+    expect(result.exitCode).toBeUndefined();
+  });
+
+  it("inspect google.fum@ outputs the normalized target identity", async () => {
+    const client = makeClient({
+      identity: "google@",
+      contentmultimap: {
+        "id:fum.vrsc::vns.record": [
+          { version: 1, type: "A", name: "@", value: "142.250.181.238", ttl: 300 }
+        ]
+      }
+    });
+    const result = await run(["record", "inspect", "google.fum@", "--root", "fum@", "--tld", "vrsc"], client);
+    const payload = JSON.parse(result.stdout);
+
+    expect(client.getIdentity).toHaveBeenCalledWith("google.fum@");
+    expect(payload.identity).toBe("google.fum@");
+    expect(payload.identity).not.toBe("google@");
+    expect(result.exitCode).toBeUndefined();
   });
 
   it("inspects decoded records from hex objectdata", async () => {

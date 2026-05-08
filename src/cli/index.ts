@@ -127,11 +127,12 @@ export function createCliProgram(options: CliOptions = {}): Command {
       const command = record.commands.find((candidate) => candidate.name() === "inspect");
       const global = readGlobalOptions(program, env, command);
       const client = rpcClientFactory(requireRpcOptions(program, env, command));
-      const identityPayload = await fetchIdentityOrExit(client, identityName);
+      const targetIdentity = normalizeIdentityNameForUpdate(identityName);
+      const identityPayload = await fetchIdentityOrExit(client, targetIdentity);
       const vdxfIds = await resolveIds(client, global.root, global.tld);
       const parsed = extractVnsRecords(identityPayload, vdxfIds.record, vdxfIds.labels);
       writeJson(io, {
-        identity: identityPayload.identity,
+        identity: targetIdentity,
         vnsRecordKey: vdxfIds.record,
         records: parsed.records,
         warnings: parsed.warnings
@@ -478,7 +479,7 @@ async function maybeVerify(
   const identityPayload = await fetchIdentityOrExit(client, identityName);
   const parsed = extractVnsRecords(identityPayload, vdxfIds.record, vdxfIds.labels);
   writeJson(io, {
-    identity: identityPayload.identity,
+    identity: identityName,
     vnsRecordKey: vdxfIds.record,
     records: parsed.records,
     warnings: parsed.warnings

@@ -1,0 +1,21 @@
+vrsc:53 {
+  bind 127.0.0.1
+
+  vns {
+    resolver_url http://127.0.0.1:8080
+    timeout 3s
+  }
+
+  errors
+  log
+  cache 30
+}
+
+.:53 {
+  bind 127.0.0.1
+
+  forward . 1.1.1.1 9.9.9.9
+  cache 300
+  errors
+  log
+}
