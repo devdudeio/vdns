@@ -33,6 +33,48 @@ pnpm vdns:uninstall
 
 `vdns:install` writes launchd plist files and installs `/etc/resolver/vrsc` when needed. `vdns:start` bootstraps and kickstarts the jobs. `vdns:stop` bootouts the jobs but leaves plist files installed. `vdns:uninstall` stops jobs and removes plist files.
 
+
+## Service architecture
+
+```mermaid
+flowchart TB
+  subgraph launchd[launchd]
+    AgentResolver[User LaunchAgent\nio.vdns.resolver]
+    AgentCoreDNS[User LaunchAgent\nio.vdns.coredns]
+    DaemonRedirect[Root LaunchDaemon\nio.vdns.redirect]
+  end
+
+  subgraph files[Installed files]
+    Env[.env.local\nsecrets stay here]
+    ResolverPlist["~/Library/LaunchAgents/io.vdns.resolver.plist"]
+    CoreDNSPlist["~/Library/LaunchAgents/io.vdns.coredns.plist"]
+    RedirectPlist["/Library/LaunchDaemons/io.vdns.redirect.plist"]
+    SplitDNS["/etc/resolver/vrsc"]
+    Logs[.vdns/logs/*.launchd.*]
+  end
+
+  subgraph processes[Runtime processes]
+    Resolver[node dist/index.js\nHTTP resolver :8080]
+    CoreDNS[coredns-vns\nDNS :1053]
+    Redirect[node dist/redirect-index.js\nHTTP redirect :80]
+  end
+
+  ResolverPlist --> AgentResolver --> Resolver
+  CoreDNSPlist --> AgentCoreDNS --> CoreDNS
+  RedirectPlist --> DaemonRedirect --> Redirect
+  Env --> AgentResolver
+  Env --> AgentCoreDNS
+  Env --> DaemonRedirect
+  SplitDNS --> CoreDNS
+  Resolver --> Logs
+  CoreDNS --> Logs
+  Redirect --> Logs
+  CoreDNS -->|resolve-domain HTTP calls| Resolver
+  Redirect -->|REDIRECT lookup HTTP calls| Resolver
+```
+
+The resolver and CoreDNS jobs run in the logged-in user's launchd GUI domain. The redirect job runs in the system domain because binding port `80` requires root privileges. The plist files contain paths and safe environment values only; RPC credentials remain in `.env.local` and are loaded by the wrapper scripts at runtime.
+
 ## Installed files
 
 User LaunchAgents:

@@ -14,6 +14,45 @@ HTTP client
 
 The resolver core owns domain parsing, record parsing, validation, filtering, and caching. Verus identity access is isolated behind `VerusRpcLike`, so tests and local development use fixtures without requiring a real Verus node. RPC mode uses JSON-RPC POST requests with optional Basic Auth and request timeouts.
 
+
+## Local DNS Architecture
+
+The local macOS stack has two paths: DNS resolution for `.vrsc` names and HTTP redirect handling for browser-style URLs.
+
+```mermaid
+flowchart LR
+  subgraph macOS[macOS client machine]
+    App[Browser, curl, or app]
+    ResolverConfig["/etc/resolver/vrsc"]
+    CoreDNS[CoreDNS vDNS plugin\n127.0.0.1:1053]
+    HTTPResolver[Fastify resolver API\n127.0.0.1:8080]
+    Redirect[Redirect service\n127.0.0.1:80]
+  end
+
+  subgraph Verus[Verus data source]
+    RPC[Verus JSON-RPC node]
+    Identity[VerusID identity\ncontentmultimap records]
+  end
+
+  App -->|DNS query: google.vrsc A| ResolverConfig
+  ResolverConfig -->|split-DNS route for .vrsc| CoreDNS
+  CoreDNS -->|HTTP resolve-domain request| HTTPResolver
+  HTTPResolver -->|getidentity / getvdxfid| RPC
+  RPC --> Identity
+  Identity -->|A, CNAME, TXT, REDIRECT records| HTTPResolver
+  HTTPResolver -->|DNS-compatible answer| CoreDNS
+  CoreDNS -->|A 142.250.181.238| App
+
+  App -->|HTTP request: chainvue.vrsc| Redirect
+  Redirect -->|lookup REDIRECT record| HTTPResolver
+  HTTPResolver -->|REDIRECT http://chainvue.io/| Redirect
+  Redirect -->|302 Location header| App
+```
+
+DNS answers are produced by CoreDNS, but CoreDNS does not talk to Verus directly. It delegates `.vrsc` record lookup to the local HTTP resolver. The HTTP resolver owns Verus identity lookup, VDXF key resolution, contentmultimap parsing, record validation, filtering by requested DNS type, and cache behavior.
+
+The redirect service is separate from DNS. DNS first maps a `.vrsc` name such as `chainvue.vrsc` to `127.0.0.1`; then the browser connects to local port `80`, where the redirect service asks the HTTP resolver for a `REDIRECT` record and returns an HTTP `302`.
+
 ## Namespace Configuration
 
 The root identity and TLD are runtime configuration:
