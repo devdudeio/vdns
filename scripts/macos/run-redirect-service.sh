@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/vdns-lib.sh"
+
+vdns_require_darwin
+REPO_ROOT="$(vdns_repo_root)"
+cd "${REPO_ROOT}"
+
+if ! vdns_load_env "${REPO_ROOT}" >/dev/null; then
+  echo "Create .env.local first. See .env.vdns.local.example." >&2
+  exit 1
+fi
+
+ENTRYPOINT="${REPO_ROOT}/dist/redirect-index.js"
+if [[ ! -f "${ENTRYPOINT}" ]]; then
+  echo "Missing built redirect service entrypoint: ${ENTRYPOINT}" >&2
+  echo "Run: pnpm build" >&2
+  exit 1
+fi
+
+if ! NODE_BIN="$(vdns_find_node)"; then
+  echo "Could not find node. Set NODE_BIN=/path/to/node in the launchd environment or reinstall services." >&2
+  exit 1
+fi
+
+export VNS_REDIRECT_HOST=127.0.0.1
+export VNS_REDIRECT_PORT=80
+export VNS_RESOLVER_URL="${VNS_RESOLVER_URL:-http://127.0.0.1:${PORT:-8080}}"
+
+exec "${NODE_BIN}" "${ENTRYPOINT}"

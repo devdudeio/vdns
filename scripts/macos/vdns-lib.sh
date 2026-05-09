@@ -150,6 +150,38 @@ vdns_lsof_port() {
   fi
 }
 
+vdns_lsof_port_privileged_if_needed() {
+  local protocol="$1"
+  local port="$2"
+  local output
+
+  command -v lsof >/dev/null 2>&1 || {
+    echo "lsof is not available"
+    return 0
+  }
+
+  output="$(vdns_lsof_port "${protocol}" "${port}")"
+  if [[ -n "${output}" ]]; then
+    echo "${output}"
+    return 0
+  fi
+
+  if sudo -n true >/dev/null 2>&1; then
+    if [[ "${protocol}" == "TCP" ]]; then
+      sudo -n lsof -nP -iTCP:"${port}" -sTCP:LISTEN 2>/dev/null || true
+    else
+      sudo -n lsof -nP -iUDP:"${port}" 2>/dev/null || true
+    fi
+  else
+    echo "No listener visible as ${USER:-current user}. For privileged ports, run:"
+    if [[ "${protocol}" == "TCP" ]]; then
+      echo "  sudo lsof -nP -iTCP:${port} -sTCP:LISTEN"
+    else
+      echo "  sudo lsof -nP -iUDP:${port}"
+    fi
+  fi
+}
+
 vdns_listener_pids_matching() {
   local protocol="$1"
   local port="$2"
@@ -176,4 +208,111 @@ vdns_resolver_url() {
 vdns_section() {
   echo
   echo "== $1 =="
+}
+
+vdns_launchd_gui_domain() {
+  echo "gui/$(id -u)"
+}
+
+vdns_launchd_resolver_label() {
+  echo "io.vdns.resolver"
+}
+
+vdns_launchd_coredns_label() {
+  echo "io.vdns.coredns"
+}
+
+vdns_launchd_redirect_label() {
+  echo "io.vdns.redirect"
+}
+
+vdns_launch_agent_dir() {
+  echo "${HOME}/Library/LaunchAgents"
+}
+
+vdns_launch_daemon_dir() {
+  echo "/Library/LaunchDaemons"
+}
+
+vdns_launch_agent_plist() {
+  echo "$(vdns_launch_agent_dir)/$1.plist"
+}
+
+vdns_launch_daemon_plist() {
+  echo "$(vdns_launch_daemon_dir)/$1.plist"
+}
+
+vdns_xml_escape() {
+  local value="$1"
+  value="${value//&/&amp;}"
+  value="${value//</&lt;}"
+  value="${value//>/&gt;}"
+  value="${value//\"/&quot;}"
+  value="${value//\'/&apos;}"
+  echo "${value}"
+}
+
+vdns_find_node() {
+  if [[ -n "${NODE_BIN:-}" && -x "${NODE_BIN}" ]]; then
+    echo "${NODE_BIN}"
+  elif command -v node >/dev/null 2>&1; then
+    command -v node
+  elif [[ -x /opt/homebrew/bin/node ]]; then
+    echo "/opt/homebrew/bin/node"
+  elif [[ -x /usr/local/bin/node ]]; then
+    echo "/usr/local/bin/node"
+  else
+    return 1
+  fi
+}
+
+vdns_require_file() {
+  local path="$1"
+  local message="$2"
+
+  if [[ ! -f "${path}" ]]; then
+    echo "${message}" >&2
+    exit 1
+  fi
+}
+
+vdns_require_executable() {
+  local path="$1"
+  local message="$2"
+
+  if [[ ! -x "${path}" ]]; then
+    echo "${message}" >&2
+    exit 1
+  fi
+}
+
+vdns_launchctl_print_summary() {
+  local domain="$1"
+  local label="$2"
+
+  if launchctl print "${domain}/${label}" >/tmp/vdns-launchctl-print.$$ 2>/tmp/vdns-launchctl-print-err.$$; then
+    echo "${domain}/${label}: loaded"
+    awk '
+      /^[[:space:]]*state = / ||
+      /^[[:space:]]*pid = / ||
+      /^[[:space:]]*last exit code = / ||
+      /^[[:space:]]*path = / { print "  " $0 }
+    ' /tmp/vdns-launchctl-print.$$
+    rm -f /tmp/vdns-launchctl-print.$$ /tmp/vdns-launchctl-print-err.$$
+    return 0
+  fi
+
+  echo "${domain}/${label}: not loaded"
+  rm -f /tmp/vdns-launchctl-print.$$ /tmp/vdns-launchctl-print-err.$$
+}
+
+vdns_port_owner_lines() {
+  local protocol="$1"
+  local port="$2"
+
+  vdns_lsof_port "${protocol}" "${port}" | awk 'NR > 1'
+}
+
+vdns_port_has_owner() {
+  [[ -n "$(vdns_port_owner_lines "$1" "$2")" ]]
 }

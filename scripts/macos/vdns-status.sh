@@ -4,6 +4,10 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "${SCRIPT_DIR}/vdns-lib.sh"
+if [[ -f "${SCRIPT_DIR}/vdns-services-lib.sh" ]]; then
+  # shellcheck disable=SC1091
+  source "${SCRIPT_DIR}/vdns-services-lib.sh"
+fi
 
 vdns_require_darwin
 REPO_ROOT="$(vdns_repo_root)"
@@ -57,13 +61,17 @@ if [[ -f "${PID_DIR}/redirect.pid" ]]; then
     echo "port 80 redirect PID file is stale or unrelated: ${REDIRECT_PID}"
   fi
 else
-  echo "port 80 redirect PID file: missing"
+  echo "port 80 redirect PID file: missing (normal for launchd service mode)"
+fi
+
+if declare -F vdns_print_launchd_redirect_state >/dev/null 2>&1; then
+  vdns_print_launchd_redirect_state
 fi
 
 if command -v lsof >/dev/null 2>&1; then
   echo
   echo "visible TCP listeners:"
-  vdns_lsof_port TCP 80
+  vdns_lsof_port_privileged_if_needed TCP 80
   vdns_lsof_port TCP "${VNS_REDIRECT_PORT}"
 else
   echo "lsof is not available"

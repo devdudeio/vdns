@@ -11,39 +11,212 @@ cd "${REPO_ROOT}"
 vdns_load_env "${REPO_ROOT}" >/dev/null || true
 
 VNS_TLD="${VNS_TLD:-vrsc}"
+VNS_DNS_PORT="${VNS_DNS_PORT:-1053}"
 VNS_RESOLVER_URL="$(vdns_resolver_url)"
+GOOGLE_HOST="${VDNS_DEMO_GOOGLE_HOST:-google.${VNS_TLD}}"
+GOOGLE_EXPECTED_A="${VDNS_DEMO_GOOGLE_A:-142.250.181.238}"
+REDIRECT_HOST="${VDNS_DEMO_REDIRECT_HOST:-chainvue.${VNS_TLD}}"
+REDIRECT_EXPECTED_A="${VDNS_DEMO_REDIRECT_A:-127.0.0.1}"
+REDIRECT_EXPECTED_LOCATION="${VDNS_DEMO_REDIRECT_LOCATION:-http://chainvue.io/}"
 FAILED=0
 
-run_demo() {
+if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
+  BOLD="$(printf '\033[1m')"
+  DIM="$(printf '\033[2m')"
+  GREEN="$(printf '\033[32m')"
+  RED="$(printf '\033[31m')"
+  YELLOW="$(printf '\033[33m')"
+  RESET="$(printf '\033[0m')"
+else
+  BOLD=""
+  DIM=""
+  GREEN=""
+  RED=""
+  YELLOW=""
+  RESET=""
+fi
+
+section() {
   echo
-  echo "$ $*"
+  echo "${BOLD}$1${RESET}"
+}
+
+pass() {
+  echo "${GREEN}PASS${RESET} $1"
+}
+
+fail() {
+  echo "${RED}FAIL${RESET} $1"
+  FAILED=1
+}
+
+warn() {
+  echo "${YELLOW}WARN${RESET} $1"
+}
+
+show_cmd() {
+  echo "${DIM}$ $*${RESET}"
+}
+
+require_command() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    fail "missing required command: $1"
+  fi
+}
+
+run_capture() {
+  local seconds="$1"
+  shift
+  vdns_timeout "${seconds}" "$@" 2>&1
+}
+
+expect_contains_line() {
+  local output="$1"
+  local expected="$2"
+
+  printf '%s\n' "${output}" | awk -v expected="${expected}" '$0 == expected { found=1 } END { exit found ? 0 : 1 }'
+}
+
+expect_dscache_ip() {
+  local output="$1"
+  local expected="$2"
+
+  printf '%s\n' "${output}" | awk -v expected="${expected}" '$1 == "ip_address:" && $2 == expected { found=1 } END { exit found ? 0 : 1 }'
+}
+
+expect_http_redirect() {
+  local output="$1"
+  local location="$2"
+
+  printf '%s\n' "${output}" | grep -Eiq '^HTTP/[^ ]+ 302 ' &&
+    printf '%s\n' "${output}" | grep -Eiq "^location: ${location//\//\\/}"'\r?$'
+}
+
+run_show() {
+  echo
+  show_cmd "$@"
   vdns_timeout 10 "$@"
 }
 
-echo "vDNS demo"
-run_demo dscacheutil -q host -a name "google.${VNS_TLD}"
-run_demo dscacheutil -q host -a name "chainvue.${VNS_TLD}"
-run_demo curl -fsS --max-time 5 "${VNS_RESOLVER_URL}/resolve-domain/chainvue.${VNS_TLD}?type=REDIRECT"
-
+echo "${BOLD}vDNS Terminal Demo${RESET}"
+echo "VerusID records -> HTTP resolver -> CoreDNS -> macOS split-DNS -> local HTTP redirect"
 echo
-echo "$ curl -i --max-time 10 http://chainvue.${VNS_TLD}"
-OUTPUT="$(vdns_timeout 12 curl -i --max-time 10 "http://chainvue.${VNS_TLD}" 2>&1)"
-STATUS=$?
-printf '%s\n' "${OUTPUT}"
+echo "Demo hosts:"
+echo "  ${GOOGLE_HOST} -> ${GOOGLE_EXPECTED_A}"
+echo "  ${REDIRECT_HOST} -> ${REDIRECT_EXPECTED_A} -> ${REDIRECT_EXPECTED_LOCATION}"
 
-if [[ "${STATUS}" -ne 0 ]]; then
-  FAILED=1
-elif ! printf '%s\n' "${OUTPUT}" | grep -Eiq '^HTTP/[^ ]+ 302 '; then
-  FAILED=1
-elif ! printf '%s\n' "${OUTPUT}" | grep -Eiq '^location: http://chainvue\.io/\r?$'; then
-  FAILED=1
+require_command curl
+require_command dig
+require_command dscacheutil
+
+if [[ "${FAILED}" -ne 0 ]]; then
+  echo
+  echo "Install missing commands, then rerun: pnpm vdns:demo"
+  exit 1
+fi
+
+section "1. HTTP resolver"
+show_cmd curl -fsS --max-time 5 "${VNS_RESOLVER_URL}/debug/config"
+CONFIG_OUTPUT="$(run_capture 7 curl -fsS --max-time 5 "${VNS_RESOLVER_URL}/debug/config")"
+CONFIG_STATUS=$?
+printf '%s\n' "${CONFIG_OUTPUT}"
+if [[ "${CONFIG_STATUS}" -eq 0 ]] &&
+  printf '%s\n' "${CONFIG_OUTPUT}" | grep -q '"mode":"rpc"' &&
+  printf '%s\n' "${CONFIG_OUTPUT}" | grep -q "\"tld\":\"${VNS_TLD}\""; then
+  pass "resolver is reachable at ${VNS_RESOLVER_URL}"
+else
+  fail "resolver is not ready at ${VNS_RESOLVER_URL}"
+fi
+
+section "2. VerusID-backed records"
+show_cmd curl -fsS --max-time 5 "${VNS_RESOLVER_URL}/resolve-domain/${GOOGLE_HOST}?type=A"
+GOOGLE_JSON="$(run_capture 7 curl -fsS --max-time 5 "${VNS_RESOLVER_URL}/resolve-domain/${GOOGLE_HOST}?type=A")"
+GOOGLE_JSON_STATUS=$?
+printf '%s\n' "${GOOGLE_JSON}"
+if [[ "${GOOGLE_JSON_STATUS}" -eq 0 ]] && printf '%s\n' "${GOOGLE_JSON}" | grep -q "\"value\":\"${GOOGLE_EXPECTED_A}\""; then
+  pass "${GOOGLE_HOST} has A ${GOOGLE_EXPECTED_A}"
+else
+  fail "${GOOGLE_HOST} did not return expected A record"
 fi
 
 echo
+show_cmd curl -fsS --max-time 5 "${VNS_RESOLVER_URL}/resolve-domain/${REDIRECT_HOST}?type=REDIRECT"
+REDIRECT_JSON="$(run_capture 7 curl -fsS --max-time 5 "${VNS_RESOLVER_URL}/resolve-domain/${REDIRECT_HOST}?type=REDIRECT")"
+REDIRECT_JSON_STATUS=$?
+printf '%s\n' "${REDIRECT_JSON}"
+if [[ "${REDIRECT_JSON_STATUS}" -eq 0 ]] && printf '%s\n' "${REDIRECT_JSON}" | grep -q "\"url\":\"${REDIRECT_EXPECTED_LOCATION}\""; then
+  pass "${REDIRECT_HOST} has REDIRECT ${REDIRECT_EXPECTED_LOCATION}"
+else
+  fail "${REDIRECT_HOST} did not return expected REDIRECT record"
+fi
+
+section "3. CoreDNS direct lookup"
+show_cmd dig +time=2 +tries=1 @127.0.0.1 -p "${VNS_DNS_PORT}" "${GOOGLE_HOST}" A +short
+CORE_DNS_OUTPUT="$(run_capture 5 dig +time=2 +tries=1 @127.0.0.1 -p "${VNS_DNS_PORT}" "${GOOGLE_HOST}" A +short)"
+CORE_DNS_STATUS=$?
+printf '%s\n' "${CORE_DNS_OUTPUT}"
+if [[ "${CORE_DNS_STATUS}" -eq 0 ]] && expect_contains_line "${CORE_DNS_OUTPUT}" "${GOOGLE_EXPECTED_A}"; then
+  pass "CoreDNS returned ${GOOGLE_EXPECTED_A}"
+else
+  fail "CoreDNS did not return ${GOOGLE_EXPECTED_A}"
+fi
+
+section "4. macOS split-DNS"
+show_cmd dscacheutil -q host -a name "${GOOGLE_HOST}"
+GOOGLE_DSCACHE="$(run_capture 10 dscacheutil -q host -a name "${GOOGLE_HOST}")"
+GOOGLE_DSCACHE_STATUS=$?
+printf '%s\n' "${GOOGLE_DSCACHE}"
+if [[ "${GOOGLE_DSCACHE_STATUS}" -eq 0 ]] && expect_dscache_ip "${GOOGLE_DSCACHE}" "${GOOGLE_EXPECTED_A}"; then
+  pass "macOS resolver returned ${GOOGLE_EXPECTED_A}"
+else
+  fail "macOS resolver did not return ${GOOGLE_EXPECTED_A}"
+fi
+
+echo
+show_cmd dscacheutil -q host -a name "${REDIRECT_HOST}"
+REDIRECT_DSCACHE="$(run_capture 10 dscacheutil -q host -a name "${REDIRECT_HOST}")"
+REDIRECT_DSCACHE_STATUS=$?
+printf '%s\n' "${REDIRECT_DSCACHE}"
+if [[ "${REDIRECT_DSCACHE_STATUS}" -eq 0 ]] && expect_dscache_ip "${REDIRECT_DSCACHE}" "${REDIRECT_EXPECTED_A}"; then
+  pass "macOS resolver returned ${REDIRECT_EXPECTED_A}"
+else
+  fail "macOS resolver did not return ${REDIRECT_EXPECTED_A}"
+fi
+
+section "5. Browser-style HTTP redirect"
+show_cmd curl -i --max-time 10 "http://${REDIRECT_HOST}"
+HTTP_OUTPUT="$(run_capture 12 curl -i --max-time 10 "http://${REDIRECT_HOST}")"
+HTTP_STATUS=$?
+printf '%s\n' "${HTTP_OUTPUT}"
+
+echo
+if [[ "${HTTP_STATUS}" -eq 0 ]] && expect_http_redirect "${HTTP_OUTPUT}" "${REDIRECT_EXPECTED_LOCATION}"; then
+  pass "${REDIRECT_HOST} returned 302 Location: ${REDIRECT_EXPECTED_LOCATION}"
+else
+  fail "${REDIRECT_HOST} did not return the expected HTTP redirect"
+fi
+
+section "Result"
 if [[ "${FAILED}" -eq 0 ]]; then
-  echo "Success: chainvue.${VNS_TLD} returned 302 Location: http://chainvue.io/"
+  echo "${GREEN}${BOLD}vDNS demo passed.${RESET}"
+  echo "Stop the local stack with: pnpm vdns:down"
   exit 0
 fi
 
-echo "Demo failed: expected 302 Location: http://chainvue.io/"
+echo "${RED}${BOLD}vDNS demo failed.${RESET}"
+echo
+echo "Fast recovery checklist:"
+if [[ "${CONFIG_STATUS:-1}" -ne 0 ]]; then
+  echo "  1. Start the stack: pnpm vdns:up"
+elif [[ "${CORE_DNS_STATUS:-1}" -ne 0 ]]; then
+  echo "  1. Check CoreDNS logs: tail -n 80 .vdns/logs/coredns.log"
+elif [[ "${GOOGLE_DSCACHE_STATUS:-1}" -ne 0 || "${REDIRECT_DSCACHE_STATUS:-1}" -ne 0 ]]; then
+  echo "  1. Check split-DNS: pnpm vdns:status"
+elif [[ "${HTTP_STATUS:-1}" -ne 0 ]]; then
+  echo "  1. Check redirect logs: tail -n 80 .vdns/logs/redirect-port80.log"
+else
+  echo "  1. Inspect status: pnpm vdns:status"
+fi
+echo "  2. Run diagnostics: scripts/macos/diagnose-vdns.sh"
+echo "  3. Rerun this demo: pnpm vdns:demo"
 exit 1

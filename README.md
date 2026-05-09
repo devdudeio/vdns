@@ -19,6 +19,7 @@ Implemented now:
 - CoreDNS plugin MVP that adapts DNS queries to the HTTP resolver
 - macOS split-DNS helper scripts for routing `.vrsc` lookups to a local CoreDNS resolver
 - macOS vDNS scripts for starting, checking, demoing, and stopping the local stack
+- alpha macOS launchd service scripts for installing the resolver, CoreDNS, and port 80 redirect as services
 
 Not implemented yet:
 
@@ -61,6 +62,60 @@ pnpm build
 ```
 
 Runtime defaults to RPC mode. `pnpm dev` and `pnpm start` require `VERUS_RPC_URL` from the shell or `.env.local`; use `pnpm dev:mock` for fixture mode.
+
+## Demo
+
+The fastest polished demo is:
+
+```sh
+pnpm build
+pnpm vdns:up
+pnpm vdns:demo
+```
+
+`pnpm vdns:demo` is a terminal walkthrough of the complete MVP path:
+
+```text
+VerusID records -> HTTP resolver -> CoreDNS -> macOS split-DNS -> local HTTP redirect
+```
+
+It verifies:
+
+- the HTTP resolver is running in RPC mode
+- `google.vrsc` resolves to `142.250.181.238`
+- `chainvue.vrsc` resolves to `127.0.0.1`
+- the `chainvue.vrsc` VerusID record contains `REDIRECT -> http://chainvue.io/`
+- `curl http://chainvue.vrsc` returns `302 Location: http://chainvue.io/`
+
+Expected final output:
+
+```text
+vDNS demo passed.
+Stop the local stack with: pnpm vdns:down
+```
+
+The demo uses these defaults, which can be overridden for another showcase identity:
+
+| Env var | Default |
+| --- | --- |
+| `VDNS_DEMO_GOOGLE_HOST` | `google.vrsc` |
+| `VDNS_DEMO_GOOGLE_A` | `142.250.181.238` |
+| `VDNS_DEMO_REDIRECT_HOST` | `chainvue.vrsc` |
+| `VDNS_DEMO_REDIRECT_A` | `127.0.0.1` |
+| `VDNS_DEMO_REDIRECT_LOCATION` | `http://chainvue.io/` |
+
+If the demo fails, run:
+
+```sh
+pnpm vdns:status
+scripts/macos/diagnose-vdns.sh
+```
+
+Stop the demo stack with:
+
+```sh
+pnpm vdns:down
+```
 
 ## macOS Local vDNS Quickstart
 
@@ -134,6 +189,26 @@ pnpm vdns:down
 ```
 
 This stops the resolver, CoreDNS, and port 80 redirect service, while leaving `/etc/resolver/vrsc` installed.
+
+`pnpm vdns:up` and `pnpm vdns:down` are dev-process scripts. They start background processes from the current checkout and stop those PID-file-managed processes.
+
+For alpha launchd service mode:
+
+```sh
+pnpm build
+cp .env.vdns.local.example .env.local
+# edit .env.local
+pnpm vdns:install
+pnpm vdns:start
+pnpm vdns:service-status
+pnpm vdns:demo
+pnpm vdns:stop
+pnpm vdns:uninstall
+```
+
+`pnpm vdns:install`, `pnpm vdns:start`, `pnpm vdns:stop`, and `pnpm vdns:uninstall` install and manage launchd jobs. The HTTP resolver and CoreDNS run as user LaunchAgents. The browser-style redirect service runs as a root LaunchDaemon because `http://chainvue.vrsc` requires binding privileged port `80`. HTTPS, local TLS, and local CA support remain future work.
+
+See [docs/macos-services.md](docs/macos-services.md) for installed plist paths, logs, troubleshooting, uninstall options, and alpha limitations.
 
 Manual fallback commands:
 
