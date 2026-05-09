@@ -5,6 +5,7 @@ export const VNS_VDXF_KEYS = {
   DNS_CNAME: "VNS.vrsc::dns.cname",
   DNS_TXT: "VNS.vrsc::dns.txt",
   WEB_REDIRECT: "VNS.vrsc::web.redirect",
+  WEB_PROXY: "VNS.vrsc::web.proxy",
   TLS_FINGERPRINT: "VNS.vrsc::tls.fingerprint"
 } as const;
 
@@ -16,5 +17,6 @@ export const SUPPORTED_RECORD_TYPES = [
   "CNAME",
   "TXT",
   "REDIRECT",
+  "PROXY",
   "TLSA"
 ] as const;

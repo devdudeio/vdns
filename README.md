@@ -12,7 +12,7 @@ Implemented now:
 - configurable root identity and TLD
 - mock fixture-backed resolver
 - Fastify HTTP resolver API
-- separate local Fastify redirect service for `.vrsc` `REDIRECT` records
+- separate local Fastify web gateway for `.vrsc` `REDIRECT` records and opt-in `PROXY` records
 - read-only Verus JSON-RPC client for `getidentity`, `getinfo`, and `getblockchaininfo`
 - redacted debug endpoints for config, raw identity payloads, and RPC health
 - local `vns` CLI for VDXF key inspection, raw identity reads, VNS record inspection, and guarded `updateidentity` writes
@@ -52,6 +52,10 @@ Local redirect service configuration:
 | `VNS_TLD` | `vrsc` | TLD handled by this redirect service |
 | `VNS_REDIRECT_DEFAULT_STATUS` | `302` | Fallback redirect status when a record status is not `301` or `302` |
 | `VNS_REDIRECT_TIMEOUT_MS` | `5000` | Resolver request timeout in milliseconds |
+| `VDNS_PROXY_ENABLED` | `false` | Enable `PROXY @` gateway behavior before falling back to `REDIRECT @` |
+| `VDNS_PROXY_TIMEOUT_MS` | `10000` | Upstream proxy request timeout in milliseconds |
+| `VDNS_PROXY_MAX_BODY_BYTES` | `10485760` | Maximum proxied response body size |
+| `VDNS_PROXY_FOLLOW_REDIRECTS` | `manual` | Upstream redirect mode; V1 supports only `manual` |
 
 ## Install And Run
 
@@ -147,6 +151,8 @@ The demo assumes these records exist under `VNS_ROOT_IDENTITY=fum@` and `VNS_TLD
 google.fum@:   A @ -> 142.250.181.238
 chainvue.fum@: A @ -> 127.0.0.1
 chainvue.fum@: REDIRECT @ -> http://chainvue.io/ status 302
+verus.fum@:    A @ -> 127.0.0.1
+verus.fum@:    PROXY @ -> https://verus.io/
 ```
 
 The `vns` CLI can prepare those writes:
@@ -155,6 +161,8 @@ The `vns` CLI can prepare those writes:
 node dist/cli/index.js record set google.fum@ A @ 142.250.181.238 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
 node dist/cli/index.js record set chainvue.fum@ A @ 127.0.0.1 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
 node dist/cli/index.js record set chainvue.fum@ REDIRECT @ http://chainvue.io/ --status 302 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
+node dist/cli/index.js record set verus.fum@ A @ 127.0.0.1 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
+node dist/cli/index.js record set verus.fum@ PROXY @ https://verus.io/ --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
 ```
 
 Start the local vDNS stack:
@@ -270,7 +278,7 @@ curl "http://127.0.0.1:8081/debug/resolve?host=chainvue.vrsc"
 curl -i -H "Host: chainvue.vrsc" http://127.0.0.1:8081/
 ```
 
-The redirect service only returns HTTP redirects. It does not proxy, fetch target content, rewrite HTML, follow redirects, or expose resolver/RPC credentials. Browser use without a port requires listening on port 80 or a later local forwarding/LaunchDaemon setup. HTTPS and local CA support are not implemented yet.
+By default the web gateway only returns HTTP redirects. With `VDNS_PROXY_ENABLED=true`, `PROXY @` records are proxied before falling back to `REDIRECT @`. Proxying forwards paths and queries, strips hop-by-hop and problematic browser-security headers, rejects same-host loops and explicit localhost/private targets, and uses manual upstream redirect handling only. It does not rewrite HTML, follow redirects, or expose resolver/RPC credentials. Browser use without a port requires listening on port 80 or a later local forwarding/LaunchDaemon setup. HTTPS and local CA support are not implemented yet.
 
 For normal local HTTP on macOS:
 
@@ -398,6 +406,7 @@ Both resolver routes support:
 ?type=CNAME
 ?type=TXT
 ?type=REDIRECT
+?type=PROXY
 ?type=TLSA
 ```
 

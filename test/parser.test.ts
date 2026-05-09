@@ -14,6 +14,7 @@ const vdxfIds: VnsVdxfIds = {
     CNAME: "id:cname",
     TXT: "id:txt",
     REDIRECT: "id:redirect",
+    PROXY: "id:proxy",
     TLSA: "id:tlsa"
   }
 };
@@ -62,5 +63,30 @@ describe("parseIdentityRecords", () => {
       records: [{ version: 1, type: "A", name: "@", value: "142.250.181.238", ttl: 300 }],
       warnings: []
     });
+  });
+
+  it("parses PROXY records from DataDescriptor hex objectdata", () => {
+    const result = parseIdentityRecords({
+      identity: "verus.fum@",
+      contentmultimap: {
+        [vdxfIds.record]: [{
+          [VERUS_DATA_DESCRIPTOR_KEY]: {
+            version: 1,
+            label: vdxfIds.labels.PROXY,
+            mimetype: "application/json",
+            objectdata: encodeJsonObjectData({
+              version: 1,
+              name: "@",
+              ttl: 300,
+              type: "PROXY",
+              url: "https://verus.io/"
+            })
+          }
+        }]
+      }
+    }, { vnsVdxfIds: vdxfIds, symbolicFallback: false });
+
+    expect(result.records).toEqual([{ version: 1, type: "PROXY", name: "@", url: "https://verus.io/", ttl: 300 }]);
+    expect(result.warnings).toEqual([]);
   });
 });

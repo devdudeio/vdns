@@ -9,6 +9,7 @@ describe("records", () => {
     [{ version: 1, type: "CNAME", name: "www", value: "example.pages.dev", ttl: 300 }],
     [{ version: 1, type: "TXT", name: "@", value: "vns=verus", ttl: 300 }],
     [{ version: 1, type: "REDIRECT", name: "@", url: "https://example.com", status: 302, ttl: 300 }],
+    [{ version: 1, type: "PROXY", name: "@", url: "https://example.com", ttl: 300 }],
     [{ version: 1, type: "TLSA", name: "@", sha256: "a".repeat(64), ttl: 300 }]
   ])("validates valid record %#", (record) => {
     expect(validateRecord(record)).toEqual(record);
@@ -22,6 +23,7 @@ describe("records", () => {
     [{ version: 1, type: "TXT", name: "@", value: "", ttl: 300 }],
     [{ version: 1, type: "REDIRECT", name: "@", url: "ftp://example.com", status: 302, ttl: 300 }],
     [{ version: 1, type: "REDIRECT", name: "@", url: "https://example.com", status: 307, ttl: 300 }],
+    [{ version: 1, type: "PROXY", name: "@", url: "ftp://example.com", ttl: 300 }],
     [{ version: 1, type: "TLSA", name: "@", sha256: "A".repeat(64), ttl: 300 }],
     [{ version: 1, type: "A", name: "bad.name", value: "203.0.113.42", ttl: 300 }],
     [{ version: 1, type: "A", name: "@", value: "203.0.113.42", ttl: 29 }]

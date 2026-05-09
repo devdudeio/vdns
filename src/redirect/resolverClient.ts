@@ -1,7 +1,7 @@
 import { z } from "zod";
-import type { ResolveResult } from "../core/types.js";
-import { selectRedirectRecord } from "./safety.js";
-import { RedirectResolverError, type RedirectRecord, type RedirectResolveDebug } from "./types.js";
+import type { ResolveResult, VnsRecordType } from "../core/types.js";
+import { selectProxyRecord, selectRedirectRecord } from "./safety.js";
+import { RedirectResolverError, type ProxyRecord, type RedirectRecord, type RedirectResolveDebug } from "./types.js";
 
 type ResolverClientOptions = {
   resolverUrl: string;
@@ -29,28 +29,36 @@ export class HttpRedirectResolverClient {
   }
 
   async resolveRedirect(hostname: string): Promise<RedirectRecord | null> {
-    const debug = await this.resolveDebug(hostname);
-    return debug.selectedRecord;
+    const result = await this.fetchResolveResult(hostname, "REDIRECT");
+    return result ? selectRedirectRecord(result.records) : null;
+  }
+
+  async resolveProxy(hostname: string): Promise<ProxyRecord | null> {
+    const result = await this.fetchResolveResult(hostname, "PROXY");
+    return result ? selectProxyRecord(result.records) : null;
   }
 
   async resolveDebug(hostname: string): Promise<RedirectResolveDebug> {
-    const result = await this.fetchResolveResult(hostname);
-    const selectedRecord = result ? selectRedirectRecord(result.records) : null;
+    const [redirectResult, proxyResult] = await Promise.all([
+      this.fetchResolveResult(hostname, "REDIRECT"),
+      this.fetchResolveResult(hostname, "PROXY")
+    ]);
     return {
       hostname,
       resolverUrl: this.resolverUrl,
-      result,
-      selectedRecord
+      result: redirectResult,
+      selectedRecord: redirectResult ? selectRedirectRecord(redirectResult.records) : null,
+      selectedProxyRecord: proxyResult ? selectProxyRecord(proxyResult.records) : null
     };
   }
 
-  private async fetchResolveResult(hostname: string): Promise<ResolveResult | null> {
+  private async fetchResolveResult(hostname: string, type: VnsRecordType): Promise<ResolveResult | null> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
     let response: Response;
     try {
-      response = await this.fetchImpl(`${this.resolverUrl}/resolve-domain/${encodeURIComponent(hostname)}?type=REDIRECT`, {
+      response = await this.fetchImpl(`${this.resolverUrl}/resolve-domain/${encodeURIComponent(hostname)}?type=${type}`, {
         signal: controller.signal
       });
     } catch (error) {

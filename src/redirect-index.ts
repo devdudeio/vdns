@@ -20,6 +20,10 @@ function logStartupConfig(config: ReturnType<typeof loadRedirectConfigFromEnv>):
   console.log(`resolverUrl: ${config.resolverUrl}`);
   console.log(`defaultStatus: ${config.defaultStatus}`);
   console.log(`timeoutMs: ${config.timeoutMs}`);
+  console.log(`proxyEnabled: ${config.proxyEnabled}`);
+  console.log(`proxyTimeoutMs: ${config.proxyTimeoutMs}`);
+  console.log(`proxyMaxBodyBytes: ${config.proxyMaxBodyBytes}`);
+  console.log(`proxyFollowRedirects: ${config.proxyFollowRedirects}`);
 }
 
 main().catch((error) => {

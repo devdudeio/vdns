@@ -7,6 +7,10 @@ export type RedirectConfig = {
   tld: string;
   defaultStatus: 301 | 302;
   timeoutMs: number;
+  proxyEnabled: boolean;
+  proxyTimeoutMs: number;
+  proxyMaxBodyBytes: number;
+  proxyFollowRedirects: "manual";
 };
 
 const tldSchema = z
@@ -21,6 +25,11 @@ const intFromEnv = (name: string, value: string | undefined, fallback: number): 
   return Number(raw);
 };
 
+const boolFromEnv = (value: string | undefined, fallback: boolean): boolean => {
+  const raw = value ?? String(fallback);
+  return raw.toLowerCase() === "true";
+};
+
 export function loadRedirectConfigFromEnv(env: NodeJS.ProcessEnv = process.env): RedirectConfig {
   const host = env.VNS_REDIRECT_HOST ?? "127.0.0.1";
   const port = intFromEnv("VNS_REDIRECT_PORT", env.VNS_REDIRECT_PORT, 8081);
@@ -28,6 +37,10 @@ export function loadRedirectConfigFromEnv(env: NodeJS.ProcessEnv = process.env):
   const tld = env.VNS_TLD ?? "vrsc";
   const defaultStatus = intFromEnv("VNS_REDIRECT_DEFAULT_STATUS", env.VNS_REDIRECT_DEFAULT_STATUS, 302);
   const timeoutMs = intFromEnv("VNS_REDIRECT_TIMEOUT_MS", env.VNS_REDIRECT_TIMEOUT_MS, 5000);
+  const proxyEnabled = boolFromEnv(env.VDNS_PROXY_ENABLED, false);
+  const proxyTimeoutMs = intFromEnv("VDNS_PROXY_TIMEOUT_MS", env.VDNS_PROXY_TIMEOUT_MS, 10000);
+  const proxyMaxBodyBytes = intFromEnv("VDNS_PROXY_MAX_BODY_BYTES", env.VDNS_PROXY_MAX_BODY_BYTES, 10485760);
+  const proxyFollowRedirects = env.VDNS_PROXY_FOLLOW_REDIRECTS ?? "manual";
 
   const parsed = z
     .object({
@@ -36,9 +49,13 @@ export function loadRedirectConfigFromEnv(env: NodeJS.ProcessEnv = process.env):
       resolverUrl: z.string().url(),
       tld: tldSchema,
       defaultStatus: z.union([z.literal(301), z.literal(302)]),
-      timeoutMs: z.number().int().positive()
+      timeoutMs: z.number().int().positive(),
+      proxyEnabled: z.boolean(),
+      proxyTimeoutMs: z.number().int().positive(),
+      proxyMaxBodyBytes: z.number().int().positive(),
+      proxyFollowRedirects: z.literal("manual")
     })
-    .safeParse({ host, port, resolverUrl, tld, defaultStatus, timeoutMs });
+    .safeParse({ host, port, resolverUrl, tld, defaultStatus, timeoutMs, proxyEnabled, proxyTimeoutMs, proxyMaxBodyBytes, proxyFollowRedirects });
 
   if (!parsed.success) {
     const message = parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ");

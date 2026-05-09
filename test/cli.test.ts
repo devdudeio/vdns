@@ -168,6 +168,33 @@ describe("vns CLI", () => {
     expect(result.exitCode).toBeUndefined();
   });
 
+  it("sets PROXY records with --yes", async () => {
+    const client = makeClient({ identity: "dude@", contentmultimap: {} });
+    const result = await run([
+      "record",
+      "set",
+      "dude@",
+      "PROXY",
+      "@",
+      "https://verus.io/",
+      "--root",
+      "dude@",
+      "--yes"
+    ], client);
+    const payload = parseJsonOutputs(result.stdout)[0];
+    const descriptor = payload.contentmultimap["id:dude.vrsc::vns.record"][0].i4GC1YGEVD21afWudGoFJVdnfjJ5XWnCQv;
+
+    expect(descriptor.label).toBe("id:dude.vrsc::vns.web.proxy");
+    expect(decodeJsonObjectData(descriptor.objectdata).value).toEqual({
+      version: 1,
+      type: "PROXY",
+      name: "@",
+      url: "https://verus.io/",
+      ttl: 300
+    });
+    expect(result.exitCode).toBeUndefined();
+  });
+
   it("does not call updateidentity when validation fails", async () => {
     const client = makeClient();
     const result = await run(["record", "set", "dude@", "A", "@", "not-an-ip", "--yes"], client);

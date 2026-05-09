@@ -51,7 +51,7 @@ Invalid examples:
 
 ## Records
 
-Records are versioned JSON objects. Supported record types are `A`, `AAAA`, `CNAME`, `TXT`, `REDIRECT`, and `TLSA`.
+Records are versioned JSON objects. Supported record types are `A`, `AAAA`, `CNAME`, `TXT`, `REDIRECT`, `PROXY`, and `TLSA`.
 
 Common fields:
 
@@ -67,6 +67,7 @@ Type-specific fields:
 - `TXT.value` must be a non-empty string
 - `REDIRECT.url` must use `http://` or `https://`
 - `REDIRECT.status` must be `301` or `302`
+- `PROXY.url` must use `http://` or `https://`
 - `TLSA.sha256` must be 64 lowercase hex characters
 
 ## Contentmultimap Shape

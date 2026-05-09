@@ -362,6 +362,8 @@ function buildRecord(typeInput: string, name: string, value: string, ttl: number
   const base = { version: 1 as const, type, name, ttl };
   const candidate = type === "REDIRECT"
     ? { ...base, url: value, status }
+    : type === "PROXY"
+      ? { ...base, url: value }
     : type === "TLSA"
       ? { ...base, sha256: value }
       : { ...base, value };
@@ -389,7 +391,7 @@ function buildCliUpdatePayload(
 
 function parseRecordType(input: string): VnsRecordType {
   const type = input.toUpperCase();
-  if (["A", "AAAA", "CNAME", "TXT", "REDIRECT", "TLSA"].includes(type)) {
+  if (["A", "AAAA", "CNAME", "TXT", "REDIRECT", "PROXY", "TLSA"].includes(type)) {
     return type as VnsRecordType;
   }
   throw new CliExitError(`Unsupported record type: ${input}`, 1);

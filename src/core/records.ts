@@ -49,6 +49,13 @@ const redirectRecordSchema = baseRecordSchema.extend({
   status: z.union([z.literal(301), z.literal(302)])
 });
 
+const proxyRecordSchema = baseRecordSchema.extend({
+  type: z.literal("PROXY"),
+  url: z.string().url().refine((value) => value.startsWith("http://") || value.startsWith("https://"), {
+    message: "must use http:// or https://"
+  })
+});
+
 const tlsaRecordSchema = baseRecordSchema.extend({
   type: z.literal("TLSA"),
   sha256: z.string().regex(/^[a-f0-9]{64}$/)
@@ -60,6 +67,7 @@ export const vnsRecordSchema = z.discriminatedUnion("type", [
   cnameRecordSchema,
   txtRecordSchema,
   redirectRecordSchema,
+  proxyRecordSchema,
   tlsaRecordSchema
 ]);
 

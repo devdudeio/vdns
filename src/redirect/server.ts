@@ -8,6 +8,7 @@ import type { RedirectResolverClient } from "./types.js";
 type ServerOptions = {
   logger?: boolean;
   resolver?: RedirectResolverClient;
+  fetchImpl?: typeof fetch;
 };
 
 export async function buildRedirectServer(config: RedirectConfig, options: ServerOptions = {}) {
@@ -18,6 +19,10 @@ export async function buildRedirectServer(config: RedirectConfig, options: Serve
   });
 
   await app.register(sensible);
-  await registerRedirectRoutes(app, { config, resolver });
+  await registerRedirectRoutes(app, {
+    config,
+    resolver,
+    ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {})
+  });
   return app;
 }

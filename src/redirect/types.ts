@@ -1,6 +1,7 @@
 import type { ResolveResult, VnsRecord } from "../core/types.js";
 
 export type RedirectRecord = Extract<VnsRecord, { type: "REDIRECT" }>;
+export type ProxyRecord = Extract<VnsRecord, { type: "PROXY" }>;
 
 export type RedirectResolverErrorKind = "upstream" | "timeout" | "invalid-response";
 
@@ -13,6 +14,7 @@ export class RedirectResolverError extends Error {
 
 export type RedirectResolverClient = {
   resolveRedirect(hostname: string): Promise<RedirectRecord | null>;
+  resolveProxy?(hostname: string): Promise<ProxyRecord | null>;
 };
 
 export type RedirectResolveDebug = {
@@ -20,4 +22,5 @@ export type RedirectResolveDebug = {
   resolverUrl: string;
   result: ResolveResult | null;
   selectedRecord: RedirectRecord | null;
+  selectedProxyRecord?: ProxyRecord | null;
 };

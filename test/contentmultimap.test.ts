@@ -19,6 +19,7 @@ const vdxfIds: VnsVdxfIds = {
     CNAME: "vdxf:vns.dns.cname",
     TXT: "vdxf:vns.dns.txt",
     REDIRECT: "vdxf:vns.web.redirect",
+    PROXY: "vdxf:vns.web.proxy",
     TLSA: "vdxf:vns.tls.fingerprint"
   }
 };

@@ -16,6 +16,7 @@ describe("VNS VDXF helpers", () => {
       CNAME: expectedRecordKey.replace("vns.record", "vns.dns.cname"),
       TXT: expectedRecordKey.replace("vns.record", "vns.dns.txt"),
       REDIRECT: expectedRecordKey.replace("vns.record", "vns.web.redirect"),
+      PROXY: expectedRecordKey.replace("vns.record", "vns.web.proxy"),
       TLSA: expectedRecordKey.replace("vns.record", "vns.tls.fingerprint")
     });
   });
@@ -32,9 +33,10 @@ describe("VNS VDXF helpers", () => {
         CNAME: `id:${keyNames.labels.CNAME}`,
         TXT: `id:${keyNames.labels.TXT}`,
         REDIRECT: `id:${keyNames.labels.REDIRECT}`,
+        PROXY: `id:${keyNames.labels.PROXY}`,
         TLSA: `id:${keyNames.labels.TLSA}`
       }
     });
-    expect(getVdxfId).toHaveBeenCalledTimes(7);
+    expect(getVdxfId).toHaveBeenCalledTimes(8);
   });
 });

@@ -91,6 +91,12 @@ Set a redirect:
 node dist/cli/index.js record set chainvue.dude@ REDIRECT @ https://example.com --status 302 --ttl 300
 ```
 
+Set a proxy target:
+
+```sh
+node dist/cli/index.js record set chainvue.dude@ PROXY @ https://example.com/ --ttl 300
+```
+
 Set a TLSA fingerprint:
 
 ```sh

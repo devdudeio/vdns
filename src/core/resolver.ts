@@ -21,6 +21,7 @@ export type DebugVdxfKeys = {
     dnsCNAME: { name: string; vdxfid: string };
     dnsTXT: { name: string; vdxfid: string };
     webRedirect: { name: string; vdxfid: string };
+    webProxy: { name: string; vdxfid: string };
     tlsFingerprint: { name: string; vdxfid: string };
   };
 };
@@ -70,6 +71,7 @@ export class VnsResolver {
         dnsCNAME: { name: keyNames.labels.CNAME, vdxfid: ids.labels.CNAME },
         dnsTXT: { name: keyNames.labels.TXT, vdxfid: ids.labels.TXT },
         webRedirect: { name: keyNames.labels.REDIRECT, vdxfid: ids.labels.REDIRECT },
+        webProxy: { name: keyNames.labels.PROXY, vdxfid: ids.labels.PROXY },
         tlsFingerprint: { name: keyNames.labels.TLSA, vdxfid: ids.labels.TLSA }
       }
     };
