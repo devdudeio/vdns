@@ -88,3 +88,8 @@ vdns_timeout 8 dscacheutil -q host -a name "chainvue.${VNS_TLD}"
 vdns_section "HTTP Redirect Check"
 echo "$ curl -i --max-time 5 http://chainvue.${VNS_TLD}"
 vdns_timeout 8 curl -i --max-time 5 "http://chainvue.${VNS_TLD}"
+
+vdns_section "PROXY Check"
+echo "$ curl -I --max-time 10 http://verus.${VNS_TLD}"
+vdns_timeout 12 curl -I --max-time 10 "http://verus.${VNS_TLD}" 2>&1 |
+  awk 'BEGIN { IGNORECASE=1 } /^HTTP\// || /^x-vdns-/ { print }'

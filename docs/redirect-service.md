@@ -13,7 +13,7 @@ REDIRECT @ -> http://chainvue.io/
 A @ -> 127.0.0.1
 ```
 
-The `A` record lets local split-DNS resolve `chainvue.vrsc` to `127.0.0.1`. The gateway then handles the HTTP request, asks the resolver for `type=REDIRECT`, and sends the browser to the `REDIRECT` target with `301` or `302`.
+The `A` record lets local split-DNS resolve `chainvue.vrsc` to `127.0.0.1`. The gateway then handles the HTTP request, asks the resolver for `type=REDIRECT`, and sends the browser to the `REDIRECT` target with `301` or `302`. `REDIRECT` changes the browser URL to the target site and is the more robust browser mode.
 
 ## PROXY Flow
 
@@ -24,9 +24,9 @@ PROXY @ -> https://verus.io/
 A @ -> 127.0.0.1
 ```
 
-When `VDNS_PROXY_ENABLED=true`, the gateway asks the resolver for `type=PROXY` first. If a `PROXY @` record exists, it forwards the incoming path and query to the upstream target and returns the upstream response. If no `PROXY @` record exists, it falls back to the existing `REDIRECT @` behavior. If neither exists, it returns `404`.
+When `VDNS_PROXY_ENABLED=true`, the gateway asks the resolver for `type=PROXY` first. If a `PROXY @` record exists, it forwards `GET` and `HEAD` requests to the upstream target and returns the upstream response while keeping the `.vrsc` URL in the browser. If no `PROXY @` record exists, it falls back to the existing `REDIRECT @` behavior. If neither exists, it returns `404`.
 
-V1 redirect handling for proxied upstream responses is manual only. If the upstream returns `301` or `302`, the gateway passes that response through, so the browser may leave `.vrsc` and navigate to the upstream domain.
+V1 follows a small number of upstream redirects server-side, validates every redirect target, and preserves the `.vrsc` browser URL when redirects are valid. `PROXY` is experimental and best-effort: complex sites may break because of CSP, cookies, absolute URLs, auth/OAuth, service workers, WebSockets, CORS, and the lack of HTTPS `.vrsc`.
 
 ## Run
 
@@ -126,14 +126,17 @@ VNS_REDIRECT_TIMEOUT_MS=5000
 VDNS_PROXY_ENABLED=false
 VDNS_PROXY_TIMEOUT_MS=10000
 VDNS_PROXY_MAX_BODY_BYTES=10485760
-VDNS_PROXY_FOLLOW_REDIRECTS=manual
+VDNS_PROXY_MAX_REDIRECTS=3
+VDNS_PROXY_ALLOW_PRIVATE_TARGETS=false
 ```
 
 The service loads `.env` and `.env.local`, but it does not require Verus RPC environment variables.
 
 ## Guardrails
 
-Proxy targets must use `http://` or `https://`. The gateway rejects same-host loops and explicit localhost or private IP targets. It strips hop-by-hop headers and response headers that can break local gateway behavior, including CSP, HSTS, X-Frame-Options, and Set-Cookie. It preserves ordinary safe response headers such as Content-Type, Cache-Control, ETag, Last-Modified, and Location.
+Proxy targets must use `http://` or `https://`. The gateway rejects same-host and subdomain loops, obvious localhost names, and literal private/internal IP targets including loopback, unspecified, link-local, private IPv4, metadata IP, multicast/reserved IPv4, IPv6 loopback, unique-local, and link-local addresses. It strips hop-by-hop headers and upstream-origin security/session headers that can break local gateway behavior, including CSP, HSTS, X-Frame-Options, and Set-Cookie. It preserves ordinary safe response headers such as Content-Type, Cache-Control, ETag, Last-Modified, Expires, Content-Language, and safe Vary values.
+
+`VDNS_PROXY_ALLOW_PRIVATE_TARGETS=true` disables private/internal target rejection and is unsafe outside advanced local development.
 
 ## Limitations
 
@@ -141,4 +144,4 @@ Proxy targets must use `http://` or `https://`. The gateway rejects same-host lo
 - No browser extension.
 - No WebSockets.
 - No link rewriting or HTML rewriting.
-- Proxy redirect policy is manual only; limited upstream redirect following is reserved for a later version.
+- No DNS rebinding protection in V1; only literal private/internal IPs and obvious localhost names are blocked.

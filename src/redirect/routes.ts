@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { RedirectConfig } from "./config.js";
-import { isConfiguredTldHost, isLocalClient, normalizeHostHeader, redirectStatus, validateProxyTarget, validateRedirectTarget } from "./safety.js";
+import { validateProxyTargetUrl } from "./proxySecurity.js";
+import { isConfiguredTldHost, isLocalClient, normalizeHostHeader, redirectStatus, validateRedirectTarget } from "./safety.js";
 import { RedirectResolverError, type ProxyRecord, type RedirectResolverClient } from "./types.js";
 
 type DebugResolveQuery = {
@@ -50,6 +51,16 @@ const strippedResponseHeaders = new Set([
   "content-encoding"
 ]);
 
+const preservedResponseHeaders = new Set([
+  "content-type",
+  "cache-control",
+  "etag",
+  "last-modified",
+  "expires",
+  "content-language",
+  "location"
+]);
+
 export async function registerRedirectRoutes(app: FastifyInstance, options: RouteOptions): Promise<void> {
   app.get("/health", async () => ({ status: "ok", service: "vns-redirect" }));
 
@@ -83,8 +94,7 @@ export async function registerRedirectRoutes(app: FastifyInstance, options: Rout
     }
   });
 
-  app.get("/*", async (request, reply) => handleGatewayRequest(request, reply, options));
-  app.head("/*", async (request, reply) => handleGatewayRequest(request, reply, options));
+  app.all("/*", async (request, reply) => handleGatewayRequest(request, reply, options));
 }
 
 async function handleGatewayRequest(request: FastifyRequest, reply: FastifyReply, options: RouteOptions) {
@@ -95,6 +105,13 @@ async function handleGatewayRequest(request: FastifyRequest, reply: FastifyReply
 
   if (!isConfiguredTldHost(hostname, options.config.tld)) {
     return reply.notFound();
+  }
+
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return reply
+      .code(405)
+      .header("Allow", "GET, HEAD")
+      .send({ statusCode: 405, error: "Method Not Allowed", message: "Web gateway only supports GET and HEAD" });
   }
 
   if (options.config.proxyEnabled) {
@@ -144,62 +161,135 @@ async function proxyRequest(
   hostname: string,
   record: ProxyRecord
 ) {
-  const targetBase = validateProxyTarget(record, hostname);
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return reply
+      .code(405)
+      .header("Allow", "GET, HEAD")
+      .send({ statusCode: 405, error: "Method Not Allowed", message: "PROXY only supports GET and HEAD" });
+  }
+
+  const targetBase = validateProxyTargetUrl(record.url, hostname, {
+    allowPrivateTargets: options.config.proxyAllowPrivateTargets
+  });
   if (targetBase instanceof Error) {
-    const statusCode = targetBase.message.includes("loops") ? 508 : 502;
-    return reply.code(statusCode).send({
-      statusCode,
-      error: statusCode === 508 ? "Loop Detected" : "Bad Gateway",
-      message: targetBase.message
-    });
+    return sendProxyTargetRejected(reply, targetBase);
   }
 
   const target = buildProxyUrl(targetBase, request.url);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), options.config.proxyTimeoutMs);
-
-  let upstream: Response;
-  try {
-    upstream = await (options.fetchImpl ?? fetch)(target, {
-      method: request.method,
-      headers: buildProxyRequestHeaders(request),
-      redirect: options.config.proxyFollowRedirects,
-      signal: controller.signal
-    });
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
+  const redirectResult = await fetchProxyWithRedirects(request, options, target, hostname);
+  if (redirectResult instanceof Error) {
+    if (redirectResult.name === "AbortError") {
       return reply.code(504).send({ statusCode: 504, error: "Gateway Timeout", message: "Proxy upstream request timed out" });
     }
+    if (redirectResult.message.startsWith("PROXY target rejected:")) {
+      return sendProxyTargetRejected(reply, redirectResult);
+    }
+    if (redirectResult.message === "PROXY redirect limit exceeded") {
+      return reply.code(502).send({ statusCode: 502, error: "Bad Gateway", message: redirectResult.message });
+    }
     return reply.code(502).send({ statusCode: 502, error: "Bad Gateway", message: "Proxy upstream request failed" });
-  } finally {
-    clearTimeout(timeout);
   }
 
-  copyProxyResponseHeaders(reply, upstream.headers);
-  reply.code(upstream.status);
-
-  if (request.method === "HEAD") {
-    return reply.send();
-  }
-
-  const contentLength = upstream.headers.get("content-length");
+  const contentLength = redirectResult.headers.get("content-length");
   if (contentLength && Number(contentLength) > options.config.proxyMaxBodyBytes) {
     return reply.code(502).send({ statusCode: 502, error: "Bad Gateway", message: "Proxy upstream response is too large" });
   }
 
-  const body = Buffer.from(await upstream.arrayBuffer());
+  if (request.method === "HEAD") {
+    copyProxyResponseHeaders(reply, redirectResult.headers);
+    return reply
+      .code(redirectResult.status)
+      .header("x-vdns-proxy", "1")
+      .header("x-vdns-proxy-target-host", redirectResult.url.hostname)
+      .header("x-vdns-source-host", hostname)
+      .send();
+  }
+
+  const body = Buffer.from(await redirectResult.response.arrayBuffer());
   if (body.byteLength > options.config.proxyMaxBodyBytes) {
     return reply.code(502).send({ statusCode: 502, error: "Bad Gateway", message: "Proxy upstream response is too large" });
   }
 
-  return reply.send(body);
+  copyProxyResponseHeaders(reply, redirectResult.headers);
+  return reply
+    .code(redirectResult.status)
+    .header("x-vdns-proxy", "1")
+    .header("x-vdns-proxy-target-host", redirectResult.url.hostname)
+    .header("x-vdns-source-host", hostname)
+    .send(body);
+}
+
+type ProxyFetchResult = {
+  response: Response;
+  url: URL;
+  status: number;
+  headers: Headers;
+};
+
+async function fetchProxyWithRedirects(
+  request: FastifyRequest,
+  options: RouteOptions,
+  initialTarget: string,
+  hostname: string
+): Promise<ProxyFetchResult | Error> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.config.proxyTimeoutMs);
+  let target = new URL(initialTarget);
+
+  try {
+    for (let redirectCount = 0; redirectCount <= options.config.proxyMaxRedirects; redirectCount += 1) {
+      const upstream = await (options.fetchImpl ?? fetch)(target.toString(), {
+        method: request.method,
+        headers: buildProxyRequestHeaders(request),
+        redirect: "manual",
+        signal: controller.signal
+      });
+
+      if (!isRedirectStatus(upstream.status)) {
+        return { response: upstream, url: target, status: upstream.status, headers: upstream.headers };
+      }
+
+      const location = upstream.headers.get("location");
+      if (!location) {
+        return { response: upstream, url: target, status: upstream.status, headers: upstream.headers };
+      }
+
+      if (redirectCount >= options.config.proxyMaxRedirects) {
+        return new Error("PROXY redirect limit exceeded");
+      }
+
+      let nextUrl: URL;
+      try {
+        nextUrl = new URL(location, target);
+      } catch {
+        return new Error("PROXY target rejected: redirect Location URL is invalid");
+      }
+
+      const nextTarget = validateProxyTargetUrl(nextUrl.toString(), hostname, {
+        allowPrivateTargets: options.config.proxyAllowPrivateTargets
+      });
+      if (nextTarget instanceof Error) {
+        return nextTarget;
+      }
+      target = nextTarget;
+    }
+
+    return new Error("PROXY redirect limit exceeded");
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return error;
+    }
+    return new Error("Proxy upstream request failed");
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function buildProxyUrl(base: URL, requestUrl: string): string {
   const target = new URL(base.toString());
   const incoming = new URL(requestUrl, "http://vdns.local");
   const basePath = target.pathname.endsWith("/") ? target.pathname.slice(0, -1) : target.pathname;
-  target.pathname = `${basePath}${incoming.pathname}`.replace(/\/+/g, "/");
+  target.pathname = `${basePath}${incoming.pathname}`;
   target.search = incoming.search;
   target.hash = "";
   return target.toString();
@@ -220,9 +310,38 @@ function buildProxyRequestHeaders(request: FastifyRequest): Headers {
 
 function copyProxyResponseHeaders(reply: FastifyReply, headers: Headers): void {
   headers.forEach((value, name) => {
-    if (!strippedResponseHeaders.has(name.toLowerCase())) {
+    const lowerName = name.toLowerCase();
+    if (strippedResponseHeaders.has(lowerName)) {
+      return;
+    }
+    if (preservedResponseHeaders.has(lowerName) || (lowerName === "vary" && isSafeVaryHeader(value))) {
       reply.header(name, value);
     }
+  });
+}
+
+function isRedirectStatus(status: number): boolean {
+  return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
+}
+
+function isSafeVaryHeader(value: string): boolean {
+  if (value.trim() === "*") {
+    return false;
+  }
+
+  const safeVaryHeaders = new Set(["accept", "accept-language", "user-agent"]);
+  return value.split(",").every((part) => safeVaryHeaders.has(part.trim().toLowerCase()));
+}
+
+function sendProxyTargetRejected(reply: FastifyReply, error: Error) {
+  const statusCode = error.message.includes("loops") ? 508 : 502;
+  const reason = error.message.startsWith("PROXY target rejected:")
+    ? error.message.slice("PROXY target rejected:".length).trim()
+    : error.message;
+  return reply.code(statusCode).send({
+    statusCode,
+    error: statusCode === 508 ? "Loop Detected" : "Bad Gateway",
+    message: `PROXY target rejected: ${reason}`
   });
 }
 

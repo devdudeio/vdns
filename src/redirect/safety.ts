@@ -1,4 +1,4 @@
-import { isIP } from "node:net";
+import { validateProxyTargetUrl } from "./proxySecurity.js";
 import type { ProxyRecord, RedirectRecord } from "./types.js";
 
 const hostnamePattern = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
@@ -53,16 +53,7 @@ export function validateRedirectTarget(record: RedirectRecord, requestedHostname
 }
 
 export function validateProxyTarget(record: ProxyRecord, requestedHostname: string): URL | Error {
-  const target = validateHttpTarget(record.url, requestedHostname, "Proxy");
-  if (target instanceof Error) {
-    return target;
-  }
-
-  if (isExplicitLocalOrPrivateHost(target.hostname)) {
-    return new Error("Proxy target URL must not use localhost or a private address");
-  }
-
-  return target;
+  return validateProxyTargetUrl(record.url, requestedHostname);
 }
 
 export function redirectStatus(record: RedirectRecord, defaultStatus: 301 | 302): 301 | 302 {
@@ -94,47 +85,6 @@ function validateHttpTarget(url: string, requestedHostname: string, label: "Redi
   }
 
   return target;
-}
-
-function isExplicitLocalOrPrivateHost(hostname: string): boolean {
-  const normalized = hostname.toLowerCase().replace(/^\[(.*)\]$/, "$1");
-  if (normalized === "localhost" || normalized.endsWith(".localhost")) {
-    return true;
-  }
-
-  const ipVersion = isIP(normalized);
-  if (ipVersion === 4) {
-    return isPrivateIpv4(normalized);
-  }
-  if (ipVersion === 6) {
-    const ipv4Mapped = normalized.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-    if (ipv4Mapped) { return isPrivateIpv4(ipv4Mapped[1] ?? ""); }
-    return isPrivateIpv6(normalized);
-  }
-
-  return false;
-}
-
-function isPrivateIpv4(ip: string): boolean {
-  const octets = ip.split(".").map(Number);
-  const a = octets[0] ?? -1;
-  const b = octets[1] ?? -1;
-  return a === 10 ||
-    a === 127 ||
-    (a === 169 && b === 254) ||
-    (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && b === 168) ||
-    (a === 0) ||
-    (a === 100 && b >= 64 && b <= 127);
-}
-
-function isPrivateIpv6(ip: string): boolean {
-  const normalized = ip.toLowerCase();
-  return normalized === "::1" ||
-    normalized === "::" ||
-    normalized.startsWith("fc") ||
-    normalized.startsWith("fd") ||
-    normalized.startsWith("fe80:");
 }
 
 function stripOptionalPort(host: string): string {

@@ -55,7 +55,8 @@ Local redirect service configuration:
 | `VDNS_PROXY_ENABLED` | `false` | Enable `PROXY @` gateway behavior before falling back to `REDIRECT @` |
 | `VDNS_PROXY_TIMEOUT_MS` | `10000` | Upstream proxy request timeout in milliseconds |
 | `VDNS_PROXY_MAX_BODY_BYTES` | `10485760` | Maximum proxied response body size |
-| `VDNS_PROXY_FOLLOW_REDIRECTS` | `manual` | Upstream redirect mode; V1 supports only `manual` |
+| `VDNS_PROXY_MAX_REDIRECTS` | `3` | Maximum server-side upstream redirects to follow for `PROXY` |
+| `VDNS_PROXY_ALLOW_PRIVATE_TARGETS` | `false` | Unsafe advanced local-development escape hatch for private/internal proxy targets |
 
 ## Install And Run
 
@@ -278,7 +279,7 @@ curl "http://127.0.0.1:8081/debug/resolve?host=chainvue.vrsc"
 curl -i -H "Host: chainvue.vrsc" http://127.0.0.1:8081/
 ```
 
-By default the web gateway only returns HTTP redirects. With `VDNS_PROXY_ENABLED=true`, `PROXY @` records are proxied before falling back to `REDIRECT @`. Proxying forwards paths and queries, strips hop-by-hop and problematic browser-security headers, rejects same-host loops and explicit localhost/private targets, and uses manual upstream redirect handling only. It does not rewrite HTML, follow redirects, or expose resolver/RPC credentials. Browser use without a port requires listening on port 80 or a later local forwarding/LaunchDaemon setup. HTTPS and local CA support are not implemented yet.
+By default the web gateway only returns HTTP redirects. `REDIRECT` changes the browser URL to the target site and is the more robust mode. With `VDNS_PROXY_ENABLED=true`, `PROXY @` records are proxied before falling back to `REDIRECT @`; `PROXY` keeps the `.vrsc` URL in the browser, supports only `GET` and `HEAD` in V1, and is experimental/best-effort. Proxying forwards paths and queries, follows a small number of validated upstream redirects server-side, strips hop-by-hop and problematic browser-security/session headers, rejects same-host loops and explicit localhost/private targets, and does not expose resolver/RPC credentials. Complex sites may still break because of CSP, cookies, absolute URLs, auth/OAuth, service workers, WebSockets, CORS, and the lack of HTTPS `.vrsc`. `VDNS_PROXY_ALLOW_PRIVATE_TARGETS=true` is unsafe and only for advanced local development. DNS rebinding protection is not implemented in V1; literal private/internal IPs and obvious localhost names are blocked.
 
 For normal local HTTP on macOS:
 

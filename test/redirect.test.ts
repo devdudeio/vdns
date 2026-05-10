@@ -15,7 +15,8 @@ const config: RedirectConfig = {
   proxyEnabled: false,
   proxyTimeoutMs: 5000,
   proxyMaxBodyBytes: 10485760,
-  proxyFollowRedirects: "manual"
+  proxyMaxRedirects: 3,
+  proxyAllowPrivateTargets: false
 };
 
 let app: FastifyInstance | undefined;
@@ -146,7 +147,62 @@ describe("redirect service", () => {
     expect(response.statusCode).toBe(200);
     expect(response.body).toBe("proxied");
     expect(response.headers["content-type"]).toContain("text/plain");
+    expect(response.headers["x-vdns-proxy"]).toBe("1");
+    expect(response.headers["x-vdns-proxy-target-host"]).toBe("upstream.example");
+    expect(response.headers["x-vdns-source-host"]).toBe("chainvue.vrsc");
     expect(fetchImpl).toHaveBeenCalledWith("https://upstream.example/base/docs?a=1", expect.objectContaining({ redirect: "manual" }));
+  });
+
+  it("maps proxy root target paths safely", async () => {
+    const fetchImpl = vi.fn(async () => new Response("ok"));
+    const server = await makeApp(null, undefined, proxyRecord("https://verus.io/"), { proxyEnabled: true }, fetchImpl as typeof fetch);
+    await server.inject({ method: "GET", url: "/technology?x=1", headers: { host: "verus.vrsc" } });
+
+    expect(fetchImpl).toHaveBeenCalledWith("https://verus.io/technology?x=1", expect.anything());
+  });
+
+  it("proxies HEAD headers with no body", async () => {
+    const fetchImpl = vi.fn(async () => new Response("hidden", {
+      status: 200,
+      headers: { "content-type": "text/html" }
+    }));
+    const server = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true }, fetchImpl as typeof fetch);
+    const response = await server.inject({ method: "HEAD", url: "/", headers: { host: "chainvue.vrsc" } });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toBe("");
+    expect(response.headers["x-vdns-proxy"]).toBe("1");
+  });
+
+  it("strips unsafe outbound proxy request headers", async () => {
+    const fetchImpl = vi.fn(async () => new Response("ok"));
+    const server = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true }, fetchImpl as typeof fetch);
+    await server.inject({
+      method: "GET",
+      url: "/",
+      headers: {
+        host: "chainvue.vrsc",
+        "accept-encoding": "gzip",
+        "content-length": "12",
+        "x-custom": "kept"
+      }
+    });
+
+    const headers = fetchImpl.mock.calls[0]?.[1]?.headers as Headers;
+    expect(headers.get("host")).toBeNull();
+    expect(headers.get("accept-encoding")).toBeNull();
+    expect(headers.get("content-length")).toBeNull();
+    expect(headers.get("x-custom")).toBe("kept");
+  });
+
+  it("returns 405 for unsupported gateway methods", async () => {
+    const fetchImpl = vi.fn();
+    const server = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true }, fetchImpl as typeof fetch);
+    const response = await server.inject({ method: "POST", url: "/", headers: { host: "chainvue.vrsc" } });
+
+    expect(response.statusCode).toBe(405);
+    expect(response.headers.allow).toBe("GET, HEAD");
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it("strips unsafe upstream response headers", async () => {
@@ -157,7 +213,9 @@ describe("redirect service", () => {
         "content-security-policy": "default-src 'none'",
         "strict-transport-security": "max-age=1",
         "x-frame-options": "DENY",
-        "set-cookie": "a=b"
+        "set-cookie": "a=b",
+        "connection": "close",
+        "transfer-encoding": "chunked"
       }
     }));
     const server = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true }, fetchImpl as typeof fetch);
@@ -168,20 +226,59 @@ describe("redirect service", () => {
     expect(response.headers["strict-transport-security"]).toBeUndefined();
     expect(response.headers["x-frame-options"]).toBeUndefined();
     expect(response.headers["set-cookie"]).toBeUndefined();
+    expect(response.headers["transfer-encoding"]).toBeUndefined();
   });
 
-  it("passes through manual upstream redirects", async () => {
-    const fetchImpl = vi.fn(async () => new Response(null, { status: 302, headers: { location: "https://target.example/" } }));
+  it("follows validated upstream redirects server-side", async () => {
+    const fetchImpl = vi.fn(async (url: string | URL | Request) => {
+      if (String(url) === "https://upstream.example/") {
+        return new Response(null, { status: 302, headers: { location: "https://target.example/final" } });
+      }
+      return new Response("final", { status: 200, headers: { "content-type": "text/plain" } });
+    });
     const server = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true }, fetchImpl as typeof fetch);
     const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
-    expect(response.statusCode).toBe(302);
-    expect(response.headers.location).toBe("https://target.example/");
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toBe("final");
+    expect(response.headers.location).toBeUndefined();
+    expect(response.headers["x-vdns-proxy-target-host"]).toBe("target.example");
+  });
+
+  it("rejects unsafe upstream redirects before fetching them", async () => {
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 302, headers: { location: "http://127.0.0.1/admin" } }));
+    const server = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true }, fetchImpl as typeof fetch);
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+
+    expect(response.statusCode).toBe(502);
+    expect(response.json().message).toContain("PROXY target rejected:");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects malformed upstream redirects", async () => {
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 302, headers: { location: "http://[::1" } }));
+    const server = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true }, fetchImpl as typeof fetch);
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+
+    expect(response.statusCode).toBe(502);
+    expect(response.json().message).toContain("PROXY target rejected:");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops following redirects at the configured limit", async () => {
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 302, headers: { location: "https://target.example/next" } }));
+    const server = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true, proxyMaxRedirects: 1 }, fetchImpl as typeof fetch);
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+
+    expect(response.statusCode).toBe(502);
+    expect(response.json().message).toBe("PROXY redirect limit exceeded");
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
   it("rejects private proxy targets and same-host loops", async () => {
     const privateServer = await makeApp(null, undefined, proxyRecord("http://127.0.0.1:9000/"), { proxyEnabled: true });
     const privateResponse = await privateServer.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
     expect(privateResponse.statusCode).toBe(502);
+    expect(privateResponse.json().message).toContain("PROXY target rejected:");
 
     await privateServer.close();
     app = undefined;
@@ -208,6 +305,15 @@ describe("redirect service", () => {
     const upstreamResponse = await upstreamServer.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
     expect(upstreamResponse.statusCode).toBe(500);
     expect(upstreamResponse.body).toBe("upstream failed");
+  });
+
+  it("rejects oversized proxied responses", async () => {
+    const fetchImpl = vi.fn(async () => new Response("abc", { headers: { "content-length": "3" } }));
+    const server = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true, proxyMaxBodyBytes: 2 }, fetchImpl as typeof fetch);
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+
+    expect(response.statusCode).toBe(502);
+    expect(response.json().message).toBe("Proxy upstream response is too large");
   });
 });
 

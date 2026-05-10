@@ -23,7 +23,11 @@ function logStartupConfig(config: ReturnType<typeof loadRedirectConfigFromEnv>):
   console.log(`proxyEnabled: ${config.proxyEnabled}`);
   console.log(`proxyTimeoutMs: ${config.proxyTimeoutMs}`);
   console.log(`proxyMaxBodyBytes: ${config.proxyMaxBodyBytes}`);
-  console.log(`proxyFollowRedirects: ${config.proxyFollowRedirects}`);
+  console.log(`proxyMaxRedirects: ${config.proxyMaxRedirects}`);
+  console.log(`proxyAllowPrivateTargets: ${config.proxyAllowPrivateTargets}`);
+  if (config.proxyAllowPrivateTargets) {
+    console.warn("WARNING: VDNS_PROXY_ALLOW_PRIVATE_TARGETS=true disables PROXY private/internal target rejection.");
+  }
 }
 
 main().catch((error) => {

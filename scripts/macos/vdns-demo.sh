@@ -18,6 +18,8 @@ GOOGLE_EXPECTED_A="${VDNS_DEMO_GOOGLE_A:-142.250.181.238}"
 REDIRECT_HOST="${VDNS_DEMO_REDIRECT_HOST:-chainvue.${VNS_TLD}}"
 REDIRECT_EXPECTED_A="${VDNS_DEMO_REDIRECT_A:-127.0.0.1}"
 REDIRECT_EXPECTED_LOCATION="${VDNS_DEMO_REDIRECT_LOCATION:-http://chainvue.io/}"
+PROXY_HOST="${VDNS_DEMO_PROXY_HOST:-verus.${VNS_TLD}}"
+PROXY_EXPECTED_TARGET_HOST="${VDNS_DEMO_PROXY_TARGET_HOST:-verus.io}"
 FAILED=0
 
 if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
@@ -92,6 +94,16 @@ expect_http_redirect() {
     printf '%s\n' "${output}" | grep -Eiq "^location: ${location//\//\\/}"'\r?$'
 }
 
+expect_proxy_response() {
+  local output="$1"
+  local target_host="$2"
+
+  printf '%s\n' "${output}" | grep -Eiq '^HTTP/[^ ]+ 200 ' &&
+    printf '%s\n' "${output}" | grep -Eiq '^x-vdns-proxy: 1\r?$' &&
+    printf '%s\n' "${output}" | grep -Eiq "^x-vdns-proxy-target-host: ${target_host}\r?$" &&
+    printf '%s\n' "${output}" | grep -Eiq 'verus|blockchain|currency|PBaaS'
+}
+
 run_show() {
   echo
   show_cmd "$@"
@@ -104,6 +116,7 @@ echo
 echo "Demo hosts:"
 echo "  ${GOOGLE_HOST} -> ${GOOGLE_EXPECTED_A}"
 echo "  ${REDIRECT_HOST} -> ${REDIRECT_EXPECTED_A} -> ${REDIRECT_EXPECTED_LOCATION}"
+echo "  ${PROXY_HOST} -> PROXY ${PROXY_EXPECTED_TARGET_HOST}"
 
 require_command curl
 require_command dig
@@ -150,6 +163,17 @@ else
   fail "${REDIRECT_HOST} did not return expected REDIRECT record"
 fi
 
+echo
+show_cmd curl -fsS --max-time 5 "${VNS_RESOLVER_URL}/resolve-domain/${PROXY_HOST}?type=PROXY"
+PROXY_JSON="$(run_capture 7 curl -fsS --max-time 5 "${VNS_RESOLVER_URL}/resolve-domain/${PROXY_HOST}?type=PROXY")"
+PROXY_JSON_STATUS=$?
+printf '%s\n' "${PROXY_JSON}"
+if [[ "${PROXY_JSON_STATUS}" -eq 0 ]] && printf '%s\n' "${PROXY_JSON}" | grep -q "\"url\":\"https://${PROXY_EXPECTED_TARGET_HOST}/\""; then
+  pass "${PROXY_HOST} has PROXY https://${PROXY_EXPECTED_TARGET_HOST}/"
+else
+  fail "${PROXY_HOST} did not return expected PROXY record"
+fi
+
 section "3. CoreDNS direct lookup"
 show_cmd dig +time=2 +tries=1 @127.0.0.1 -p "${VNS_DNS_PORT}" "${GOOGLE_HOST}" A +short
 CORE_DNS_OUTPUT="$(run_capture 5 dig +time=2 +tries=1 @127.0.0.1 -p "${VNS_DNS_PORT}" "${GOOGLE_HOST}" A +short)"
@@ -183,7 +207,7 @@ else
   fail "macOS resolver did not return ${REDIRECT_EXPECTED_A}"
 fi
 
-section "5. Browser-style HTTP redirect"
+section "5. Browser-style HTTP gateway"
 show_cmd curl -i --max-time 10 "http://${REDIRECT_HOST}"
 HTTP_OUTPUT="$(run_capture 12 curl -i --max-time 10 "http://${REDIRECT_HOST}")"
 HTTP_STATUS=$?
@@ -194,6 +218,19 @@ if [[ "${HTTP_STATUS}" -eq 0 ]] && expect_http_redirect "${HTTP_OUTPUT}" "${REDI
   pass "${REDIRECT_HOST} returned 302 Location: ${REDIRECT_EXPECTED_LOCATION}"
 else
   fail "${REDIRECT_HOST} did not return the expected HTTP redirect"
+fi
+
+echo
+show_cmd curl -i --max-time 10 "http://${PROXY_HOST}"
+PROXY_HTTP_OUTPUT="$(run_capture 12 curl -i --max-time 10 "http://${PROXY_HOST}")"
+PROXY_HTTP_STATUS=$?
+printf '%s\n' "${PROXY_HTTP_OUTPUT}"
+
+echo
+if [[ "${PROXY_HTTP_STATUS}" -eq 0 ]] && expect_proxy_response "${PROXY_HTTP_OUTPUT}" "${PROXY_EXPECTED_TARGET_HOST}"; then
+  pass "${PROXY_HOST} returned proxied ${PROXY_EXPECTED_TARGET_HOST} content"
+else
+  fail "${PROXY_HOST} did not return the expected PROXY response"
 fi
 
 section "Result"
@@ -212,7 +249,7 @@ elif [[ "${CORE_DNS_STATUS:-1}" -ne 0 ]]; then
   echo "  1. Check CoreDNS logs: tail -n 80 .vdns/logs/coredns.log"
 elif [[ "${GOOGLE_DSCACHE_STATUS:-1}" -ne 0 || "${REDIRECT_DSCACHE_STATUS:-1}" -ne 0 ]]; then
   echo "  1. Check split-DNS: pnpm vdns:status"
-elif [[ "${HTTP_STATUS:-1}" -ne 0 ]]; then
+elif [[ "${HTTP_STATUS:-1}" -ne 0 || "${PROXY_HTTP_STATUS:-1}" -ne 0 ]]; then
   echo "  1. Check redirect logs: tail -n 80 .vdns/logs/redirect-port80.log"
 else
   echo "  1. Inspect status: pnpm vdns:status"

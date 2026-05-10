@@ -10,7 +10,8 @@ export type RedirectConfig = {
   proxyEnabled: boolean;
   proxyTimeoutMs: number;
   proxyMaxBodyBytes: number;
-  proxyFollowRedirects: "manual";
+  proxyMaxRedirects: number;
+  proxyAllowPrivateTargets: boolean;
 };
 
 const tldSchema = z
@@ -40,7 +41,8 @@ export function loadRedirectConfigFromEnv(env: NodeJS.ProcessEnv = process.env):
   const proxyEnabled = boolFromEnv(env.VDNS_PROXY_ENABLED, false);
   const proxyTimeoutMs = intFromEnv("VDNS_PROXY_TIMEOUT_MS", env.VDNS_PROXY_TIMEOUT_MS, 10000);
   const proxyMaxBodyBytes = intFromEnv("VDNS_PROXY_MAX_BODY_BYTES", env.VDNS_PROXY_MAX_BODY_BYTES, 10485760);
-  const proxyFollowRedirects = env.VDNS_PROXY_FOLLOW_REDIRECTS ?? "manual";
+  const proxyMaxRedirects = intFromEnv("VDNS_PROXY_MAX_REDIRECTS", env.VDNS_PROXY_MAX_REDIRECTS, 3);
+  const proxyAllowPrivateTargets = boolFromEnv(env.VDNS_PROXY_ALLOW_PRIVATE_TARGETS, false);
 
   const parsed = z
     .object({
@@ -53,9 +55,22 @@ export function loadRedirectConfigFromEnv(env: NodeJS.ProcessEnv = process.env):
       proxyEnabled: z.boolean(),
       proxyTimeoutMs: z.number().int().positive(),
       proxyMaxBodyBytes: z.number().int().positive(),
-      proxyFollowRedirects: z.literal("manual")
+      proxyMaxRedirects: z.number().int().min(0).max(20),
+      proxyAllowPrivateTargets: z.boolean()
     })
-    .safeParse({ host, port, resolverUrl, tld, defaultStatus, timeoutMs, proxyEnabled, proxyTimeoutMs, proxyMaxBodyBytes, proxyFollowRedirects });
+    .safeParse({
+      host,
+      port,
+      resolverUrl,
+      tld,
+      defaultStatus,
+      timeoutMs,
+      proxyEnabled,
+      proxyTimeoutMs,
+      proxyMaxBodyBytes,
+      proxyMaxRedirects,
+      proxyAllowPrivateTargets
+    });
 
   if (!parsed.success) {
     const message = parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ");
