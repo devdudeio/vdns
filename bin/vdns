@@ -1,0 +1,207 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SELF="$0"
+if command -v perl >/dev/null 2>&1; then
+  REAL_SELF="$(perl -MCwd=abs_path -e 'print abs_path(shift)' "${SELF}")"
+else
+  REAL_SELF="${SELF}"
+fi
+BIN_DIR="$(cd "$(dirname "${REAL_SELF}")" && pwd)"
+
+if [[ -z "${VDNS_HOME:-}" ]]; then
+  if [[ -f "${BIN_DIR}/../scripts/lib/vdns-paths.sh" ]]; then
+    VDNS_HOME="$(cd "${BIN_DIR}/.." && pwd)"
+  elif [[ -f "${BIN_DIR}/../libexec/scripts/lib/vdns-paths.sh" ]]; then
+    VDNS_HOME="$(cd "${BIN_DIR}/../libexec" && pwd)"
+  else
+    VDNS_HOME="$(cd "${BIN_DIR}/.." && pwd)"
+  fi
+  export VDNS_HOME
+fi
+
+# shellcheck disable=SC1091
+source "${VDNS_HOME}/scripts/lib/vdns-paths.sh"
+
+PKG_JSON="${VDNS_HOME}/package.json"
+VERSION="unknown"
+if [[ -f "${PKG_JSON}" ]]; then
+  VERSION="$(node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); console.log(p.version || 'unknown')" "${PKG_JSON}")"
+fi
+
+usage() {
+  cat <<USAGE
+vdns ${VERSION}
+
+Usage:
+  vdns <command> [args]
+
+Commands:
+  setup             Create or update the vDNS env file
+  install           Install macOS launchd services and /etc/resolver entry
+  uninstall         Uninstall macOS launchd services
+  start             Start launchd services
+  stop              Stop launchd services
+  restart           Restart launchd services
+  status            Print local stack status
+  service-status    Print launchd service status
+  demo              Run the vDNS demo regression
+  doctor            Run status and diagnostics
+  logs              Print or tail vDNS log files
+  paths             Print resolved vDNS paths
+  resolver          Run the HTTP resolver
+  gateway           Run the web gateway
+  record            Delegate to the vns record CLI
+  identity          Delegate to the vns identity CLI
+  vdxf              Delegate to the vns vdxf CLI
+  help              Show this help
+
+Global:
+  --version         Print version
+  -h, --help        Show this help
+USAGE
+}
+
+print_paths() {
+  cat <<PATHS
+VDNS_HOME=${VDNS_HOME}
+VDNS_INSTALL_MODE=${VDNS_INSTALL_MODE}
+VDNS_STATE_DIR=${VDNS_STATE_DIR}
+VDNS_ENV_FILE=${VDNS_ENV_FILE}
+VDNS_LOG_DIR=${VDNS_LOG_DIR}
+VDNS_PID_DIR=${VDNS_PID_DIR}
+PATHS
+}
+
+require_macos() {
+  if [[ "$(uname -s)" != "Darwin" ]]; then
+    echo "This command is macOS-only." >&2
+    exit 1
+  fi
+}
+
+run_script() {
+  require_macos
+  local script="$1"
+  shift
+  exec "${VDNS_HOME}/scripts/macos/${script}" "$@"
+}
+
+cli_entrypoint() {
+  local entry="${VDNS_HOME}/dist/cli/index.js"
+  if [[ ! -f "${entry}" ]]; then
+    echo "Missing CLI entrypoint: ${entry}" >&2
+    echo "Run: pnpm build" >&2
+    exit 1
+  fi
+  exec node "${entry}" "$@"
+}
+
+write_setup_env() {
+  local force=0 root_identity="fum@" tld="vrsc" rpc_url="" rpc_user="" rpc_password=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --force) force=1; shift ;;
+      --root) root_identity="${2:?missing --root value}"; shift 2 ;;
+      --tld) tld="${2:?missing --tld value}"; shift 2 ;;
+      --rpc-url) rpc_url="${2:?missing --rpc-url value}"; shift 2 ;;
+      --rpc-user) rpc_user="${2:?missing --rpc-user value}"; shift 2 ;;
+      --rpc-password) rpc_password="${2:?missing --rpc-password value}"; shift 2 ;;
+      -h|--help)
+        cat <<SETUP
+Usage: vdns setup [--force] [--root fum@] [--tld vrsc] [--rpc-url URL] [--rpc-user USER] [--rpc-password PASS]
+
+Creates ${VDNS_ENV_FILE} with mode 600. Existing files are preserved unless --force is used.
+SETUP
+        return 0
+        ;;
+      *) echo "Unknown setup option: $1" >&2; return 1 ;;
+    esac
+  done
+
+  if [[ -f "${VDNS_ENV_FILE}" && "${force}" != "1" ]]; then
+    echo "Env file already exists: ${VDNS_ENV_FILE}" >&2
+    echo "Use --force to overwrite." >&2
+    return 1
+  fi
+
+  if [[ -t 0 ]]; then
+    local input
+    if [[ -z "${rpc_url}" ]]; then
+      read -r -p "Verus RPC URL [http://127.0.0.1:18843]: " input
+      rpc_url="${input:-http://127.0.0.1:18843}"
+    fi
+    if [[ -z "${rpc_user}" ]]; then
+      read -r -p "Verus RPC user []: " rpc_user
+    fi
+    if [[ -z "${rpc_password}" ]]; then
+      read -r -s -p "Verus RPC password []: " rpc_password
+      echo
+    fi
+  fi
+
+  rpc_url="${rpc_url:-http://127.0.0.1:18843}"
+  mkdir -p "$(dirname "${VDNS_ENV_FILE}")" "${VDNS_LOG_DIR}" "${VDNS_PID_DIR}"
+  umask 077
+  cat > "${VDNS_ENV_FILE}" <<ENV
+VNS_MODE=rpc
+VNS_ROOT_IDENTITY=${root_identity}
+VNS_TLD=${tld}
+VNS_DEFAULT_TTL=300
+PORT=8080
+
+VERUS_RPC_URL=${rpc_url}
+VERUS_RPC_USER=${rpc_user}
+VERUS_RPC_PASSWORD=${rpc_password}
+VERUS_RPC_TIMEOUT_MS=10000
+
+VNS_RESOLVER_URL=http://127.0.0.1:8080
+VNS_DNS_PORT=1053
+VNS_REDIRECT_HOST=127.0.0.1
+VNS_REDIRECT_PORT=8081
+VNS_REDIRECT_DEFAULT_STATUS=302
+VNS_REDIRECT_TIMEOUT_MS=5000
+VDNS_PROXY_ENABLED=true
+VDNS_PROXY_TIMEOUT_MS=10000
+VDNS_PROXY_MAX_BODY_BYTES=10485760
+VDNS_PROXY_MAX_REDIRECTS=3
+VDNS_PROXY_ALLOW_PRIVATE_TARGETS=false
+ENV
+  chmod 600 "${VDNS_ENV_FILE}"
+  echo "Created ${VDNS_ENV_FILE}"
+  echo "Next steps:"
+  echo "  vdns install"
+  echo "  vdns start"
+  echo "  vdns status"
+  echo "  vdns demo"
+}
+
+case "${1:-help}" in
+  --version|version) echo "${VERSION}" ;;
+  -h|--help|help) usage ;;
+  paths) print_paths ;;
+  setup) shift; write_setup_env "$@" ;;
+  install) shift; run_script install-services.sh "$@" ;;
+  uninstall) shift; run_script uninstall-services.sh "$@" ;;
+  start) shift; run_script start-services.sh "$@" ;;
+  stop) shift; run_script stop-services.sh "$@" ;;
+  restart) shift; run_script restart-services.sh "$@" ;;
+  status) shift; run_script vdns-status.sh "$@" ;;
+  service-status) shift; run_script print-service-status.sh "$@" ;;
+  demo) shift; run_script vdns-demo.sh "$@" ;;
+  doctor) shift; "${VDNS_HOME}/scripts/macos/vdns-status.sh" "$@"; echo; "${VDNS_HOME}/scripts/macos/diagnose-vdns.sh" "$@" ;;
+  logs)
+    shift
+    mkdir -p "${VDNS_LOG_DIR}"
+    if [[ "${1:-}" == "--tail" || "${1:-}" == "-f" ]]; then
+      shift
+      exec tail -f "${VDNS_LOG_DIR}"/*.log "${VDNS_LOG_DIR}"/*.err "$@"
+    fi
+    echo "Logs: ${VDNS_LOG_DIR}"
+    ls -1 "${VDNS_LOG_DIR}"/*.log "${VDNS_LOG_DIR}"/*.err 2>/dev/null || true
+    ;;
+  resolver) shift; exec node "${VDNS_HOME}/dist/index.js" "$@" ;;
+  gateway) shift; exec node "${VDNS_HOME}/dist/redirect-index.js" "$@" ;;
+  record|identity|vdxf) cmd="$1"; shift; cli_entrypoint "${cmd}" "$@" ;;
+  *) echo "Unknown command: $1" >&2; usage >&2; exit 1 ;;
+esac

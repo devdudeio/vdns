@@ -7,7 +7,9 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/vdns-lib.sh"
+REPO_ROOT="$(vdns_repo_root)"
 ENTRYPOINT="${REPO_ROOT}/dist/redirect-index.js"
 RESOLVER_URL="${VNS_RESOLVER_URL:-http://127.0.0.1:8080}"
 NODE_BIN="${NODE_BIN:-}"
@@ -49,7 +51,7 @@ fi
 
 echo "Starting VNS redirect service on 127.0.0.1:80"
 echo "This runs the built JS entrypoint directly to avoid root-owned pnpm/node_modules cache files."
-echo "Stop it with: sudo scripts/macos/stop-redirect-port80.sh"
+echo "Stop it with: sudo ${SCRIPT_DIR}/stop-redirect-port80.sh"
 echo
 
 cd "${REPO_ROOT}"
@@ -60,6 +62,11 @@ if [[ "${BACKGROUND}" == "1" ]]; then
   fi
 
   mkdir -p "$(dirname "${PID_FILE}")" "$(dirname "${LOG_FILE}")"
+  VDNS_HOME="${VDNS_HOME}" \
+  VDNS_STATE_DIR="${VDNS_STATE_DIR}" \
+  VDNS_ENV_FILE="${VDNS_ENV_FILE}" \
+  VDNS_LOG_DIR="${VDNS_LOG_DIR}" \
+  VDNS_PID_DIR="${VDNS_PID_DIR}" \
   VNS_REDIRECT_HOST="${VNS_REDIRECT_HOST:-127.0.0.1}" \
   VNS_REDIRECT_PORT=80 \
   VNS_RESOLVER_URL="${RESOLVER_URL}" \
@@ -83,6 +90,11 @@ if [[ "${BACKGROUND}" == "1" ]]; then
   exit 0
 fi
 
+VDNS_HOME="${VDNS_HOME}" \
+VDNS_STATE_DIR="${VDNS_STATE_DIR}" \
+VDNS_ENV_FILE="${VDNS_ENV_FILE}" \
+VDNS_LOG_DIR="${VDNS_LOG_DIR}" \
+VDNS_PID_DIR="${VDNS_PID_DIR}" \
 VNS_REDIRECT_HOST="${VNS_REDIRECT_HOST:-127.0.0.1}" \
 VNS_REDIRECT_PORT=80 \
 VNS_RESOLVER_URL="${RESOLVER_URL}" \

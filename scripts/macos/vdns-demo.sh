@@ -123,7 +123,7 @@ require_command dscacheutil
 
 if [[ "${FAILED}" -ne 0 ]]; then
   echo
-  echo "Install missing commands, then rerun: pnpm vdns:demo"
+  echo "Install missing commands, then rerun: vdns demo"
   exit 1
 fi
 
@@ -222,7 +222,7 @@ fi
 section "Result"
 if [[ "${FAILED}" -eq 0 ]]; then
   echo "${GREEN}${BOLD}vDNS demo passed.${RESET}"
-  echo "Stop the local stack with: pnpm vdns:down"
+  echo "Stop the local stack with: vdns stop"
   exit 0
 fi
 
@@ -230,16 +230,16 @@ echo "${RED}${BOLD}vDNS demo failed.${RESET}"
 echo
 echo "Fast recovery checklist:"
 if [[ "${CONFIG_STATUS:-1}" -ne 0 ]]; then
-  echo "  1. Start the stack: pnpm vdns:up"
+  echo "  1. Start the stack: vdns start"
 elif [[ "${CORE_DNS_STATUS:-1}" -ne 0 ]]; then
   echo "  1. Check CoreDNS logs: tail -n 80 .vdns/logs/coredns.log"
 elif [[ "${GOOGLE_DSCACHE_STATUS:-1}" -ne 0 || "${REDIRECT_DSCACHE_STATUS:-1}" -ne 0 ]]; then
-  echo "  1. Check split-DNS: pnpm vdns:status"
+  echo "  1. Check split-DNS: vdns status"
 elif [[ "${PROXY_HTTP_STATUS:-1}" -ne 0 ]]; then
   echo "  1. Check redirect logs: tail -n 80 .vdns/logs/redirect-port80.log"
 else
-  echo "  1. Inspect status: pnpm vdns:status"
+  echo "  1. Inspect status: vdns status"
 fi
 echo "  2. Run diagnostics: scripts/macos/diagnose-vdns.sh"
-echo "  3. Rerun this demo: pnpm vdns:demo"
+echo "  3. Rerun this demo: vdns demo"
 exit 1

@@ -24,8 +24,8 @@ REPO_ROOT="$(vdns_repo_root)"
 cd "${REPO_ROOT}"
 vdns_require_launchd_accessible_repo "${REPO_ROOT}"
 
-if [[ ! -f "${REPO_ROOT}/.env.local" ]]; then
-  echo "Create .env.local first. See .env.vdns.local.example." >&2
+if [[ ! -f "${VDNS_ENV_FILE}" ]]; then
+  echo "Create ${VDNS_ENV_FILE} first. Run: vdns setup" >&2
   exit 1
 fi
 
@@ -56,7 +56,9 @@ COREDNS_CONTENT="$(vdns_generate_plist "${VDNS_COREDNS_LABEL}" "${SCRIPT_DIR}/ru
 REDIRECT_CONTENT="$(vdns_generate_plist "${VDNS_REDIRECT_LABEL}" "${SCRIPT_DIR}/run-redirect-service.sh" "${REPO_ROOT}" "${LOG_DIR}/redirect.launchd.log" "${LOG_DIR}/redirect.launchd.err" "${NODE_BIN}")"
 
 echo "Installing vDNS launchd services"
-echo "Repository: ${REPO_ROOT}"
+echo "VDNS_HOME: ${REPO_ROOT}"
+echo "State: ${VDNS_STATE_DIR}"
+echo "Env: ${VDNS_ENV_FILE}"
 echo "Logs: ${LOG_DIR}"
 echo "User LaunchAgents:"
 echo "  ${RESOLVER_PLIST}"
@@ -106,4 +108,4 @@ vdns_install_root_plist "${REDIRECT_PLIST}" "${REDIRECT_CONTENT}"
 
 echo
 echo "vDNS launchd services installed."
-echo "Start them with: pnpm vdns:start"
+echo "Start them with: vdns start"

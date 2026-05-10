@@ -44,9 +44,9 @@ else
 fi
 
 if [[ "${PURGE}" == "1" ]]; then
-  echo "Removing .vdns logs and pids."
-  rm -rf "${REPO_ROOT}/.vdns/logs" "${REPO_ROOT}/.vdns/pids"
+  echo "Removing vDNS logs and pids."
+  rm -rf "${VDNS_LOG_DIR}" "${VDNS_PID_DIR}"
 fi
 
 echo
-echo "vDNS launchd services uninstalled. .env.local was preserved."
+echo "vDNS launchd services uninstalled. ${VDNS_ENV_FILE} was preserved."

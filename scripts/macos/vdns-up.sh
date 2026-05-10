@@ -16,9 +16,9 @@ VNS_RESOLVER_URL="$(vdns_resolver_url)"
 VNS_REDIRECT_HOST="${VNS_REDIRECT_HOST:-127.0.0.1}"
 VNS_REDIRECT_PORT="${VNS_REDIRECT_PORT:-8081}"
 
-STATE_DIR="${REPO_ROOT}/.vdns"
-PID_DIR="${STATE_DIR}/pids"
-LOG_DIR="${STATE_DIR}/logs"
+STATE_DIR="${VDNS_STATE_DIR}"
+PID_DIR="${VDNS_PID_DIR}"
+LOG_DIR="${VDNS_LOG_DIR}"
 STARTED_RESOLVER=0
 STARTED_COREDNS=0
 STARTED_REDIRECT=0
@@ -111,7 +111,12 @@ if vdns_has_listener_matching TCP 80 "dist/redirect-index.js"; then
   echo "Port 80 redirect service already running"
 else
   echo "Starting redirect service on 127.0.0.1:80; sudo may prompt."
-  sudo VNS_BACKGROUND=1 \
+  sudo VDNS_HOME="${VDNS_HOME}" \
+    VDNS_STATE_DIR="${VDNS_STATE_DIR}" \
+    VDNS_ENV_FILE="${VDNS_ENV_FILE}" \
+    VDNS_LOG_DIR="${VDNS_LOG_DIR}" \
+    VDNS_PID_DIR="${VDNS_PID_DIR}" \
+    VNS_BACKGROUND=1 \
     VNS_PID_FILE="${PID_DIR}/redirect.pid" \
     VNS_LOG_FILE="${LOG_DIR}/redirect-port80.log" \
     VNS_RESOLVER_URL="${VNS_RESOLVER_URL}" \
@@ -136,10 +141,10 @@ echo "vDNS is up."
 echo "Resolver API: ${VNS_RESOLVER_URL}"
 echo "CoreDNS: 127.0.0.1:${VNS_DNS_PORT}"
 echo "macOS resolver: ${RESOLVER_FILE}"
-echo "HTTP redirects: http://*.${VNS_TLD} via 127.0.0.1:80"
+echo "HTTP gateway: http://*.${VNS_TLD} via 127.0.0.1:80"
 echo
 echo "Try:"
-echo "  pnpm vdns:status"
-echo "  pnpm vdns:demo"
+echo "  vdns status"
+echo "  vdns demo"
 echo "  dscacheutil -q host -a name google.${VNS_TLD}"
 echo "  curl -i --max-time 10 http://chainvue.${VNS_TLD}"

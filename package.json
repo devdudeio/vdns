@@ -1,11 +1,12 @@
 {
   "name": "vns",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "VerusID-native naming layer MVP",
   "type": "module",
   "private": false,
   "bin": {
-    "vns": "./dist/cli/index.js"
+    "vns": "./dist/cli/index.js",
+    "vdns": "./bin/vdns"
   },
   "license": "MIT",
   "scripts": {

@@ -11,7 +11,7 @@ cd "${REPO_ROOT}"
 vdns_load_env "${REPO_ROOT}" >/dev/null || true
 
 VNS_DNS_PORT="${VNS_DNS_PORT:-1053}"
-PID_DIR="${REPO_ROOT}/.vdns/pids"
+PID_DIR="${VDNS_PID_DIR}"
 
 echo "Stopping local vDNS stack"
 vdns_stop_pid_file "${PID_DIR}/resolver.pid" "dist/index.js" "HTTP resolver"

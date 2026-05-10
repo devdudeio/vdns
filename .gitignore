@@ -11,3 +11,5 @@ coredns/coredns-vns
 !.env.mock.example
 !.env.vdns.local.example
 .vdns/
+.release/
+dist-release/

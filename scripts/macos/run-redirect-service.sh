@@ -10,7 +10,7 @@ REPO_ROOT="$(vdns_repo_root)"
 cd "${REPO_ROOT}"
 
 if ! vdns_load_env "${REPO_ROOT}" >/dev/null; then
-  echo "Create .env.local first. See .env.vdns.local.example." >&2
+  echo "Create ${VDNS_ENV_FILE} first. Run: vdns setup" >&2
   exit 1
 fi
 

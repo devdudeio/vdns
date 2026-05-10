@@ -5,13 +5,11 @@ VDNS_COREDNS_LABEL="$(vdns_launchd_coredns_label)"
 VDNS_REDIRECT_LABEL="$(vdns_launchd_redirect_label)"
 
 vdns_service_log_dir() {
-  local root="$1"
-  echo "${root}/.vdns/logs"
+  echo "${VDNS_LOG_DIR}"
 }
 
 vdns_service_pid_dir() {
-  local root="$1"
-  echo "${root}/.vdns/pids"
+  echo "${VDNS_PID_DIR}"
 }
 
 vdns_repo_is_tcc_protected() {
@@ -34,7 +32,7 @@ vdns_repo_is_tcc_protected() {
 vdns_require_launchd_accessible_repo() {
   local root="$1"
 
-  if [[ "${VDNS_ALLOW_TCC_PROTECTED_REPO:-0}" == "1" ]]; then
+  if [[ "${VDNS_ALLOW_TCC_PROTECTED_REPO:-0}" == "1" || "${VDNS_INSTALL_MODE:-checkout}" == "homebrew" ]]; then
     return 0
   fi
 
@@ -73,6 +71,7 @@ vdns_generate_plist() {
   local stderr_path="$5"
   local node_bin="${6:-}"
   local escaped_label escaped_program escaped_working_dir escaped_stdout escaped_stderr escaped_node
+  local escaped_vdns_home escaped_vdns_state_dir escaped_vdns_env_file escaped_vdns_log_dir escaped_vdns_pid_dir
 
   escaped_label="$(vdns_xml_escape "${label}")"
   escaped_program="$(vdns_xml_escape "${program}")"
@@ -80,6 +79,11 @@ vdns_generate_plist() {
   escaped_stdout="$(vdns_xml_escape "${stdout_path}")"
   escaped_stderr="$(vdns_xml_escape "${stderr_path}")"
   escaped_node="$(vdns_xml_escape "${node_bin}")"
+  escaped_vdns_home="$(vdns_xml_escape "${VDNS_HOME}")"
+  escaped_vdns_state_dir="$(vdns_xml_escape "${VDNS_STATE_DIR}")"
+  escaped_vdns_env_file="$(vdns_xml_escape "${VDNS_ENV_FILE}")"
+  escaped_vdns_log_dir="$(vdns_xml_escape "${VDNS_LOG_DIR}")"
+  escaped_vdns_pid_dir="$(vdns_xml_escape "${VDNS_PID_DIR}")"
 
   cat <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -106,6 +110,16 @@ vdns_generate_plist() {
   <dict>
     <key>PATH</key>
     <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>VDNS_HOME</key>
+    <string>${escaped_vdns_home}</string>
+    <key>VDNS_STATE_DIR</key>
+    <string>${escaped_vdns_state_dir}</string>
+    <key>VDNS_ENV_FILE</key>
+    <string>${escaped_vdns_env_file}</string>
+    <key>VDNS_LOG_DIR</key>
+    <string>${escaped_vdns_log_dir}</string>
+    <key>VDNS_PID_DIR</key>
+    <string>${escaped_vdns_pid_dir}</string>
 PLIST
 
   if [[ -n "${node_bin}" ]]; then

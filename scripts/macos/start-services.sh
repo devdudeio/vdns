@@ -12,8 +12,8 @@ REPO_ROOT="$(vdns_repo_root)"
 cd "${REPO_ROOT}"
 vdns_require_launchd_accessible_repo "${REPO_ROOT}"
 
-if [[ ! -f "${REPO_ROOT}/.env.local" ]]; then
-  echo "Create .env.local first. See .env.vdns.local.example." >&2
+if [[ ! -f "${VDNS_ENV_FILE}" ]]; then
+  echo "Create ${VDNS_ENV_FILE} first. Run: vdns setup" >&2
   exit 1
 fi
 
@@ -21,10 +21,10 @@ vdns_load_env "${REPO_ROOT}" >/dev/null
 PORT="${PORT:-8080}"
 VNS_DNS_PORT="${VNS_DNS_PORT:-1053}"
 
-vdns_require_file "$(vdns_resolver_plist)" "Missing LaunchAgent: $(vdns_resolver_plist). Run: pnpm vdns:install"
-vdns_require_file "$(vdns_coredns_plist)" "Missing LaunchAgent: $(vdns_coredns_plist). Run: pnpm vdns:install"
+vdns_require_file "$(vdns_resolver_plist)" "Missing LaunchAgent: $(vdns_resolver_plist). Run: vdns install"
+vdns_require_file "$(vdns_coredns_plist)" "Missing LaunchAgent: $(vdns_coredns_plist). Run: vdns install"
 if [[ ! -f "$(vdns_redirect_plist)" ]]; then
-  echo "Missing LaunchDaemon: $(vdns_redirect_plist). Run: pnpm vdns:install" >&2
+  echo "Missing LaunchDaemon: $(vdns_redirect_plist). Run: vdns install" >&2
   exit 1
 fi
 
@@ -81,4 +81,4 @@ fi
 
 echo
 echo "vDNS launchd services started."
-echo "Check status with: pnpm vdns:service-status"
+echo "Check status with: vdns service-status"

@@ -14,7 +14,7 @@ vdns_load_env "${REPO_ROOT}" >/dev/null || true
 
 PORT="${PORT:-8080}"
 VNS_DNS_PORT="${VNS_DNS_PORT:-1053}"
-LOG_DIR="$(vdns_service_log_dir "${REPO_ROOT}")"
+LOG_DIR="${VDNS_LOG_DIR}"
 GUI_DOMAIN="$(vdns_launchd_gui_domain)"
 
 echo "vDNS launchd service status"

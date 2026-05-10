@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+VDNS_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "${VDNS_LIB_DIR}/../lib/vdns-paths.sh"
+
 vdns_require_darwin() {
   if [[ "$(uname -s)" != "Darwin" ]]; then
     echo "This helper is macOS-only." >&2
@@ -8,16 +12,16 @@ vdns_require_darwin() {
 }
 
 vdns_repo_root() {
-  local script_dir
-  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  cd "${script_dir}/../.." && pwd
+  echo "${VDNS_HOME}"
 }
 
 vdns_load_env() {
-  local root="$1"
+  local root="${1:-${VDNS_HOME}}"
   local env_file=""
 
-  if [[ -f "${root}/.env.local" ]]; then
+  if [[ -n "${VDNS_ENV_FILE:-}" && -f "${VDNS_ENV_FILE}" ]]; then
+    env_file="${VDNS_ENV_FILE}"
+  elif [[ -f "${root}/.env.local" ]]; then
     env_file="${root}/.env.local"
   elif [[ -f "${root}/.env.vdns.local" ]]; then
     env_file="${root}/.env.vdns.local"
@@ -38,9 +42,9 @@ vdns_require_env() {
 
   if ! loaded="$(vdns_load_env "${root}")"; then
     echo "Missing local vDNS environment." >&2
-    echo "Copy the example and edit RPC settings first:" >&2
-    echo "  cp .env.vdns.local.example .env.local" >&2
-    echo "  \$EDITOR .env.local" >&2
+    echo "Create the env file first:" >&2
+    echo "  vdns setup" >&2
+    echo "or copy ${root}/.env.vdns.local.example to ${VDNS_ENV_FILE} and edit RPC settings." >&2
     exit 1
   fi
 
@@ -79,6 +83,9 @@ vdns_timeout() {
 }
 
 vdns_safe_config() {
+  echo "VDNS_HOME=${VDNS_HOME}"
+  echo "VDNS_STATE_DIR=${VDNS_STATE_DIR}"
+  echo "VDNS_ENV_FILE=${VDNS_ENV_FILE}"
   echo "VNS_MODE=${VNS_MODE:-rpc}"
   echo "VNS_ROOT_IDENTITY=${VNS_ROOT_IDENTITY:-fum@}"
   echo "VNS_TLD=${VNS_TLD:-vrsc}"

@@ -68,6 +68,23 @@ pnpm build
 
 Runtime defaults to RPC mode. `pnpm dev` and `pnpm start` require `VERUS_RPC_URL` from the shell or `.env.local`; use `pnpm dev:mock` for fixture mode.
 
+
+## Homebrew Alpha
+
+vDNS can be installed from a custom Homebrew tap once a release artifact has been published:
+
+```sh
+brew tap devdude/vdns
+brew install vdns
+vdns setup
+vdns install
+vdns start
+vdns status
+vdns demo
+```
+
+`brew install` only installs files. It does not install launchd services, write `/etc/resolver`, or start background processes. See [docs/homebrew.md](docs/homebrew.md) for release and tap maintenance details.
+
 ## Demo
 
 The fastest polished demo is:

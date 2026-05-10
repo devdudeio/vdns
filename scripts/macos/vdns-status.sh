@@ -19,7 +19,7 @@ VNS_DNS_PORT="${VNS_DNS_PORT:-1053}"
 VNS_RESOLVER_URL="$(vdns_resolver_url)"
 VNS_REDIRECT_PORT="${VNS_REDIRECT_PORT:-8081}"
 RESOLVER_FILE="/etc/resolver/${VNS_TLD}"
-PID_DIR="${REPO_ROOT}/.vdns/pids"
+PID_DIR="${VDNS_PID_DIR}"
 
 echo "vDNS macOS status"
 vdns_safe_config
