@@ -74,7 +74,7 @@ Runtime defaults to RPC mode. `pnpm dev` and `pnpm start` require `VERUS_RPC_URL
 vDNS can be installed from a custom Homebrew tap once a release artifact has been published:
 
 ```sh
-brew tap devdude/vdns
+brew tap devdudeio/vdns
 brew install vdns
 vdns setup
 vdns install

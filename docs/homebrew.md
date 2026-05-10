@@ -5,7 +5,7 @@ vDNS is packaged for Homebrew through a custom tap, not Homebrew Core.
 User flow:
 
 ```sh
-brew tap devdude/vdns
+brew tap devdudeio/vdns
 brew install vdns
 vdns setup
 vdns install
@@ -69,7 +69,7 @@ vdns setup \
 ## Tap Maintenance
 
 1. Create the tap repository:
-   `github.com/devdude/homebrew-vdns`
+   `github.com/devdudeio/homebrew-vdns`
 2. Copy `packaging/homebrew/vdns.rb` to `Formula/vdns.rb` in the tap.
 3. Build the release artifact from this repo:
 
@@ -83,7 +83,7 @@ vdns setup \
 7. Test the tap:
 
    ```sh
-   brew tap devdude/vdns
+   brew tap devdudeio/vdns
    brew install vdns
    vdns --version
    vdns paths

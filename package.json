@@ -1,6 +1,6 @@
 {
   "name": "vns",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "VerusID-native naming layer MVP",
   "type": "module",
   "private": false,

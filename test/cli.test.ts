@@ -12,20 +12,31 @@ type MockRpcClient = {
   updateIdentity: ReturnType<typeof vi.fn<[unknown], Promise<unknown | null>>>;
 };
 
+type CapturedPassThrough = PassThrough & { capturedChunks: Buffer[] };
+
+function makeCapturedPassThrough(): CapturedPassThrough {
+  const stream = new PassThrough() as CapturedPassThrough;
+  stream.capturedChunks = [];
+  stream.on("data", (chunk: Buffer | string) => {
+    stream.capturedChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  });
+  return stream;
+}
+
 function makeIo(stdinText = ""): {
-  stdout: PassThrough;
-  stderr: PassThrough;
+  stdout: CapturedPassThrough;
+  stderr: CapturedPassThrough;
   stdin: Readable;
 } {
   return {
-    stdout: new PassThrough(),
-    stderr: new PassThrough(),
+    stdout: makeCapturedPassThrough(),
+    stderr: makeCapturedPassThrough(),
     stdin: Readable.from([stdinText])
   };
 }
 
-function streamText(stream: PassThrough): string {
-  return String(stream.read() ?? "");
+function streamText(stream: CapturedPassThrough): string {
+  return Buffer.concat(stream.capturedChunks).toString("utf8");
 }
 
 function parseJsonOutputs(stdout: string): Array<Record<string, any>> {
