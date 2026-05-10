@@ -81,7 +81,7 @@ pnpm vdns:demo
 `pnpm vdns:demo` is a terminal walkthrough of the complete MVP path:
 
 ```text
-VerusID records -> HTTP resolver -> CoreDNS -> macOS split-DNS -> local HTTP redirect
+VerusID records -> HTTP resolver -> CoreDNS -> macOS split-DNS -> local HTTP gateway
 ```
 
 It verifies:
@@ -90,7 +90,8 @@ It verifies:
 - `google.vrsc` resolves to `142.250.181.238`
 - `chainvue.vrsc` resolves to `127.0.0.1`
 - the `chainvue.vrsc` VerusID record contains `REDIRECT -> http://chainvue.io/`
-- `curl http://chainvue.vrsc` returns `302 Location: http://chainvue.io/`
+- the `chainvue.vrsc` VerusID record contains `PROXY -> https://chainvue.io/`
+- `curl http://chainvue.vrsc` returns `x-vdns-proxy: 1` with target host `chainvue.io`
 
 Expected final output:
 
@@ -108,6 +109,8 @@ The demo uses these defaults, which can be overridden for another showcase ident
 | `VDNS_DEMO_REDIRECT_HOST` | `chainvue.vrsc` |
 | `VDNS_DEMO_REDIRECT_A` | `127.0.0.1` |
 | `VDNS_DEMO_REDIRECT_LOCATION` | `http://chainvue.io/` |
+| `VDNS_DEMO_PROXY_HOST` | `chainvue.vrsc` |
+| `VDNS_DEMO_PROXY_TARGET_HOST` | `chainvue.io` |
 
 If the demo fails, run:
 
@@ -152,8 +155,7 @@ The demo assumes these records exist under `VNS_ROOT_IDENTITY=fum@` and `VNS_TLD
 google.fum@:   A @ -> 142.250.181.238
 chainvue.fum@: A @ -> 127.0.0.1
 chainvue.fum@: REDIRECT @ -> http://chainvue.io/ status 302
-verus.fum@:    A @ -> 127.0.0.1
-verus.fum@:    PROXY @ -> https://verus.io/
+chainvue.fum@: PROXY @ -> https://chainvue.io/
 ```
 
 The `vns` CLI can prepare those writes:
@@ -162,8 +164,7 @@ The `vns` CLI can prepare those writes:
 node dist/cli/index.js record set google.fum@ A @ 142.250.181.238 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
 node dist/cli/index.js record set chainvue.fum@ A @ 127.0.0.1 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
 node dist/cli/index.js record set chainvue.fum@ REDIRECT @ http://chainvue.io/ --status 302 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
-node dist/cli/index.js record set verus.fum@ A @ 127.0.0.1 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
-node dist/cli/index.js record set verus.fum@ PROXY @ https://verus.io/ --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
+node dist/cli/index.js record set chainvue.fum@ PROXY @ https://chainvue.io/ --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
 ```
 
 Start the local vDNS stack:
@@ -265,13 +266,13 @@ curl http://localhost:8080/resolve-domain/myname.vrsc
 
 The response identity will be `myname.VERUSNAMESERVICE@`.
 
-Run the local redirect service in a second terminal:
+Run the local web gateway in a second terminal:
 
 ```sh
-VNS_RESOLVER_URL=http://127.0.0.1:8080 VNS_REDIRECT_PORT=8081 pnpm redirect:dev
+VDNS_PROXY_ENABLED=true VNS_RESOLVER_URL=http://127.0.0.1:8080 VNS_REDIRECT_PORT=8081 pnpm redirect:dev
 ```
 
-For a local web redirect, `chainvue.fum@` should contain `REDIRECT @ -> http://chainvue.io/` and `A @ -> 127.0.0.1`, and macOS split-DNS should resolve `chainvue.vrsc` to `127.0.0.1`. Then test:
+For the Chainvue local gateway demo, `chainvue.fum@` should contain `A @ -> 127.0.0.1`, `REDIRECT @ -> http://chainvue.io/`, and `PROXY @ -> https://chainvue.io/`. With `VDNS_PROXY_ENABLED=true`, PROXY wins over REDIRECT. Then test:
 
 ```sh
 curl http://127.0.0.1:8081/health

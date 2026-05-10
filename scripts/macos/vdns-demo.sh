@@ -18,8 +18,8 @@ GOOGLE_EXPECTED_A="${VDNS_DEMO_GOOGLE_A:-142.250.181.238}"
 REDIRECT_HOST="${VDNS_DEMO_REDIRECT_HOST:-chainvue.${VNS_TLD}}"
 REDIRECT_EXPECTED_A="${VDNS_DEMO_REDIRECT_A:-127.0.0.1}"
 REDIRECT_EXPECTED_LOCATION="${VDNS_DEMO_REDIRECT_LOCATION:-http://chainvue.io/}"
-PROXY_HOST="${VDNS_DEMO_PROXY_HOST:-verus.${VNS_TLD}}"
-PROXY_EXPECTED_TARGET_HOST="${VDNS_DEMO_PROXY_TARGET_HOST:-verus.io}"
+PROXY_HOST="${VDNS_DEMO_PROXY_HOST:-chainvue.${VNS_TLD}}"
+PROXY_EXPECTED_TARGET_HOST="${VDNS_DEMO_PROXY_TARGET_HOST:-chainvue.io}"
 FAILED=0
 
 if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
@@ -100,8 +100,7 @@ expect_proxy_response() {
 
   printf '%s\n' "${output}" | grep -Eiq '^HTTP/[^ ]+ 200 ' &&
     printf '%s\n' "${output}" | grep -Eiq '^x-vdns-proxy: 1\r?$' &&
-    printf '%s\n' "${output}" | grep -Eiq "^x-vdns-proxy-target-host: ${target_host}\r?$" &&
-    printf '%s\n' "${output}" | grep -Eiq 'verus|blockchain|currency|PBaaS'
+    printf '%s\n' "${output}" | grep -Eiq "^x-vdns-proxy-target-host: ${target_host}\r?$"
 }
 
 run_show() {
@@ -111,7 +110,7 @@ run_show() {
 }
 
 echo "${BOLD}vDNS Terminal Demo${RESET}"
-echo "VerusID records -> HTTP resolver -> CoreDNS -> macOS split-DNS -> local HTTP redirect"
+echo "VerusID records -> HTTP resolver -> CoreDNS -> macOS split-DNS -> local HTTP gateway"
 echo
 echo "Demo hosts:"
 echo "  ${GOOGLE_HOST} -> ${GOOGLE_EXPECTED_A}"
@@ -208,19 +207,6 @@ else
 fi
 
 section "5. Browser-style HTTP gateway"
-show_cmd curl -i --max-time 10 "http://${REDIRECT_HOST}"
-HTTP_OUTPUT="$(run_capture 12 curl -i --max-time 10 "http://${REDIRECT_HOST}")"
-HTTP_STATUS=$?
-printf '%s\n' "${HTTP_OUTPUT}"
-
-echo
-if [[ "${HTTP_STATUS}" -eq 0 ]] && expect_http_redirect "${HTTP_OUTPUT}" "${REDIRECT_EXPECTED_LOCATION}"; then
-  pass "${REDIRECT_HOST} returned 302 Location: ${REDIRECT_EXPECTED_LOCATION}"
-else
-  fail "${REDIRECT_HOST} did not return the expected HTTP redirect"
-fi
-
-echo
 show_cmd curl -i --max-time 10 "http://${PROXY_HOST}"
 PROXY_HTTP_OUTPUT="$(run_capture 12 curl -i --max-time 10 "http://${PROXY_HOST}")"
 PROXY_HTTP_STATUS=$?
@@ -249,7 +235,7 @@ elif [[ "${CORE_DNS_STATUS:-1}" -ne 0 ]]; then
   echo "  1. Check CoreDNS logs: tail -n 80 .vdns/logs/coredns.log"
 elif [[ "${GOOGLE_DSCACHE_STATUS:-1}" -ne 0 || "${REDIRECT_DSCACHE_STATUS:-1}" -ne 0 ]]; then
   echo "  1. Check split-DNS: pnpm vdns:status"
-elif [[ "${HTTP_STATUS:-1}" -ne 0 || "${PROXY_HTTP_STATUS:-1}" -ne 0 ]]; then
+elif [[ "${PROXY_HTTP_STATUS:-1}" -ne 0 ]]; then
   echo "  1. Check redirect logs: tail -n 80 .vdns/logs/redirect-port80.log"
 else
   echo "  1. Inspect status: pnpm vdns:status"

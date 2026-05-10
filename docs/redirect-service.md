@@ -17,10 +17,10 @@ The `A` record lets local split-DNS resolve `chainvue.vrsc` to `127.0.0.1`. The 
 
 ## PROXY Flow
 
-For `verus.vrsc`, the identity `verus.fum@` can contain:
+For `chainvue.vrsc`, the identity `chainvue.fum@` can also contain:
 
 ```text
-PROXY @ -> https://verus.io/
+PROXY @ -> https://chainvue.io/
 A @ -> 127.0.0.1
 ```
 
