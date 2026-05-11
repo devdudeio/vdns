@@ -9,6 +9,7 @@ vdns logs
 ```
 
 Use `vdns doctor --strict` when validating the demo records before a release or public demo.
+Use `vdns doctor --https` when validating experimental local HTTPS.
 
 ## `dig google.vrsc` Is Empty On macOS
 
@@ -121,3 +122,45 @@ vdns logs gateway --tail
 
 PROXY targets that resolve to localhost, private, or internal literal addresses are blocked by default.
 
+## `https://verus.vrsc` Shows A Browser Warning
+
+Check local HTTPS status:
+
+```sh
+vdns https status
+vdns doctor --https
+```
+
+Common fixes:
+
+```sh
+vdns https init-ca
+vdns https install-ca
+grep VDNS_HTTPS_ENABLED ~/.vdns/.env.local
+vdns restart
+```
+
+If `curl -k https://verus.vrsc` works but `curl https://verus.vrsc` fails, the HTTPS gateway is responding but the local CA is not trusted by the client.
+
+## Port 443 Conflicts
+
+The HTTPS gateway binds `127.0.0.1:443` only when `VDNS_HTTPS_ENABLED=true`.
+
+Check listeners:
+
+```sh
+sudo lsof -nP -iTCP:443 -sTCP:LISTEN
+vdns logs gateway --tail
+```
+
+Stop the conflicting service or set `VDNS_HTTPS_PORT` to a different local port for testing.
+
+## Missing Local CA
+
+If the gateway logs say `VDNS_HTTPS_ENABLED=true requires a local CA`, create and trust the local CA:
+
+```sh
+vdns https init-ca
+vdns https install-ca
+vdns restart
+```

@@ -97,6 +97,13 @@ Set a proxy target:
 node dist/cli/index.js record set chainvue.dude@ PROXY @ https://example.com/ --ttl 300
 ```
 
+Set a SITE record:
+
+```sh
+node dist/cli/index.js site build-manifest ./dist/site --base-uri https://cdn.example/site/ --out vdns-site-manifest.json
+node dist/cli/index.js site publish ./dist/site chainvue.dude@ --base-uri https://cdn.example/site/ --manifest-uri https://cdn.example/site/vdns-site-manifest.json --yes
+```
+
 Set a TLSA fingerprint:
 
 ```sh

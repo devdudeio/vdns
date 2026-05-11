@@ -12,6 +12,18 @@ export type RedirectConfig = {
   proxyMaxBodyBytes: number;
   proxyMaxRedirects: number;
   proxyAllowPrivateTargets: boolean;
+  httpsEnabled: boolean;
+  httpsHost: string;
+  httpsPort: number;
+  tlsTld: string;
+  tlsCaDir?: string | undefined;
+  tlsCertDir?: string | undefined;
+  tlsCertValidityDays: number;
+  forceHttps: boolean;
+  siteCacheEnabled: boolean;
+  siteMaxFileBytes: number;
+  siteMaxTotalManifestBytes: number;
+  siteAllowFileUri: boolean;
 };
 
 const tldSchema = z
@@ -43,6 +55,18 @@ export function loadRedirectConfigFromEnv(env: NodeJS.ProcessEnv = process.env):
   const proxyMaxBodyBytes = intFromEnv("VDNS_PROXY_MAX_BODY_BYTES", env.VDNS_PROXY_MAX_BODY_BYTES, 10485760);
   const proxyMaxRedirects = intFromEnv("VDNS_PROXY_MAX_REDIRECTS", env.VDNS_PROXY_MAX_REDIRECTS, 3);
   const proxyAllowPrivateTargets = boolFromEnv(env.VDNS_PROXY_ALLOW_PRIVATE_TARGETS, false);
+  const httpsEnabled = boolFromEnv(env.VDNS_HTTPS_ENABLED, false);
+  const httpsHost = env.VDNS_HTTPS_HOST ?? "127.0.0.1";
+  const httpsPort = intFromEnv("VDNS_HTTPS_PORT", env.VDNS_HTTPS_PORT, 443);
+  const tlsTld = env.VDNS_TLS_TLD ?? tld;
+  const tlsCaDir = env.VDNS_TLS_CA_DIR;
+  const tlsCertDir = env.VDNS_TLS_CERT_DIR;
+  const tlsCertValidityDays = intFromEnv("VDNS_TLS_CERT_VALIDITY_DAYS", env.VDNS_TLS_CERT_VALIDITY_DAYS, 397);
+  const forceHttps = boolFromEnv(env.VDNS_FORCE_HTTPS, false);
+  const siteCacheEnabled = boolFromEnv(env.VDNS_SITE_CACHE_ENABLED, true);
+  const siteMaxFileBytes = intFromEnv("VDNS_SITE_MAX_FILE_BYTES", env.VDNS_SITE_MAX_FILE_BYTES, 10485760);
+  const siteMaxTotalManifestBytes = intFromEnv("VDNS_SITE_MAX_TOTAL_MANIFEST_BYTES", env.VDNS_SITE_MAX_TOTAL_MANIFEST_BYTES, 1048576);
+  const siteAllowFileUri = boolFromEnv(env.VDNS_SITE_ALLOW_FILE_URI, false);
 
   const parsed = z
     .object({
@@ -56,7 +80,19 @@ export function loadRedirectConfigFromEnv(env: NodeJS.ProcessEnv = process.env):
       proxyTimeoutMs: z.number().int().positive(),
       proxyMaxBodyBytes: z.number().int().positive(),
       proxyMaxRedirects: z.number().int().min(0).max(20),
-      proxyAllowPrivateTargets: z.boolean()
+      proxyAllowPrivateTargets: z.boolean(),
+      httpsEnabled: z.boolean(),
+      httpsHost: z.string().min(1),
+      httpsPort: z.number().int().min(1).max(65535),
+      tlsTld: tldSchema,
+      tlsCaDir: z.string().min(1).optional(),
+      tlsCertDir: z.string().min(1).optional(),
+      tlsCertValidityDays: z.number().int().positive().max(397),
+      forceHttps: z.boolean(),
+      siteCacheEnabled: z.boolean(),
+      siteMaxFileBytes: z.number().int().positive(),
+      siteMaxTotalManifestBytes: z.number().int().positive(),
+      siteAllowFileUri: z.boolean()
     })
     .safeParse({
       host,
@@ -69,7 +105,19 @@ export function loadRedirectConfigFromEnv(env: NodeJS.ProcessEnv = process.env):
       proxyTimeoutMs,
       proxyMaxBodyBytes,
       proxyMaxRedirects,
-      proxyAllowPrivateTargets
+      proxyAllowPrivateTargets,
+      httpsEnabled,
+      httpsHost,
+      httpsPort,
+      tlsTld,
+      tlsCaDir,
+      tlsCertDir,
+      tlsCertValidityDays,
+      forceHttps,
+      siteCacheEnabled,
+      siteMaxFileBytes,
+      siteMaxTotalManifestBytes,
+      siteAllowFileUri
     });
 
   if (!parsed.success) {

@@ -42,6 +42,24 @@ describe("vdns wrapper", () => {
     expect(stdout).toContain("vdns doctor [--strict]");
   });
 
+  it("routes https help and status through the built entrypoint", async () => {
+    const stateDir = await mkdtemp(path.join(os.tmpdir(), "vdns-wrapper-https-"));
+    try {
+      const help = await runVdns(["https", "--help"], { VDNS_STATE_DIR: stateDir });
+      expect(help.stdout).toContain("vdns https <command>");
+
+      const status = await runVdns(["https", "status"], {
+        VDNS_STATE_DIR: stateDir,
+        VDNS_ENV_FILE: path.join(stateDir, ".env.local"),
+        VDNS_HTTPS_ENABLED: ""
+      });
+      expect(status.stdout).toContain("HTTPS env enabled: false");
+      expect(status.stdout).toContain("CA cert: missing");
+    } finally {
+      await rm(stateDir, { recursive: true, force: true });
+    }
+  });
+
   it("prints expected log paths by service", async () => {
     const stateDir = await mkdtemp(path.join(os.tmpdir(), "vdns-wrapper-logs-"));
     try {

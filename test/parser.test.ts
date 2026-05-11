@@ -15,6 +15,7 @@ const vdxfIds: VnsVdxfIds = {
     TXT: "id:txt",
     REDIRECT: "id:redirect",
     PROXY: "id:proxy",
+    SITE: "id:site",
     TLSA: "id:tlsa"
   }
 };

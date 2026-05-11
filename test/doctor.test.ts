@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile, mkdir, chmod } from "node:fs/promises";
+import { mkdtemp, writeFile, mkdir, chmod, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -64,6 +64,7 @@ describe("doctor internals", () => {
 
     const ctx: DoctorContext = {
       strict: true,
+      requireHttps: false,
       home: tmp,
       installMode: "checkout",
       stateDir: tmp,
@@ -115,6 +116,44 @@ describe("doctor internals", () => {
     expect(results.some((result) => result.status === "FAIL" && result.label === "resolver mode")).toBe(true);
     expect(results.some((result) => result.status === "FAIL" && result.section === "Records")).toBe(true);
     expect(formatResults(results)).toContain("Check VERUS_RPC_URL, rpcbind, rpcallowip, credentials");
+  });
+
+  it("reports HTTPS disabled as warning and --https as failure", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "vdns-doctor-https-"));
+    try {
+      const ctx: DoctorContext = {
+        strict: false,
+        requireHttps: true,
+        home: tmp,
+        installMode: "checkout",
+        stateDir: tmp,
+        envFile: path.join(tmp, ".env.local"),
+        logDir: path.join(tmp, "logs"),
+        pidDir: path.join(tmp, "pids"),
+        version: "test",
+        env: {
+          HOME: tmp,
+          VNS_MODE: "rpc",
+          VNS_ROOT_IDENTITY: "fum@",
+          VNS_TLD: "vrsc",
+          VERUS_RPC_URL: "http://127.0.0.1:18843",
+          VNS_RESOLVER_URL: "http://127.0.0.1:8080",
+          VDNS_HTTPS_ENABLED: "false"
+        }
+      };
+      const fetchImpl = async () => jsonResponse({});
+      const execFile = async () => ({ status: 1, stdout: "", stderr: "" });
+
+      const results = await runDoctorChecks(ctx, { fetch: fetchImpl as typeof fetch, execFile });
+      expect(results.some((result) =>
+        result.section === "HTTPS" &&
+        result.label === "HTTPS enabled" &&
+        result.status === "FAIL" &&
+        result.message.includes("HTTPS is not enabled")
+      )).toBe(true);
+    } finally {
+      await rm(tmp, { recursive: true, force: true });
+    }
   });
 });
 

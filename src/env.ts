@@ -6,7 +6,11 @@ export function loadEnvFiles(options: { cwd?: string; env?: NodeJS.ProcessEnv } 
   const cwd = options.cwd ?? process.cwd();
   const shellEnvKeys = new Set(Object.keys(env));
   loadEnvFile(`${cwd}/.env`, env, shellEnvKeys);
-  loadEnvFile(`${cwd}/.env.local`, env, shellEnvKeys);
+  if (env.VDNS_ENV_FILE) {
+    loadEnvFile(env.VDNS_ENV_FILE, env, shellEnvKeys);
+  } else {
+    loadEnvFile(`${cwd}/.env.local`, env, shellEnvKeys);
+  }
 }
 
 function loadEnvFile(path: string, env: NodeJS.ProcessEnv, shellEnvKeys: Set<string>): void {

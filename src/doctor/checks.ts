@@ -1,6 +1,9 @@
 import { access, readFile, stat } from "node:fs/promises";
+import net from "node:net";
 import path from "node:path";
 import { VerusRpcClient } from "../rpc/verusRpcClient.js";
+import { caStatus } from "../tls/certs.js";
+import { deriveTlsPaths } from "../tls/paths.js";
 import { applyStrict, type CheckResult, type DoctorContext } from "./types.js";
 
 type ExecResult = {
@@ -17,8 +20,8 @@ export type DoctorDeps = {
   fetch?: FetchLike;
 };
 
-const staleDocumentsPath = path.join("/Users", "robertlech", "Documents", "vns");
-const checkoutPath = path.join("/Users", "robertlech", "Developer", "vns");
+const staleDocumentsPathParts = ["", "Users", "robertlech", "Documents", "vns"];
+const checkoutPathParts = ["", "Users", "robertlech", "Developer", "vns"];
 
 export async function runDoctorChecks(ctx: DoctorContext, deps: DoctorDeps = {}): Promise<CheckResult[]> {
   const execFile = deps.execFile ?? defaultExecFile;
@@ -30,10 +33,90 @@ export async function runDoctorChecks(ctx: DoctorContext, deps: DoctorDeps = {})
     ...(await checkServices(ctx, execFile, fetchImpl)),
     ...(await checkMacDns(ctx, execFile)),
     ...(await checkWeb(ctx, execFile, fetchImpl)),
+    ...(await checkHttps(ctx, execFile, fetchImpl)),
     ...(await checkRecords(ctx, fetchImpl)),
     ...checkLogs(ctx)
   ];
   return rawResults.map((result) => applyStrict(result, ctx.strict));
+}
+
+async function checkHttps(ctx: DoctorContext, execFile: ExecFile, fetchImpl: FetchLike): Promise<CheckResult[]> {
+  const enabled = (ctx.env.VDNS_HTTPS_ENABLED ?? "false").toLowerCase() === "true";
+  const paths = deriveTlsPaths({ ...process.env, ...ctx.env, VDNS_STATE_DIR: ctx.stateDir });
+  const status = await caStatus(paths);
+  const strictHttps = ctx.requireHttps || (ctx.strict && enabled);
+  const results: CheckResult[] = [{
+    section: "HTTPS",
+    status: enabled ? "PASS" : "WARN",
+    label: "HTTPS enabled",
+    message: enabled ? "VDNS_HTTPS_ENABLED=true" : "HTTPS is not enabled. HTTP vDNS is working, but https://*.vrsc will not work.",
+    fix: enabled ? undefined : "vdns https init-ca && vdns https install-ca; set VDNS_HTTPS_ENABLED=true; vdns restart",
+    strictFailure: strictHttps
+  }];
+
+  results.push({
+    section: "HTTPS",
+    status: status.caCertExists && status.caKeyExists ? "PASS" : "WARN",
+    label: "CA files",
+    message: `cert=${status.caCertExists} key=${status.caKeyExists}`,
+    fix: "vdns https init-ca",
+    strictFailure: strictHttps
+  });
+  results.push({
+    section: "HTTPS",
+    status: status.caKeySafe === true ? "PASS" : status.caKeySafe === null ? "WARN" : "FAIL",
+    label: "CA key permissions",
+    message: status.caKeySafe === null ? "CA key missing" : `safe=${status.caKeySafe}`,
+    fix: `chmod 600 ${paths.caKey}`
+  });
+
+  const trusted = process.platform === "darwin" && status.caCertExists ? await checkCaTrusted(execFile) : "unknown";
+  results.push({
+    section: "HTTPS",
+    status: trusted === true ? "PASS" : "WARN",
+    label: "macOS CA trust",
+    message: `trusted=${trusted}`,
+    fix: "vdns https install-ca",
+    strictFailure: strictHttps
+  });
+  const httpsPort = await checkPort(execFile, "HTTPS gateway", "TCP", ctx.env.VDNS_HTTPS_PORT ?? "443", ctx.env.VDNS_HTTPS_HOST ?? "127.0.0.1");
+  results.push({ ...httpsPort, section: "HTTPS", strictFailure: strictHttps });
+
+  if (enabled) {
+    const proxyDomain = ctx.env.VDNS_DOCTOR_PROXY_DOMAIN ?? `verus.${ctx.env.VNS_TLD ?? "vrsc"}`;
+    const redirectDomain = ctx.env.VDNS_DOCTOR_REDIRECT_DOMAIN ?? `chainvue.${ctx.env.VNS_TLD ?? "vrsc"}`;
+    try {
+      const response = await curlHead(execFile, `https://${proxyDomain}`);
+      const proxy = response.headers["x-vdns-proxy"];
+      const target = response.headers["x-vdns-proxy-target-host"];
+      results.push({
+        section: "HTTPS",
+        status: proxy === "1" && target === "verus.io" ? "PASS" : "WARN",
+        label: `curl ${proxyDomain}`,
+        message: `HTTP ${response.status} x-vdns-proxy=${proxy ?? ""} x-vdns-proxy-target-host=${target ?? ""}`,
+        fix: "Check CA trust, HTTPS gateway logs, and PROXY record.",
+        strictFailure: strictHttps
+      });
+    } catch (error) {
+      results.push({ section: "HTTPS", status: "WARN", label: `curl ${proxyDomain}`, message: errorMessage(error), fix: "vdns https status; vdns logs gateway", strictFailure: strictHttps });
+    }
+
+    try {
+      const response = await curlHead(execFile, `https://${redirectDomain}`);
+      results.push({
+        section: "HTTPS",
+        status: response.status >= 300 && response.status < 400 ? "PASS" : "WARN",
+        label: `curl ${redirectDomain}`,
+        message: `HTTP ${response.status}`,
+        fix: "Check HTTPS gateway logs and REDIRECT record.",
+        strictFailure: strictHttps
+      });
+    } catch (error) {
+      results.push({ section: "HTTPS", status: "WARN", label: `curl ${redirectDomain}`, message: errorMessage(error), fix: "vdns https status; vdns logs gateway", strictFailure: strictHttps });
+    }
+  }
+
+  return ctx.requireHttps ? results.map((result) => result.status === "WARN" ? { ...result, status: "FAIL" as const } : result) : results;
 }
 
 export async function checkInstall(ctx: DoctorContext): Promise<CheckResult[]> {
@@ -84,7 +167,7 @@ async function checkLaunchdPlists(ctx: DoctorContext): Promise<CheckResult[]> {
       continue;
     }
 
-    if (content.includes(staleDocumentsPath)) {
+    if (content.includes(path.join(...staleDocumentsPathParts))) {
       results.push({
         section: "Install",
         status: "FAIL",
@@ -92,7 +175,7 @@ async function checkLaunchdPlists(ctx: DoctorContext): Promise<CheckResult[]> {
         message: `stale Documents checkout path in ${plist}`,
         fix: "vdns uninstall && vdns install"
       });
-    } else if (content.includes(checkoutPath) && !(ctx.installMode === "checkout" && ctx.home === checkoutPath)) {
+    } else if (content.includes(path.join(...checkoutPathParts)) && !(ctx.installMode === "checkout" && ctx.home === path.join(...checkoutPathParts))) {
       results.push({
         section: "Install",
         status: "WARN",
@@ -306,9 +389,10 @@ async function checkRedirect(fetchImpl: FetchLike, domain: string): Promise<Chec
   try {
     const response = await fetchImpl(`http://${domain}`, { method: "GET", redirect: "manual", signal: AbortSignal.timeout(10_000) });
     const location = response.headers.get("location");
+    const isRedirect = response.status >= 300 && response.status < 400 && Boolean(location);
     return {
       section: "Web",
-      status: response.status === 302 && location === "http://chainvue.io/" ? "PASS" : "WARN",
+      status: isRedirect ? "PASS" : "WARN",
       label: `REDIRECT ${domain}`,
       message: `HTTP ${response.status}${location ? ` Location: ${location}` : ""}`,
       fix: "vdns demo",
@@ -380,20 +464,74 @@ function checkLogs(ctx: DoctorContext): CheckResult[] {
 }
 
 async function checkPort(execFile: ExecFile, label: string, protocol: "TCP" | "UDP", port: string, host: string): Promise<CheckResult> {
+  if (protocol === "TCP") {
+    const connected = await canConnectTcp(host, port);
+    return {
+      section: port === "80" ? "Web" : "Services",
+      status: connected === true ? "PASS" : "WARN",
+      label,
+      message: connected === true ? `listener reachable on ${host}:${port}` : `no reachable listener on ${host}:${port}`,
+      fix: port === "80" ? "vdns start; if root-owned listener is hidden, check vdns logs gateway" : "vdns start"
+    };
+  }
+
   const lsof = await commandExists(execFile, "lsof");
   if (!lsof) {
-    return { section: protocol === "TCP" && port === "80" ? "Web" : "Services", status: "WARN", label, message: "lsof is unavailable" };
+    return { section: "Services", status: "WARN", label, message: "lsof is unavailable" };
   }
-  const args = protocol === "TCP" ? ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN"] : ["-nP", `-iUDP:${port}`];
+  const args = ["-nP", `-iUDP:${port}`];
   const result = await execFile("lsof", args, 3000);
-  const visible = result.stdout.includes(`:${port}`) && (result.stdout.includes(host) || (protocol === "UDP" && result.stdout.includes("*:")));
+  const visible = result.stdout.includes(`:${port}`) && (result.stdout.includes(host) || result.stdout.includes("*:"));
   return {
-    section: protocol === "TCP" && port === "80" ? "Web" : "Services",
+    section: "Services",
     status: visible ? "PASS" : "WARN",
     label,
     message: visible ? `listener visible on ${host}:${port}` : `no visible listener on ${host}:${port}`,
     fix: port === "80" ? "vdns start; if root-owned listener is hidden, check vdns logs gateway" : "vdns start"
   };
+}
+
+async function canConnectTcp(host: string, port: string): Promise<boolean | "unknown"> {
+  const parsedPort = Number(port);
+  if (!Number.isInteger(parsedPort) || parsedPort < 1 || parsedPort > 65535) {
+    return "unknown";
+  }
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ host, port: parsedPort });
+    socket.setTimeout(1000);
+    socket.once("connect", () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once("timeout", () => {
+      socket.destroy();
+      resolve(false);
+    });
+    socket.once("error", () => resolve(false));
+  });
+}
+
+async function curlHead(execFile: ExecFile, url: string): Promise<{ status: number; headers: Record<string, string> }> {
+  const result = await execFile("curl", ["-I", "--max-time", "20", url], 25_000);
+  if (result.status !== 0) {
+    throw new Error(result.stderr.trim() || `curl exited ${result.status}`);
+  }
+  return parseCurlHeaders(result.stdout);
+}
+
+function parseCurlHeaders(stdout: string): { status: number; headers: Record<string, string> } {
+  const blocks = stdout.trim().split(/\r?\n\r?\n/).filter(Boolean);
+  const lines = (blocks.at(-1) ?? "").split(/\r?\n/);
+  const status = Number(lines[0]?.match(/^HTTP\/\S+\s+(\d+)/)?.[1] ?? 0);
+  const headers: Record<string, string> = {};
+  for (const line of lines.slice(1)) {
+    const index = line.indexOf(":");
+    if (index === -1) {
+      continue;
+    }
+    headers[line.slice(0, index).trim().toLowerCase()] = line.slice(index + 1).trim();
+  }
+  return { status, headers };
 }
 
 async function commandExists(execFile: ExecFile, command: string): Promise<boolean> {
@@ -403,6 +541,15 @@ async function commandExists(execFile: ExecFile, command: string): Promise<boole
   }
   const which = await execFile("which", [command], 1000);
   return which.status === 0;
+}
+
+async function checkCaTrusted(execFile: ExecFile): Promise<boolean | "unknown"> {
+  const security = await commandExists(execFile, "security");
+  if (!security) {
+    return "unknown";
+  }
+  const result = await execFile("security", ["find-certificate", "-a", "-c", "vDNS Local Root CA", "/Library/Keychains/System.keychain"], 3000);
+  return result.status === 0 && result.stdout.includes("vDNS Local Root CA");
 }
 
 async function defaultExecFile(file: string, args: string[], timeoutMs = 5000): Promise<ExecResult> {

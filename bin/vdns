@@ -47,6 +47,8 @@ Commands:
   service-status    Print launchd service status
   demo              Run the vDNS demo regression
   doctor            Run status and diagnostics
+  https             Manage local HTTPS CA and certificates
+  site              Manage SITE manifests and records
   logs              Print or tail vDNS log files
   paths             Print resolved vDNS paths
   resolver          Run the HTTP resolver
@@ -166,6 +168,16 @@ VDNS_PROXY_TIMEOUT_MS=10000
 VDNS_PROXY_MAX_BODY_BYTES=10485760
 VDNS_PROXY_MAX_REDIRECTS=3
 VDNS_PROXY_ALLOW_PRIVATE_TARGETS=false
+VDNS_HTTPS_ENABLED=false
+VDNS_HTTPS_HOST=127.0.0.1
+VDNS_HTTPS_PORT=443
+VDNS_TLS_TLD=${tld}
+VDNS_TLS_CERT_VALIDITY_DAYS=397
+VDNS_FORCE_HTTPS=false
+VDNS_SITE_CACHE_ENABLED=true
+VDNS_SITE_MAX_FILE_BYTES=10485760
+VDNS_SITE_MAX_TOTAL_MANIFEST_BYTES=1048576
+VDNS_SITE_ALLOW_FILE_URI=false
 ENV
   chmod 600 "${VDNS_ENV_FILE}"
   echo "Created ${VDNS_ENV_FILE}"
@@ -194,6 +206,16 @@ case "${1:-help}" in
     entry="${VDNS_HOME}/dist/doctor/index.js"
     if [[ ! -f "${entry}" ]]; then
       echo "Missing doctor entrypoint: ${entry}" >&2
+      echo "Run: pnpm build" >&2
+      exit 1
+    fi
+    exec node "${entry}" "$@"
+    ;;
+  https)
+    shift
+    entry="${VDNS_HOME}/dist/https-cli.js"
+    if [[ ! -f "${entry}" ]]; then
+      echo "Missing HTTPS entrypoint: ${entry}" >&2
       echo "Run: pnpm build" >&2
       exit 1
     fi
@@ -258,6 +280,6 @@ LOGS
     ;;
   resolver) shift; exec node "${VDNS_HOME}/dist/index.js" "$@" ;;
   gateway) shift; exec node "${VDNS_HOME}/dist/redirect-index.js" "$@" ;;
-  record|identity|vdxf) cmd="$1"; shift; cli_entrypoint "${cmd}" "$@" ;;
+  record|identity|vdxf|site) cmd="$1"; shift; cli_entrypoint "${cmd}" "$@" ;;
   *) echo "Unknown command: $1" >&2; usage >&2; exit 1 ;;
 esac

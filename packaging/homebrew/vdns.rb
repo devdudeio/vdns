@@ -1,11 +1,12 @@
 class Vdns < Formula
   desc "VerusID-native DNS-compatible local resolver and web gateway"
   homepage "https://github.com/devdudeio/vdns"
-  url "https://github.com/devdudeio/vdns/releases/download/vX.Y.Z/vdns-X.Y.Z.tar.gz"
-  sha256 "PLACEHOLDER"
+  url "https://github.com/devdudeio/vdns/releases/download/v0.1.5/vdns-0.1.5.tar.gz"
+  sha256 "984657b14cf9a27e992d84bf48e5d5c9cc42ac9015e23121049dbc34387c4711"
   license "MIT"
 
   depends_on "node"
+  depends_on "openssl@3"
 
   def install
     libexec.install Dir["*"]
@@ -26,6 +27,12 @@ class Vdns < Formula
       Check the stack:
         vdns status
         vdns demo
+
+      Optional local HTTPS for https://*.vrsc requires a per-device CA:
+        vdns https init-ca
+        vdns https install-ca
+        set VDNS_HTTPS_ENABLED=true in ~/.vdns/.env.local
+        vdns restart
 
       Logs and runtime state default to:
         ~/.vdns

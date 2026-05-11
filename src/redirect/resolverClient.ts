@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { ResolveResult, VnsRecordType } from "../core/types.js";
-import { selectProxyRecord, selectRedirectRecord } from "./safety.js";
-import { RedirectResolverError, type ProxyRecord, type RedirectRecord, type RedirectResolveDebug } from "./types.js";
+import { selectProxyRecord, selectRedirectRecord, selectSiteRecord } from "./safety.js";
+import { RedirectResolverError, type ProxyRecord, type RedirectRecord, type RedirectResolveDebug, type SiteRecord } from "./types.js";
 
 type ResolverClientOptions = {
   resolverUrl: string;
@@ -38,17 +38,24 @@ export class HttpRedirectResolverClient {
     return result ? selectProxyRecord(result.records) : null;
   }
 
+  async resolveSite(hostname: string): Promise<SiteRecord | null> {
+    const result = await this.fetchResolveResult(hostname, "SITE");
+    return result ? selectSiteRecord(result.records) : null;
+  }
+
   async resolveDebug(hostname: string): Promise<RedirectResolveDebug> {
-    const [redirectResult, proxyResult] = await Promise.all([
+    const [redirectResult, proxyResult, siteResult] = await Promise.all([
       this.fetchResolveResult(hostname, "REDIRECT"),
-      this.fetchResolveResult(hostname, "PROXY")
+      this.fetchResolveResult(hostname, "PROXY"),
+      this.fetchResolveResult(hostname, "SITE")
     ]);
     return {
       hostname,
       resolverUrl: this.resolverUrl,
       result: redirectResult,
       selectedRecord: redirectResult ? selectRedirectRecord(redirectResult.records) : null,
-      selectedProxyRecord: proxyResult ? selectProxyRecord(proxyResult.records) : null
+      selectedProxyRecord: proxyResult ? selectProxyRecord(proxyResult.records) : null,
+      selectedSiteRecord: siteResult ? selectSiteRecord(siteResult.records) : null
     };
   }
 

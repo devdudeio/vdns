@@ -12,6 +12,7 @@ export type CheckResult = {
 
 export type DoctorContext = {
   strict: boolean;
+  requireHttps: boolean;
   home: string;
   installMode: string;
   stateDir: string;
@@ -29,6 +30,7 @@ export const sections = [
   "Services",
   "macOS DNS",
   "Web",
+  "HTTPS",
   "Records",
   "Logs",
   "Summary"

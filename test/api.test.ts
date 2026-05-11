@@ -241,6 +241,7 @@ function makeRealStyleRpcClient(): VerusRpcLike {
         "fum.vrsc::vns.dns.txt": "id:txt",
         "fum.vrsc::vns.web.redirect": "id:redirect",
         "fum.vrsc::vns.web.proxy": "id:proxy",
+        "fum.vrsc::vns.web.site": "id:site",
         "fum.vrsc::vns.tls.fingerprint": "id:tlsa"
       };
       return ids[key] ?? key;

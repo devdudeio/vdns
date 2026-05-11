@@ -1,4 +1,7 @@
 import { PassThrough, Readable } from "node:stream";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { runCli } from "../src/cli/index.js";
 import { decodeJsonObjectData } from "../src/core/objectDataCodec.js";
@@ -204,6 +207,61 @@ describe("vns CLI", () => {
       ttl: 300
     });
     expect(result.exitCode).toBeUndefined();
+  });
+
+  it("sets SITE records with --yes", async () => {
+    const client = makeClient({ identity: "dude@", contentmultimap: {} });
+    const result = await run([
+      "record",
+      "set",
+      "dude@",
+      "SITE",
+      "@",
+      "https://cdn.example/manifest.json",
+      "--entry",
+      "/index.html",
+      "--sha256",
+      "a".repeat(64),
+      "--root",
+      "dude@",
+      "--yes"
+    ], client);
+    const payload = parseJsonOutputs(result.stdout)[0];
+    const descriptor = payload.contentmultimap["id:dude.vrsc::vns.record"][0].i4GC1YGEVD21afWudGoFJVdnfjJ5XWnCQv;
+
+    expect(descriptor.label).toBe("id:dude.vrsc::vns.web.site");
+    expect(decodeJsonObjectData(descriptor.objectdata).value).toEqual({
+      version: 1,
+      type: "SITE",
+      name: "@",
+      entry: "/index.html",
+      manifestUri: "https://cdn.example/manifest.json",
+      sha256: "a".repeat(64),
+      ttl: 300
+    });
+    expect(result.exitCode).toBeUndefined();
+  });
+
+  it("builds SITE manifests from static directories", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "vdns-site-cli-"));
+    try {
+      await mkdir(path.join(dir, "assets"));
+      await writeFile(path.join(dir, "index.html"), "<main>home</main>");
+      await writeFile(path.join(dir, "assets", "app.js"), "console.log('ok');");
+      await writeFile(path.join(dir, ".DS_Store"), "ignored");
+
+      const result = await run(["site", "build-manifest", dir, "--base-uri", "https://cdn.example/site/", "--spa-fallback"], makeClient(), {});
+      const manifest = JSON.parse(result.stdout);
+
+      expect(manifest.type).toBe("VDNS_SITE_MANIFEST");
+      expect(manifest.entry).toBe("/index.html");
+      expect(manifest.spaFallback).toBe(true);
+      expect(manifest.files.map((file: { path: string }) => file.path)).toEqual(["/assets/app.js", "/index.html"]);
+      expect(manifest.files.find((file: { path: string }) => file.path === "/assets/app.js").mime).toContain("text/javascript");
+      expect(result.exitCode).toBeUndefined();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 
   it("does not call updateidentity when validation fails", async () => {

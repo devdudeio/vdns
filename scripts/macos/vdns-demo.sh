@@ -20,6 +20,7 @@ REDIRECT_EXPECTED_A="${VDNS_DEMO_REDIRECT_A:-127.0.0.1}"
 REDIRECT_EXPECTED_LOCATION="${VDNS_DEMO_REDIRECT_LOCATION:-http://chainvue.io/}"
 PROXY_HOST="${VDNS_DEMO_PROXY_HOST:-verus.${VNS_TLD}}"
 PROXY_EXPECTED_TARGET_HOST="${VDNS_DEMO_PROXY_TARGET_HOST:-verus.io}"
+VDNS_HTTPS_ENABLED="${VDNS_HTTPS_ENABLED:-false}"
 FAILED=0
 
 if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
@@ -217,6 +218,21 @@ if [[ "${PROXY_HTTP_STATUS}" -eq 0 ]] && expect_proxy_response "${PROXY_HTTP_OUT
   pass "${PROXY_HOST} returned proxied ${PROXY_EXPECTED_TARGET_HOST} content"
 else
   fail "${PROXY_HOST} did not return the expected PROXY response"
+fi
+
+section "6. Browser-style HTTPS gateway"
+if [[ "${VDNS_HTTPS_ENABLED}" == "true" ]]; then
+  show_cmd curl -I --max-time 20 "https://${PROXY_HOST}"
+  PROXY_HTTPS_OUTPUT="$(run_capture 22 curl -I --max-time 20 "https://${PROXY_HOST}")"
+  PROXY_HTTPS_STATUS=$?
+  printf '%s\n' "${PROXY_HTTPS_OUTPUT}"
+  if [[ "${PROXY_HTTPS_STATUS}" -eq 0 ]] && expect_proxy_response "${PROXY_HTTPS_OUTPUT}" "${PROXY_EXPECTED_TARGET_HOST}"; then
+    pass "${PROXY_HOST} returned trusted HTTPS proxied ${PROXY_EXPECTED_TARGET_HOST} headers"
+  else
+    fail "${PROXY_HOST} did not return the expected trusted HTTPS PROXY response"
+  fi
+else
+  warn "HTTPS is disabled; skipping https://${PROXY_HOST}"
 fi
 
 section "Result"

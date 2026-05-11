@@ -7,12 +7,13 @@ function usage(): string {
   return `vdns doctor
 
 Usage:
-  vdns doctor [--strict]
+  vdns doctor [--strict] [--https]
 
 Runs install, config, RPC, service, DNS, web, record, and log diagnostics.
 
 Options:
   --strict   Treat demo DNS/REDIRECT/PROXY warnings as failures
+  --https    Require HTTPS checks to pass
   -h, --help Show this help
 `;
 }
@@ -34,4 +35,3 @@ main().catch((error: unknown) => {
   process.stderr.write(`vdns doctor failed: ${message}\n`);
   process.exitCode = 1;
 });
-

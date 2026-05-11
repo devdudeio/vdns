@@ -31,6 +31,7 @@ const realVdxfIds = {
     TXT: "id:txt",
     REDIRECT: "id:redirect",
     PROXY: "id:proxy",
+    SITE: "id:site",
     TLSA: "id:tlsa"
   }
 };
@@ -67,6 +68,7 @@ function makeRealStyleRpcClient(): VerusRpcLike & { getVdxfId: ReturnType<typeof
         "fum.vrsc::vns.dns.txt": realVdxfIds.labels.TXT,
         "fum.vrsc::vns.web.redirect": realVdxfIds.labels.REDIRECT,
         "fum.vrsc::vns.web.proxy": realVdxfIds.labels.PROXY,
+        "fum.vrsc::vns.web.site": realVdxfIds.labels.SITE,
         "fum.vrsc::vns.tls.fingerprint": realVdxfIds.labels.TLSA
       };
       return entries[key as keyof typeof entries] ?? key;
@@ -128,6 +130,6 @@ describe("VnsResolver", () => {
     await resolver.getDebugVdxfKeys();
     await resolver.resolveDomain("google.vrsc");
 
-    expect(rpcClient.getVdxfId).toHaveBeenCalledTimes(8);
+    expect(rpcClient.getVdxfId).toHaveBeenCalledTimes(9);
   });
 });

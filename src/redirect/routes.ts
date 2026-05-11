@@ -1,8 +1,12 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { readFile } from "node:fs/promises";
+import type { TLSSocket } from "node:tls";
 import type { RedirectConfig } from "./config.js";
 import { validateProxyTargetUrl } from "./proxySecurity.js";
 import { isConfiguredTldHost, isLocalClient, normalizeHostHeader, redirectStatus, validateRedirectTarget } from "./safety.js";
-import { RedirectResolverError, type ProxyRecord, type RedirectResolverClient } from "./types.js";
+import { RedirectResolverError, type ProxyRecord, type RedirectResolverClient, type SiteRecord } from "./types.js";
+import { sha256Hex, validateSiteManifest, type VdnsSiteManifest } from "../core/site.js";
+import { vdnsTlsHostMatches } from "../tls/hosts.js";
 
 type DebugResolveQuery = {
   host?: string;
@@ -107,11 +111,27 @@ async function handleGatewayRequest(request: FastifyRequest, reply: FastifyReply
     return reply.notFound();
   }
 
+  const servername = (request.socket as TLSSocket).servername;
+  if (request.protocol === "https" && !vdnsTlsHostMatches(hostname, typeof servername === "string" ? servername : undefined, options.config.tlsTld)) {
+    return reply.code(421).send({
+      statusCode: 421,
+      error: "Misdirected Request",
+      message: "HTTPS Host header does not match TLS SNI"
+    });
+  }
+
   if (request.method !== "GET" && request.method !== "HEAD") {
     return reply
       .code(405)
       .header("Allow", "GET, HEAD")
       .send({ statusCode: 405, error: "Method Not Allowed", message: "Web gateway only supports GET and HEAD" });
+  }
+
+  if (request.protocol === "http" && options.config.forceHttps) {
+    return reply
+      .code(302)
+      .header("Location", `https://${hostname}${request.url}`)
+      .send();
   }
 
   if (options.config.proxyEnabled) {
@@ -134,24 +154,35 @@ async function handleGatewayRequest(request: FastifyRequest, reply: FastifyReply
     return sendResolverError(reply, error);
   }
 
-  if (!record) {
+  if (record) {
+    const target = validateRedirectTarget(record, hostname);
+    if (target instanceof Error) {
+      const statusCode = target.message.includes("loops") ? 508 : 502;
+      return reply.code(statusCode).send({
+        statusCode,
+        error: statusCode === 508 ? "Loop Detected" : "Bad Gateway",
+        message: target.message
+      });
+    }
+
+    return reply
+      .code(redirectStatus(record, options.config.defaultStatus))
+      .header("Location", target.toString())
+      .send();
+  }
+
+  let siteRecord: SiteRecord | null = null;
+  try {
+    siteRecord = options.resolver.resolveSite ? await options.resolver.resolveSite(hostname) : null;
+  } catch (error) {
+    return sendResolverError(reply, error);
+  }
+
+  if (!siteRecord) {
     return reply.notFound();
   }
 
-  const target = validateRedirectTarget(record, hostname);
-  if (target instanceof Error) {
-    const statusCode = target.message.includes("loops") ? 508 : 502;
-    return reply.code(statusCode).send({
-      statusCode,
-      error: statusCode === 508 ? "Loop Detected" : "Bad Gateway",
-      message: target.message
-    });
-  }
-
-  return reply
-    .code(redirectStatus(record, options.config.defaultStatus))
-    .header("Location", target.toString())
-    .send();
+  return serveSite(request, reply, options, hostname, siteRecord);
 }
 
 async function proxyRequest(
@@ -318,6 +349,126 @@ function copyProxyResponseHeaders(reply: FastifyReply, headers: Headers): void {
       reply.header(name, value);
     }
   });
+}
+
+async function serveSite(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  options: RouteOptions,
+  hostname: string,
+  record: SiteRecord
+) {
+  const manifestResult = await loadGatewaySiteManifest(record, hostname, options);
+  if (manifestResult instanceof Error) {
+    return reply.code(502).send({ statusCode: 502, error: "Bad Gateway", message: manifestResult.message });
+  }
+
+  const manifest = manifestResult;
+  const requestedPath = normalizeSiteRequestPath(request.url);
+  if (requestedPath instanceof Error) {
+    return reply.badRequest(requestedPath.message);
+  }
+
+  const selectedPath = requestedPath === "/" ? manifest.entry : requestedPath;
+  const file = manifest.files.find((candidate) => candidate.path === selectedPath)
+    ?? (manifest.spaFallback ? manifest.files.find((candidate) => candidate.path === manifest.entry) : undefined);
+  if (!file) {
+    return reply.notFound();
+  }
+  if (file.size > options.config.siteMaxFileBytes) {
+    return reply.code(502).send({ statusCode: 502, error: "Bad Gateway", message: "SITE file is too large" });
+  }
+
+  const fileBody = await fetchSiteBytes(file.uri, hostname, options, options.config.siteMaxFileBytes);
+  if (fileBody instanceof Error) {
+    return reply.code(502).send({ statusCode: 502, error: "Bad Gateway", message: fileBody.message });
+  }
+  if (sha256Hex(fileBody) !== file.sha256) {
+    return reply.code(502).send({ statusCode: 502, error: "Bad Gateway", message: "SITE file hash mismatch" });
+  }
+
+  reply
+    .code(200)
+    .header("content-type", file.mime)
+    .header("cache-control", `public, max-age=${record.ttl}`)
+    .header("x-vdns-site", "1")
+    .header("x-vdns-site-entry", manifest.entry)
+    .header("x-vdns-source-host", hostname);
+
+  return request.method === "HEAD" ? reply.send() : reply.send(fileBody);
+}
+
+async function loadGatewaySiteManifest(
+  record: SiteRecord,
+  hostname: string,
+  options: RouteOptions
+): Promise<VdnsSiteManifest | Error> {
+  const body = await fetchSiteBytes(record.manifestUri, hostname, options, options.config.siteMaxTotalManifestBytes);
+  if (body instanceof Error) {
+    return body;
+  }
+  if (record.sha256 && sha256Hex(body) !== record.sha256) {
+    return new Error("SITE manifest hash mismatch");
+  }
+  try {
+    return validateSiteManifest(JSON.parse(body.toString("utf8")));
+  } catch (error) {
+    return new Error(`SITE manifest invalid: ${error instanceof Error ? error.message : "unknown error"}`);
+  }
+}
+
+async function fetchSiteBytes(
+  uri: string,
+  hostname: string,
+  options: RouteOptions,
+  maxBytes: number
+): Promise<Buffer | Error> {
+  let url: URL;
+  try {
+    url = new URL(uri);
+  } catch {
+    return new Error("SITE URI is invalid");
+  }
+
+  if (url.protocol === "file:") {
+    if (!options.config.siteAllowFileUri) {
+      return new Error("SITE file:// URI is disabled");
+    }
+    const body = await readFile(url);
+    return body.byteLength > maxBytes ? new Error("SITE response is too large") : body;
+  }
+
+  const target = validateProxyTargetUrl(uri, hostname, {
+    allowPrivateTargets: options.config.proxyAllowPrivateTargets
+  });
+  if (target instanceof Error) {
+    return target;
+  }
+
+  const response = await (options.fetchImpl ?? fetch)(target.toString(), { redirect: "manual" });
+  if (!response.ok) {
+    return new Error(`SITE fetch failed with HTTP ${response.status}`);
+  }
+  const length = response.headers.get("content-length");
+  if (length && Number(length) > maxBytes) {
+    return new Error("SITE response is too large");
+  }
+  const body = Buffer.from(await response.arrayBuffer());
+  return body.byteLength > maxBytes ? new Error("SITE response is too large") : body;
+}
+
+function normalizeSiteRequestPath(requestUrl: string): string | Error {
+  const url = new URL(requestUrl, "http://vdns.local");
+  let pathname: string;
+  try {
+    pathname = decodeURIComponent(url.pathname);
+  } catch {
+    return new Error("Invalid request path");
+  }
+  if (!pathname.startsWith("/") || pathname.includes("\\") || pathname.split("/").includes("..")) {
+    return new Error("Invalid request path");
+  }
+  return pathname;
 }
 
 function isRedirectStatus(status: number): boolean {

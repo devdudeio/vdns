@@ -56,6 +56,20 @@ const proxyRecordSchema = baseRecordSchema.extend({
   })
 });
 
+const siteRecordSchema = baseRecordSchema.extend({
+  type: z.literal("SITE"),
+  entry: z.string().regex(/^\/(?:[^\\]*[^/])?$/, "must start with / and must not contain backslashes").default("/index.html"),
+  manifestUri: z.string().url().refine((value) => {
+    if (value.startsWith("http://") || value.startsWith("https://")) {
+      return true;
+    }
+    return value.startsWith("file://") && (process.env.VDNS_SITE_ALLOW_FILE_URI ?? "false").toLowerCase() === "true";
+  }, {
+    message: "must use http:// or https://; file:// requires VDNS_SITE_ALLOW_FILE_URI=true"
+  }),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/).optional()
+});
+
 const tlsaRecordSchema = baseRecordSchema.extend({
   type: z.literal("TLSA"),
   sha256: z.string().regex(/^[a-f0-9]{64}$/)
@@ -68,6 +82,7 @@ export const vnsRecordSchema = z.discriminatedUnion("type", [
   txtRecordSchema,
   redirectRecordSchema,
   proxyRecordSchema,
+  siteRecordSchema,
   tlsaRecordSchema
 ]);
 

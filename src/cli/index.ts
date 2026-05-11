@@ -3,6 +3,7 @@ import { createInterface } from "node:readline/promises";
 import { stdin as processStdin, stdout as processStdout } from "node:process";
 import { Command } from "commander";
 import { ZodError } from "zod";
+import { readFile } from "node:fs/promises";
 import {
   extractContentmultimap,
   extractVnsRecords,
@@ -21,6 +22,7 @@ import type { IdentityPayload, VnsRecord, VnsRecordType } from "../core/types.js
 import { extractTxidFromUpdateIdentityResult, waitForTxConfirmation } from "../core/txConfirmation.js";
 import { buildUpdateIdentityPayload, type UpdateIdentityPayload } from "../core/updateIdentityPayload.js";
 import { buildVnsVdxfKeyNames, resolveVnsVdxfIds, type VnsVdxfIds } from "../core/vdxf.js";
+import { buildSiteManifest, inspectSiteManifest, loadSiteManifest, sha256Hex, writeSiteManifest } from "../core/site.js";
 import { VerusRpcClient } from "../rpc/verusRpcClient.js";
 
 type CliIo = {
@@ -148,6 +150,8 @@ export function createCliProgram(options: CliOptions = {}): Command {
     .argument("<value>"))
     .option("--ttl <seconds>", "record TTL", parsePositiveInt, 300)
     .option("--status <code>", "redirect status for REDIRECT records", parseRedirectStatus, 302)
+    .option("--entry <path>", "SITE entry path", "/index.html")
+    .option("--sha256 <hash>", "SITE manifest SHA-256")
     .option("-y, --yes", "skip confirmation")
     .option("--verify", "refetch and print VNS records after updateidentity")
     .option("--confirmations <n>", "confirmations to wait for before --verify", parsePositiveInt, 1)
@@ -157,6 +161,8 @@ export function createCliProgram(options: CliOptions = {}): Command {
     .action(async (identityName: string, typeInput: string, name: string, value: string, commandOptions: {
       ttl: number;
       status: 301 | 302;
+      entry: string;
+      sha256?: string;
       yes?: boolean;
       verify?: boolean;
       confirmations: number;
@@ -169,7 +175,10 @@ export function createCliProgram(options: CliOptions = {}): Command {
       warnDefaultRootForWrite(io, global);
       const client = rpcClientFactory(requireRpcOptions(program, env, command));
       const targetIdentity = normalizeIdentityNameForUpdate(identityName);
-      const recordToWrite = buildRecord(typeInput, name, value, commandOptions.ttl, commandOptions.status);
+      const recordToWrite = buildRecord(typeInput, name, value, commandOptions.ttl, commandOptions.status, {
+        entry: commandOptions.entry,
+        ...(commandOptions.sha256 ? { sha256: commandOptions.sha256 } : {})
+      });
       const rawIdentity = await fetchRawIdentityOrExit(client, targetIdentity);
       const updateTarget = await deriveCliUpdateTarget(client, targetIdentity, rawIdentity);
       const vdxfIds = await resolveIds(client, global.root, global.tld);
@@ -226,6 +235,113 @@ export function createCliProgram(options: CliOptions = {}): Command {
       assertPayloadTargetsUpdateTarget(payload, updateTarget);
       const updateResult = await client.updateIdentity(payload);
       await handlePostUpdateVerify(io, client, targetIdentity, vdxfIds, updateResult, commandOptions);
+    });
+
+  const site = program.command("site").description("SITE record and manifest helpers");
+  site
+    .command("build-manifest")
+    .description("Build a VDNS_SITE_MANIFEST for a static directory")
+    .argument("<dir>")
+    .option("--base-uri <uri>", "base HTTP(S) URI for files")
+    .option("--local-file-uri", "emit file:// URIs for local testing")
+    .option("--entry <path>", "entry path", "/index.html")
+    .option("--spa-fallback", "serve entry for unknown paths")
+    .option("--out <file>", "write manifest JSON to a file")
+    .action(async (dir: string, commandOptions: {
+      baseUri?: string;
+      localFileUri?: boolean;
+      entry: string;
+      spaFallback?: boolean;
+      out?: string;
+    }) => {
+      const previous = process.env.VDNS_SITE_ALLOW_FILE_URI;
+      if (commandOptions.localFileUri) {
+        process.env.VDNS_SITE_ALLOW_FILE_URI = "true";
+      }
+      try {
+        const manifest = await buildSiteManifest(dir, {
+          ...(commandOptions.baseUri ? { baseUri: commandOptions.baseUri } : {}),
+          ...(commandOptions.localFileUri ? { localFileUri: commandOptions.localFileUri } : {}),
+          entry: commandOptions.entry,
+          spaFallback: Boolean(commandOptions.spaFallback)
+        });
+        if (commandOptions.out) {
+          await writeSiteManifest(commandOptions.out, manifest);
+        } else {
+          writeJson(io, manifest);
+        }
+      } finally {
+        if (previous === undefined) {
+          delete process.env.VDNS_SITE_ALLOW_FILE_URI;
+        } else {
+          process.env.VDNS_SITE_ALLOW_FILE_URI = previous;
+        }
+      }
+    });
+
+  site
+    .command("inspect-manifest")
+    .description("Validate and summarize a SITE manifest")
+    .argument("<manifest>")
+    .action(async (manifestInput: string) => {
+      const manifest = await loadSiteManifest(manifestInput);
+      writeJson(io, inspectSiteManifest(manifest));
+    });
+
+  addSharedOptions(site
+    .command("publish")
+    .description("Build a SITE manifest and write a SITE record; does not upload files")
+    .argument("<dir>")
+    .argument("<identity>")
+    .requiredOption("--manifest-uri <uri>", "published manifest URI")
+    .option("--manifest-out <file>", "local manifest path to write", "vdns-site-manifest.json")
+    .option("--base-uri <uri>", "base HTTP(S) URI for files")
+    .option("--entry <path>", "entry path", "/index.html")
+    .option("--spa-fallback", "serve entry for unknown paths")
+    .option("--ttl <seconds>", "record TTL", parsePositiveInt, 300)
+    .option("-y, --yes", "skip confirmation"))
+    .action(async (dir: string, identityName: string, commandOptions: {
+      manifestUri: string;
+      manifestOut: string;
+      baseUri?: string;
+      entry: string;
+      spaFallback?: boolean;
+      ttl: number;
+      yes?: boolean;
+    }) => {
+      const command = site.commands.find((candidate) => candidate.name() === "publish");
+      const global = readGlobalOptions(program, env, command);
+      warnDefaultRootForWrite(io, global);
+      const client = rpcClientFactory(requireRpcOptions(program, env, command));
+      const targetIdentity = normalizeIdentityNameForUpdate(identityName);
+      const manifest = await buildSiteManifest(dir, {
+        ...(commandOptions.baseUri ? { baseUri: commandOptions.baseUri } : {}),
+        entry: commandOptions.entry,
+        spaFallback: Boolean(commandOptions.spaFallback)
+      });
+      await writeSiteManifest(commandOptions.manifestOut, manifest);
+      const manifestBody = await readFile(commandOptions.manifestOut);
+      const recordToWrite = buildRecord("SITE", "@", commandOptions.manifestUri, commandOptions.ttl, 302, {
+        entry: manifest.entry,
+        sha256: sha256Hex(manifestBody)
+      });
+      const rawIdentity = await fetchRawIdentityOrExit(client, targetIdentity);
+      const updateTarget = await deriveCliUpdateTarget(client, targetIdentity, rawIdentity);
+      const vdxfIds = await resolveIds(client, global.root, global.tld);
+      const nextContentmultimap = upsertVnsRecord(extractContentmultimap(rawIdentity), vdxfIds, recordToWrite);
+      const payload = buildCliUpdatePayload(updateTarget, nextContentmultimap);
+
+      assertPayloadTargetsUpdateTarget(payload, updateTarget);
+      writeUpdateTargetPreview(io, updateTarget);
+      io.stdout.write(`Manifest: ${commandOptions.manifestOut}\n`);
+      writeJson(io, payload);
+      await confirmOrExit(io, Boolean(commandOptions.yes));
+      assertPayloadTargetsUpdateTarget(payload, updateTarget);
+      const updateResult = await client.updateIdentity(payload);
+      const txid = extractTxidFromUpdateIdentityResult(updateResult);
+      if (txid) {
+        io.stdout.write(`Update transaction: ${txid}\n`);
+      }
     });
 
   return program;
@@ -357,16 +473,25 @@ async function resolveIds(client: RpcClient, root: string, tld: string): Promise
   return resolveVnsVdxfIds(client, buildVnsVdxfKeyNames(root, tld));
 }
 
-function buildRecord(typeInput: string, name: string, value: string, ttl: number, status: 301 | 302): VnsRecord {
+function buildRecord(
+  typeInput: string,
+  name: string,
+  value: string,
+  ttl: number,
+  status: 301 | 302,
+  options: { entry?: string | undefined; sha256?: string | undefined } = {}
+): VnsRecord {
   const type = parseRecordType(typeInput);
   const base = { version: 1 as const, type, name, ttl };
   const candidate = type === "REDIRECT"
     ? { ...base, url: value, status }
     : type === "PROXY"
       ? { ...base, url: value }
-    : type === "TLSA"
-      ? { ...base, sha256: value }
-      : { ...base, value };
+      : type === "SITE"
+        ? { ...base, manifestUri: value, entry: options.entry ?? "/index.html", ...(options.sha256 ? { sha256: options.sha256 } : {}) }
+        : type === "TLSA"
+          ? { ...base, sha256: value }
+          : { ...base, value };
 
   try {
     return validateRecord(candidate);
@@ -391,7 +516,7 @@ function buildCliUpdatePayload(
 
 function parseRecordType(input: string): VnsRecordType {
   const type = input.toUpperCase();
-  if (["A", "AAAA", "CNAME", "TXT", "REDIRECT", "PROXY", "TLSA"].includes(type)) {
+  if (["A", "AAAA", "CNAME", "TXT", "REDIRECT", "PROXY", "SITE", "TLSA"].includes(type)) {
     return type as VnsRecordType;
   }
   throw new CliExitError(`Unsupported record type: ${input}`, 1);

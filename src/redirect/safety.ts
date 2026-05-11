@@ -1,5 +1,5 @@
 import { validateProxyTargetUrl } from "./proxySecurity.js";
-import type { ProxyRecord, RedirectRecord } from "./types.js";
+import type { ProxyRecord, RedirectRecord, SiteRecord } from "./types.js";
 
 const hostnamePattern = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
@@ -45,6 +45,20 @@ export function selectProxyRecord(records: unknown): ProxyRecord | null {
     (record as { type?: unknown }).type === "PROXY" &&
     (record as { name?: unknown }).name === "@" &&
     typeof (record as { url?: unknown }).url === "string"
+  ) ?? null;
+}
+
+export function selectSiteRecord(records: unknown): SiteRecord | null {
+  if (!Array.isArray(records)) {
+    return null;
+  }
+
+  return records.find((record): record is SiteRecord =>
+    Boolean(record) &&
+    typeof record === "object" &&
+    (record as { type?: unknown }).type === "SITE" &&
+    (record as { name?: unknown }).name === "@" &&
+    typeof (record as { manifestUri?: unknown }).manifestUri === "string"
   ) ?? null;
 }
 

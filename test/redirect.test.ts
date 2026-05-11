@@ -1,9 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { FastifyInstance } from "fastify";
+import { mkdtemp, rm, stat } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import type { RedirectConfig } from "../src/redirect/config.js";
 import { normalizeHostHeader } from "../src/redirect/safety.js";
-import { buildRedirectServer } from "../src/redirect/server.js";
-import { RedirectResolverError, type ProxyRecord, type RedirectRecord, type RedirectResolverClient } from "../src/redirect/types.js";
+import { buildHttpsRedirectServer, buildRedirectServer } from "../src/redirect/server.js";
+import { sha256Hex } from "../src/core/site.js";
+import { RedirectResolverError, type ProxyRecord, type RedirectRecord, type RedirectResolverClient, type SiteRecord } from "../src/redirect/types.js";
+import { initCa } from "../src/tls/certs.js";
+import { deriveTlsPaths } from "../src/tls/paths.js";
 
 const config: RedirectConfig = {
   host: "127.0.0.1",
@@ -16,7 +22,19 @@ const config: RedirectConfig = {
   proxyTimeoutMs: 5000,
   proxyMaxBodyBytes: 10485760,
   proxyMaxRedirects: 3,
-  proxyAllowPrivateTargets: false
+  proxyAllowPrivateTargets: false,
+  httpsEnabled: false,
+  httpsHost: "127.0.0.1",
+  httpsPort: 443,
+  tlsTld: "vrsc",
+  tlsCaDir: undefined,
+  tlsCertDir: undefined,
+  tlsCertValidityDays: 397,
+  forceHttps: false,
+  siteCacheEnabled: true,
+  siteMaxFileBytes: 10485760,
+  siteMaxTotalManifestBytes: 1048576,
+  siteAllowFileUri: false
 };
 
 let app: FastifyInstance | undefined;
@@ -126,6 +144,14 @@ describe("redirect service", () => {
     expect(response.statusCode).toBe(302);
     expect(response.headers.location).toBe("https://chainvue.io/");
     expect(response.body).toBe("");
+  });
+
+  it("optionally redirects HTTP vDNS requests to HTTPS before record handling", async () => {
+    const server = await makeApp(record("https://chainvue.io/"), undefined, null, { forceHttps: true });
+    const response = await server.inject({ method: "GET", url: "/docs?a=1", headers: { host: "chainvue.vrsc" } });
+
+    expect(response.statusCode).toBe(302);
+    expect(response.headers.location).toBe("https://chainvue.vrsc/docs?a=1");
   });
 
   it("does not proxy when VDNS_PROXY_ENABLED is false", async () => {
@@ -315,6 +341,75 @@ describe("redirect service", () => {
     expect(response.statusCode).toBe(502);
     expect(response.json().message).toBe("Proxy upstream response is too large");
   });
+
+  it("serves SITE entry files and direct asset paths after REDIRECT misses", async () => {
+    const index = Buffer.from("<main>home</main>");
+    const appJs = Buffer.from("console.log('ok');");
+    const manifest = {
+      version: 1,
+      type: "VDNS_SITE_MANIFEST",
+      entry: "/index.html",
+      spaFallback: true,
+      files: [
+        { path: "/index.html", mime: "text/html; charset=utf-8", size: index.byteLength, sha256: sha256Hex(index), uri: "https://cdn.example/index.html" },
+        { path: "/assets/app.js", mime: "text/javascript; charset=utf-8", size: appJs.byteLength, sha256: sha256Hex(appJs), uri: "https://cdn.example/assets/app.js" }
+      ]
+    };
+    const manifestBody = Buffer.from(JSON.stringify(manifest));
+    const fetchImpl = vi.fn(async (url: string | URL | Request) => {
+      if (String(url) === "https://cdn.example/manifest.json") {
+        return new Response(manifestBody, { headers: { "content-type": "application/json" } });
+      }
+      if (String(url) === "https://cdn.example/assets/app.js") {
+        return new Response(appJs);
+      }
+      return new Response(index);
+    });
+    const server = await makeApp(null, undefined, null, {}, fetchImpl as typeof fetch, siteRecord("https://cdn.example/manifest.json", sha256Hex(manifestBody)));
+
+    const root = await server.inject({ method: "GET", url: "/", headers: { host: "site.vrsc" } });
+    expect(root.statusCode).toBe(200);
+    expect(root.body).toBe("<main>home</main>");
+    expect(root.headers["x-vdns-site"]).toBe("1");
+
+    const asset = await server.inject({ method: "GET", url: "/assets/app.js", headers: { host: "site.vrsc" } });
+    expect(asset.statusCode).toBe(200);
+    expect(asset.headers["content-type"]).toContain("text/javascript");
+    expect(asset.body).toBe("console.log('ok');");
+  });
+
+  it("keeps PROXY and REDIRECT priority ahead of SITE", async () => {
+    const fetchImpl = vi.fn(async () => new Response("proxied"));
+    const server = await makeApp(record("https://chainvue.io/"), undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true }, fetchImpl as typeof fetch, siteRecord("https://cdn.example/manifest.json"));
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "site.vrsc" } });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toBe("proxied");
+  });
+
+  it("rejects SITE hash mismatches", async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ version: 1, type: "VDNS_SITE_MANIFEST", entry: "/index.html", spaFallback: false, files: [] })));
+    const server = await makeApp(null, undefined, null, {}, fetchImpl as typeof fetch, siteRecord("https://cdn.example/manifest.json", "a".repeat(64)));
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "site.vrsc" } });
+
+    expect(response.statusCode).toBe(502);
+    expect(response.json().message).toBe("SITE manifest hash mismatch");
+  });
+
+  it("builds an HTTPS gateway with generated default certificate cache", async () => {
+    const stateDir = await mkdtemp(path.join(os.tmpdir(), "vdns-https-gateway-"));
+    try {
+      const paths = deriveTlsPaths({ VDNS_STATE_DIR: stateDir });
+      await initCa({ paths });
+      const resolver = makeResolver(record("https://chainvue.io/"));
+      app = await buildHttpsRedirectServer({ ...config, tlsCaDir: paths.caDir, tlsCertDir: paths.certDir }, { resolver });
+
+      await expect(stat(path.join(paths.certDir, "verus.vrsc", "cert.pem"))).resolves.toBeTruthy();
+      await expect(stat(path.join(paths.certDir, "verus.vrsc", "key.pem"))).resolves.toBeTruthy();
+    } finally {
+      await rm(stateDir, { recursive: true, force: true });
+    }
+  });
 });
 
 async function makeApp(
@@ -322,7 +417,8 @@ async function makeApp(
   onResolve?: (hostname: string) => void,
   proxyResult: ProxyRecord | RedirectResolverError | null = null,
   configOverrides: Partial<RedirectConfig> = {},
-  fetchImpl?: typeof fetch
+  fetchImpl?: typeof fetch,
+  siteResult: SiteRecord | RedirectResolverError | null = null
 ): Promise<FastifyInstance> {
   const resolver: RedirectResolverClient = {
     async resolveRedirect(hostname: string): Promise<RedirectRecord | null> {
@@ -338,6 +434,13 @@ async function makeApp(
         throw proxyResult;
       }
       return proxyResult;
+    },
+    async resolveSite(hostname: string): Promise<SiteRecord | null> {
+      onResolve?.(hostname);
+      if (siteResult instanceof RedirectResolverError) {
+        throw siteResult;
+      }
+      return siteResult;
     }
   };
 
@@ -345,10 +448,26 @@ async function makeApp(
   return app;
 }
 
+function makeResolver(redirectResult: RedirectRecord | null): RedirectResolverClient {
+  return {
+    async resolveRedirect(): Promise<RedirectRecord | null> {
+      return redirectResult;
+    },
+    async resolveProxy(): Promise<ProxyRecord | null> {
+      return null;
+    }
+  };
+}
+
+
 function record(url: string, status: 301 | 302 = 302): RedirectRecord {
   return { version: 1, type: "REDIRECT", name: "@", url, status, ttl: 300 };
 }
 
 function proxyRecord(url: string): ProxyRecord {
   return { version: 1, type: "PROXY", name: "@", url, ttl: 300 };
+}
+
+function siteRecord(manifestUri: string, sha256?: string): SiteRecord {
+  return { version: 1, type: "SITE", name: "@", entry: "/index.html", manifestUri, ...(sha256 ? { sha256 } : {}), ttl: 300 };
 }

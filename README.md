@@ -20,6 +20,7 @@ Current alpha support includes:
 - macOS split-DNS helper scripts for routing `.vrsc` lookups to a local CoreDNS resolver
 - `vdns` wrapper commands for setup, install, start, status, doctor, demo, logs, and uninstall
 - alpha macOS launchd services for the resolver, CoreDNS, and local web gateway
+- experimental opt-in local HTTPS for `https://*.vrsc` with a per-device vDNS root CA
 
 ## Quick Install With Homebrew
 
@@ -80,6 +81,14 @@ For web requests:
 browser -> 127.0.0.1:80 web gateway -> REDIRECT or PROXY record
 ```
 
+Experimental HTTPS can add:
+
+```text
+browser -> 127.0.0.1:443 HTTPS gateway -> REDIRECT or PROXY record
+```
+
+See [docs/https.md](docs/https.md) for local CA setup and uninstall steps.
+
 See [docs/architecture.md](docs/architecture.md) for details.
 
 More alpha docs:
@@ -91,7 +100,7 @@ More alpha docs:
 
 ## Current Limitations
 
-- local TLS/CA
+- public TLS/CA or cross-device trust
 - desktop client
 - payment/product logic
 - real VDXF key registration
@@ -127,6 +136,17 @@ Local redirect service configuration:
 | `VDNS_PROXY_MAX_BODY_BYTES` | `10485760` | Maximum proxied response body size |
 | `VDNS_PROXY_MAX_REDIRECTS` | `3` | Maximum server-side upstream redirects to follow for `PROXY` |
 | `VDNS_PROXY_ALLOW_PRIVATE_TARGETS` | `false` | Unsafe advanced local-development escape hatch for private/internal proxy targets |
+
+Experimental local HTTPS configuration:
+
+| Env var | Default | Description |
+| --- | --- | --- |
+| `VDNS_HTTPS_ENABLED` | `false` | Start the local HTTPS gateway on `127.0.0.1:443` when a local CA exists |
+| `VDNS_HTTPS_HOST` | `127.0.0.1` | HTTPS gateway bind host |
+| `VDNS_HTTPS_PORT` | `443` | HTTPS gateway bind port |
+| `VDNS_TLS_TLD` | `VNS_TLD` or `vrsc` | TLD allowed for generated certificates |
+| `VDNS_TLS_CERT_VALIDITY_DAYS` | `397` | Host certificate validity |
+| `VDNS_FORCE_HTTPS` | `false` | Experimental HTTP-to-HTTPS redirect for `.vrsc` gateway requests |
 
 ## Install And Run
 

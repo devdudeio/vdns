@@ -17,6 +17,7 @@ export const VNS_RECORD_TYPE_LABELS: Record<VnsRecordType, string> = {
   TXT: "vns.dns.txt",
   REDIRECT: "vns.web.redirect",
   PROXY: "vns.web.proxy",
+  SITE: "vns.web.site",
   TLSA: "vns.tls.fingerprint"
 };
 
@@ -35,13 +36,14 @@ export function buildVnsVdxfKeyNames(rootIdentity: string, tld: string): VnsVdxf
       TXT: `${namespace}::${VNS_RECORD_TYPE_LABELS.TXT}`,
       REDIRECT: `${namespace}::${VNS_RECORD_TYPE_LABELS.REDIRECT}`,
       PROXY: `${namespace}::${VNS_RECORD_TYPE_LABELS.PROXY}`,
+      SITE: `${namespace}::${VNS_RECORD_TYPE_LABELS.SITE}`,
       TLSA: `${namespace}::${VNS_RECORD_TYPE_LABELS.TLSA}`
     }
   };
 }
 
 export async function resolveVnsVdxfIds(rpcClient: VdxfRpcLike, keyNames: VnsVdxfKeyNames): Promise<VnsVdxfIds> {
-  const [record, a, aaaa, cname, txt, redirect, proxy, tlsa] = await Promise.all([
+  const [record, a, aaaa, cname, txt, redirect, proxy, site, tlsa] = await Promise.all([
     rpcClient.getVdxfId(keyNames.record),
     rpcClient.getVdxfId(keyNames.labels.A),
     rpcClient.getVdxfId(keyNames.labels.AAAA),
@@ -49,6 +51,7 @@ export async function resolveVnsVdxfIds(rpcClient: VdxfRpcLike, keyNames: VnsVdx
     rpcClient.getVdxfId(keyNames.labels.TXT),
     rpcClient.getVdxfId(keyNames.labels.REDIRECT),
     rpcClient.getVdxfId(keyNames.labels.PROXY),
+    rpcClient.getVdxfId(keyNames.labels.SITE),
     rpcClient.getVdxfId(keyNames.labels.TLSA)
   ]);
 
@@ -61,6 +64,7 @@ export async function resolveVnsVdxfIds(rpcClient: VdxfRpcLike, keyNames: VnsVdx
       TXT: txt,
       REDIRECT: redirect,
       PROXY: proxy,
+      SITE: site,
       TLSA: tlsa
     }
   };

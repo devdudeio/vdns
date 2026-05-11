@@ -20,6 +20,7 @@ const vdxfIds: VnsVdxfIds = {
     TXT: "vdxf:vns.dns.txt",
     REDIRECT: "vdxf:vns.web.redirect",
     PROXY: "vdxf:vns.web.proxy",
+    SITE: "vdxf:vns.web.site",
     TLSA: "vdxf:vns.tls.fingerprint"
   }
 };

@@ -5,6 +5,7 @@ import type { DoctorContext } from "./types.js";
 
 export async function loadDoctorContext(argv: string[], processEnv: NodeJS.ProcessEnv = process.env): Promise<DoctorContext> {
   const strict = argv.includes("--strict");
+  const requireHttps = argv.includes("--https") || (processEnv.VDNS_DOCTOR_REQUIRE_HTTPS ?? "").toLowerCase() === "true";
   const home = processEnv.VDNS_HOME ?? process.cwd();
   const installMode = processEnv.VDNS_INSTALL_MODE ?? inferInstallMode(home);
   const stateDir = processEnv.VDNS_STATE_DIR ?? (installMode === "homebrew" ? path.join(processEnv.HOME ?? home, ".vdns") : path.join(home, ".vdns"));
@@ -15,7 +16,7 @@ export async function loadDoctorContext(argv: string[], processEnv: NodeJS.Proce
   const env = { ...fileEnv, ...processEnv };
   const version = await readVersion(home);
 
-  return { strict, home, installMode, stateDir, envFile, logDir, pidDir, version, env };
+  return { strict, requireHttps, home, installMode, stateDir, envFile, logDir, pidDir, version, env };
 }
 
 async function readEnvFile(envFile: string): Promise<Record<string, string>> {
@@ -40,4 +41,3 @@ function inferInstallMode(home: string): string {
     ? "homebrew"
     : "checkout";
 }
-

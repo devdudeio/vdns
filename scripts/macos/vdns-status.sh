@@ -18,6 +18,9 @@ VNS_TLD="${VNS_TLD:-vrsc}"
 VNS_DNS_PORT="${VNS_DNS_PORT:-1053}"
 VNS_RESOLVER_URL="$(vdns_resolver_url)"
 VNS_REDIRECT_PORT="${VNS_REDIRECT_PORT:-8081}"
+VDNS_HTTPS_ENABLED="${VDNS_HTTPS_ENABLED:-false}"
+VDNS_HTTPS_PORT="${VDNS_HTTPS_PORT:-443}"
+VDNS_TLS_CA_DIR="${VDNS_TLS_CA_DIR:-${VDNS_STATE_DIR}/ca}"
 RESOLVER_FILE="/etc/resolver/${VNS_TLD}"
 PID_DIR="${VDNS_PID_DIR}"
 
@@ -73,6 +76,25 @@ if command -v lsof >/dev/null 2>&1; then
   echo "visible TCP listeners:"
   vdns_lsof_port_privileged_if_needed TCP 80
   vdns_lsof_port TCP "${VNS_REDIRECT_PORT}"
+else
+  echo "lsof is not available"
+fi
+
+vdns_section "HTTPS"
+echo "VDNS_HTTPS_ENABLED=${VDNS_HTTPS_ENABLED}"
+if [[ -f "${VDNS_TLS_CA_DIR}/vdns-local-root-ca.pem" ]]; then
+  echo "CA cert: ${VDNS_TLS_CA_DIR}/vdns-local-root-ca.pem"
+  if command -v security >/dev/null 2>&1 && security find-certificate -a -c "vDNS Local Root CA" /Library/Keychains/System.keychain >/dev/null 2>&1; then
+    echo "CA trusted: true"
+  else
+    echo "CA trusted: false"
+  fi
+else
+  echo "CA cert: missing"
+  echo "CA trusted: unknown"
+fi
+if command -v lsof >/dev/null 2>&1; then
+  vdns_lsof_port_privileged_if_needed TCP "${VDNS_HTTPS_PORT}"
 else
   echo "lsof is not available"
 fi
