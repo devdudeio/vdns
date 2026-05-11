@@ -24,12 +24,12 @@ export function parseVnsDomain(domain: string, config: VnsConfig): ParsedVnsDoma
   }
 
   if (labels.length !== 2 && labels.length !== 3) {
-    throw new Error(`VNS v1 supports only name.${config.tld} or host.name.${config.tld}`);
+    throw new Error(`vDNS v1 supports only name.${config.tld} or host.name.${config.tld}`);
   }
 
   const relevantLabels = labels.slice(0, -1);
   if (!relevantLabels.every((label) => labelPattern.test(label))) {
-    throw new Error(`Invalid VNS domain label in ${domain}`);
+    throw new Error(`Invalid vDNS domain label in ${domain}`);
   }
 
   const name = labels.length === 2 ? labels[0] : labels[1];

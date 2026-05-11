@@ -54,9 +54,9 @@ Commands:
   paths             Print resolved vDNS paths
   resolver          Run the HTTP resolver
   gateway           Run the web gateway
-  record            Delegate to the vns record CLI
-  identity          Delegate to the vns identity CLI
-  vdxf              Delegate to the vns vdxf CLI
+  record            Delegate to the compatibility record CLI
+  identity          Delegate to the compatibility identity CLI
+  vdxf              Delegate to the compatibility vdxf CLI
   help              Show this help
 
 Global:

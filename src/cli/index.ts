@@ -75,7 +75,7 @@ export function createCliProgram(options: CliOptions = {}): Command {
 
   program
     .name("vns")
-    .description("Inspect and write VNS records in VerusID contentmultimap data")
+    .description("Inspect and write vDNS records in VerusID contentmultimap data")
     .option("--rpc-url <url>", "Verus JSON-RPC endpoint URL")
     .option("--rpc-user <user>", "Verus JSON-RPC username")
     .option("--rpc-password <password>", "Verus JSON-RPC password")
@@ -84,8 +84,8 @@ export function createCliProgram(options: CliOptions = {}): Command {
     .option("--write-rpc-user <user>", "Verus write JSON-RPC username")
     .option("--write-rpc-password <password>", "Verus write JSON-RPC password")
     .option("--write-rpc-timeout-ms <ms>", "Verus write JSON-RPC timeout in milliseconds", parsePositiveInt)
-    .option("--root <identity>", "VNS root identity")
-    .option("--tld <tld>", "VNS top-level domain")
+    .option("--root <identity>", "vDNS root identity")
+    .option("--tld <tld>", "vDNS top-level domain")
     .configureOutput({
       writeOut: (str) => io.stdout.write(str),
       writeErr: (str) => io.stderr.write(str)
@@ -94,7 +94,7 @@ export function createCliProgram(options: CliOptions = {}): Command {
   const vdxf = program.command("vdxf").description("VDXF helpers");
   addSharedOptions(vdxf
     .command("keys")
-    .description("Print VNS symbolic VDXF keys and resolved IDs when RPC is configured"))
+    .description("Print vDNS symbolic VDXF keys and resolved IDs when RPC is configured"))
     .action(async () => {
       const global = readGlobalOptions(program, env, vdxf.commands[0]);
       const keyNames = buildVnsVdxfKeyNames(global.root, global.tld);
@@ -124,10 +124,10 @@ export function createCliProgram(options: CliOptions = {}): Command {
       writeJson(io, raw);
     });
 
-  const record = program.command("record").description("VNS record helpers");
+  const record = program.command("record").description("vDNS record helpers");
   addSharedOptions(record
     .command("inspect")
-    .description("Inspect VNS records on an identity")
+    .description("Inspect vDNS records on an identity")
     .argument("<identity>"))
     .action(async (identityName: string) => {
       const command = record.commands.find((candidate) => candidate.name() === "inspect");
@@ -147,7 +147,7 @@ export function createCliProgram(options: CliOptions = {}): Command {
 
   addSharedOptions(record
     .command("set")
-    .description("Prepare and write a VNS record")
+    .description("Prepare and write a vDNS record")
     .argument("<identity>")
     .argument("<type>")
     .argument("<name>")
@@ -157,7 +157,7 @@ export function createCliProgram(options: CliOptions = {}): Command {
     .option("--entry <path>", "SITE entry path", "/index.html")
     .option("--sha256 <hash>", "SITE manifest SHA-256")
     .option("-y, --yes", "skip confirmation")
-    .option("--verify", "refetch and print VNS records after updateidentity")
+    .option("--verify", "refetch and print vDNS records after updateidentity")
     .option("--confirmations <n>", "confirmations to wait for before --verify", parsePositiveInt, 1)
     .option("--verify-timeout-ms <ms>", "--verify confirmation wait timeout in milliseconds", parsePositiveInt, 180_000)
     .option("--verify-interval-ms <ms>", "--verify confirmation poll interval in milliseconds", parsePositiveInt, 5_000)
@@ -201,12 +201,12 @@ export function createCliProgram(options: CliOptions = {}): Command {
 
   addSharedOptions(record
     .command("remove")
-    .description("Prepare and remove a VNS record")
+    .description("Prepare and remove a vDNS record")
     .argument("<identity>")
     .argument("<type>")
     .argument("<name>"))
     .option("-y, --yes", "skip confirmation")
-    .option("--verify", "refetch and print VNS records after updateidentity")
+    .option("--verify", "refetch and print vDNS records after updateidentity")
     .option("--confirmations <n>", "confirmations to wait for before --verify", parsePositiveInt, 1)
     .option("--verify-timeout-ms <ms>", "--verify confirmation wait timeout in milliseconds", parsePositiveInt, 180_000)
     .option("--verify-interval-ms <ms>", "--verify confirmation poll interval in milliseconds", parsePositiveInt, 5_000)
@@ -374,8 +374,8 @@ function addSharedOptions(command: Command): Command {
     .option("--write-rpc-user <user>", "Verus write JSON-RPC username")
     .option("--write-rpc-password <password>", "Verus write JSON-RPC password")
     .option("--write-rpc-timeout-ms <ms>", "Verus write JSON-RPC timeout in milliseconds", parsePositiveInt)
-    .option("--root <identity>", "VNS root identity")
-    .option("--tld <tld>", "VNS top-level domain");
+    .option("--root <identity>", "vDNS root identity")
+    .option("--tld <tld>", "vDNS top-level domain");
 }
 
 function readGlobalOptions(program: Command, env: NodeJS.ProcessEnv, command?: Command): {
@@ -550,7 +550,7 @@ function buildRecord(
     return validateRecord(candidate);
   } catch (error) {
     if (error instanceof ZodError) {
-      throw new CliExitError(`Invalid VNS record: ${error.issues.map((issue) => issue.message).join("; ")}`, 1);
+      throw new CliExitError(`Invalid vDNS record: ${error.issues.map((issue) => issue.message).join("; ")}`, 1);
     }
     throw error;
   }
@@ -706,7 +706,7 @@ async function handlePostUpdateVerify(
 
 function warnDefaultRootForWrite(io: CliIo, global: { root: string; usedDefaultRoot: boolean }): void {
   if (global.usedDefaultRoot && global.root === "fum@") {
-    io.stderr.write("Warning: using default VNS root identity fum@. Set --root or VNS_ROOT_IDENTITY to override.\n");
+    io.stderr.write("Warning: using default vDNS root identity fum@. Set --root or VNS_ROOT_IDENTITY to override.\n");
   }
 }
 

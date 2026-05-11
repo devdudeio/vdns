@@ -80,11 +80,11 @@ run_report() {
   fi
 }
 
-echo "VNS/vDNS macOS diagnostic report"
+echo "vDNS macOS diagnostic report"
 echo "domain: ${VNS_TLD}"
 echo "test host: ${VNS_TEST_HOST}"
 echo "CoreDNS expected at 127.0.0.1:${VNS_DNS_PORT}"
-echo "VNS HTTP resolver expected at ${VNS_RESOLVER_URL}"
+echo "vDNS HTTP resolver expected at ${VNS_RESOLVER_URL}"
 echo "redirect service expected at 127.0.0.1:${VNS_REDIRECT_PORT} and optionally 127.0.0.1:${VNS_REDIRECT_PORT80}"
 
 section "Resolver File"
@@ -112,7 +112,7 @@ else
   echo "lsof is not available; skipping listener checks."
 fi
 
-section "VNS HTTP Resolver"
+section "vDNS HTTP Resolver"
 run_report 5 curl -i --max-time 5 "${VNS_RESOLVER_URL}/health"
 run_report 5 curl -i --max-time 5 "${VNS_RESOLVER_URL}/resolve-domain/${VNS_TEST_HOST}?type=A"
 run_report 5 curl -i --max-time 5 "${VNS_RESOLVER_URL}/resolve-domain/${VNS_TEST_HOST}?type=REDIRECT"

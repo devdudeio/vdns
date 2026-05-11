@@ -43,14 +43,14 @@ for pid in ${PIDS}; do
   COMMAND_LINE="$(ps -p "${pid}" -o command= || true)"
   if [[ "${COMMAND_LINE}" == *"dist/redirect-index.js"* ]] || [[ "${COMMAND_LINE}" == *"redirect-index.js"* ]]; then
     MATCHED_PIDS="${MATCHED_PIDS} ${pid}"
-    echo "Matched VNS redirect process ${pid}: ${COMMAND_LINE}"
+    echo "Matched vDNS gateway process ${pid}: ${COMMAND_LINE}"
   else
-    echo "Skipping node process ${pid}; it does not look like VNS redirect: ${COMMAND_LINE}"
+    echo "Skipping node process ${pid}; it does not look like the vDNS gateway: ${COMMAND_LINE}"
   fi
 done
 
 if [[ -z "${MATCHED_PIDS// }" ]]; then
-  echo "No VNS redirect process found on port 80. Refusing to stop unrelated service." >&2
+  echo "No vDNS gateway process found on port 80. Refusing to stop unrelated service." >&2
   exit 1
 fi
 
@@ -68,4 +68,4 @@ for pid in ${MATCHED_PIDS}; do
   fi
 done
 
-echo "Stopped VNS redirect service on port 80."
+echo "Stopped vDNS gateway on port 80."

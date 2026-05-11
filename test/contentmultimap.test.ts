@@ -147,7 +147,7 @@ describe("contentmultimap helpers", () => {
 
     expect(result.records).toEqual([]);
     expect(result.warnings).toEqual([
-      "Skipping invalid VNS record at index 0: DataDescriptor objectdata is null and cannot be decoded"
+      "Skipping invalid vDNS record at index 0: DataDescriptor objectdata is null and cannot be decoded"
     ]);
   });
 

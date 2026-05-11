@@ -24,7 +24,7 @@ async function main(): Promise<void> {
 }
 
 function logStartupConfig(config: ReturnType<typeof loadConfigFromEnv>): void {
-  console.log("VNS server starting");
+  console.log("vDNS resolver starting");
   console.log(`mode: ${config.mode}`);
   console.log(`rootIdentity: ${config.rootIdentity}`);
   console.log(`tld: ${config.tld}`);

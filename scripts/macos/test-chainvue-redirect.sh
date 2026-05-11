@@ -77,9 +77,9 @@ echo
 RESOLVER_OUTPUT="$(curl -fsS --max-time 5 "${VNS_RESOLVER_URL}/health" 2>&1)"
 if [[ "$?" -eq 0 ]]; then
   RESOLVER_OK=1
-  pass "VNS HTTP resolver is reachable at ${VNS_RESOLVER_URL}"
+  pass "vDNS HTTP resolver is reachable at ${VNS_RESOLVER_URL}"
 else
-  fail "VNS HTTP resolver is not reachable at ${VNS_RESOLVER_URL}"
+  fail "vDNS HTTP resolver is not reachable at ${VNS_RESOLVER_URL}"
   echo "${RESOLVER_OUTPUT}"
 fi
 
@@ -148,11 +148,11 @@ if [[ "${FAILED}" -eq 0 ]]; then
 fi
 
 if [[ "${RESOLVER_OK}" -ne 1 ]]; then
-  echo "Next step: VNS HTTP resolver is not running or not reachable. Start it on ${VNS_RESOLVER_URL} first."
+  echo "Next step: vDNS HTTP resolver is not running or not reachable. Start it on ${VNS_RESOLVER_URL} first."
 elif [[ "${COREDNS_LISTENING}" -ne 1 ]]; then
   echo "Next step: CoreDNS is not listening on port ${VNS_DNS_PORT}. Start it with: cd coredns && ./run-local-resolver.sh"
 elif ! printf '%s\n' "${CORE_DNS_OUTPUT}" | awk '$0 == "127.0.0.1" { found=1 } END { exit found ? 0 : 1 }'; then
-  echo "Next step: CoreDNS is listening but did not return 127.0.0.1. Check the VNS record and resolver response for ${VNS_TEST_HOST}."
+  echo "Next step: CoreDNS is listening but did not return 127.0.0.1. Check the vDNS record and resolver response for ${VNS_TEST_HOST}."
 elif [[ "${DSCACHE_STATUS}" -ne 0 ]] || ! printf '%s\n' "${DSCACHE_OUTPUT}" | awk '$1 == "ip_address:" && $2 == "127.0.0.1" { found=1 } END { exit found ? 0 : 1 }'; then
   echo "Next step: direct CoreDNS passed but macOS resolver failed. Check /etc/resolver/${VNS_TLD} and macOS DNS state."
 elif [[ "${REDIRECT_8081_LISTENING}" -ne 1 ]]; then

@@ -30,7 +30,7 @@ Examples with `VNS_ROOT_IDENTITY=myname.vns@`:
 
 ## Domain Rules
 
-VNS Step 2 supports only:
+vDNS Step 2 supports only:
 
 - `name.<tld>`
 - `host.name.<tld>`

@@ -76,6 +76,6 @@ describe("loadConfigFromEnv", () => {
     [{ VERUS_RPC_TIMEOUT_MS: "0" }],
     [{ VERUS_RPC_TIMEOUT_MS: "abc" }]
   ])("rejects invalid config %#", (env) => {
-    expect(() => loadConfigFromEnv(env)).toThrow("Invalid VNS configuration");
+    expect(() => loadConfigFromEnv(env)).toThrow("Invalid vDNS configuration");
   });
 });

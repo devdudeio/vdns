@@ -42,14 +42,14 @@ if [[ -z "${NODE_BIN}" ]]; then
   fi
 fi
 
-echo "Checking VNS HTTP resolver at ${RESOLVER_URL}/health"
+echo "Checking vDNS HTTP resolver at ${RESOLVER_URL}/health"
 if ! curl -fsS --max-time 5 "${RESOLVER_URL}/health" >/dev/null; then
-  echo "VNS HTTP resolver is not reachable at ${RESOLVER_URL}" >&2
+  echo "vDNS HTTP resolver is not reachable at ${RESOLVER_URL}" >&2
   echo "Start the resolver first, or set VNS_RESOLVER_URL before running this helper." >&2
   exit 1
 fi
 
-echo "Starting VNS redirect service on 127.0.0.1:80"
+echo "Starting vDNS gateway on 127.0.0.1:80"
 echo "This runs the built JS entrypoint directly to avoid root-owned pnpm/node_modules cache files."
 echo "Stop it with: sudo ${SCRIPT_DIR}/stop-redirect-port80.sh"
 echo
@@ -84,7 +84,7 @@ if [[ "${BACKGROUND}" == "1" ]]; then
     exit 1
   fi
 
-  echo "Started VNS redirect service in background."
+  echo "Started vDNS gateway in background."
   echo "PID file: ${PID_FILE}"
   echo "Log file: ${LOG_FILE}"
   exit 0

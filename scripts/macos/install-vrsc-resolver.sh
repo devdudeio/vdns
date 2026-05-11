@@ -34,7 +34,7 @@ esac
 
 mkdir -p "${RESOLVER_DIR}"
 
-if [[ -e "${RESOLVER_FILE}" ]] && ! grep -q "Managed by VNS" "${RESOLVER_FILE}"; then
+if [[ -e "${RESOLVER_FILE}" ]] && ! grep -Eq "Managed by (VNS|vDNS)" "${RESOLVER_FILE}"; then
   BACKUP_FILE="${RESOLVER_FILE}.backup.${TIMESTAMP}"
   if ! cp -p "${RESOLVER_FILE}" "${BACKUP_FILE}"; then
     echo "Refusing to overwrite unmanaged resolver file because backup failed: ${RESOLVER_FILE}" >&2
@@ -44,7 +44,7 @@ if [[ -e "${RESOLVER_FILE}" ]] && ! grep -q "Managed by VNS" "${RESOLVER_FILE}";
 fi
 
 {
-  echo "# Managed by VNS"
+  echo "# Managed by vDNS"
   echo "# Generated at ${GENERATED_AT}"
   echo "domain ${VNS_TLD}"
   echo "nameserver 127.0.0.1"

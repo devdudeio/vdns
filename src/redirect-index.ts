@@ -11,7 +11,7 @@ async function main(): Promise<void> {
 
   const app = await buildRedirectServer(config, { logger: true });
   await app.listen({ port: config.port, host: config.host });
-  console.log(`VNS redirect service listening on ${config.host}:${config.port}`);
+  console.log(`vDNS gateway listening on ${config.host}:${config.port}`);
 
   if (config.httpsEnabled) {
     const tlsPaths = deriveTlsPaths({
@@ -30,7 +30,7 @@ async function main(): Promise<void> {
 }
 
 function logStartupConfig(config: ReturnType<typeof loadRedirectConfigFromEnv>): void {
-  console.log("VNS redirect service starting");
+  console.log("vDNS gateway starting");
   console.log(`host: ${config.host}`);
   console.log(`port: ${config.port}`);
   console.log(`tld: ${config.tld}`);

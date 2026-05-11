@@ -36,7 +36,7 @@ describe("parseIdentityRecords", () => {
   it("warns when record key is missing", () => {
     const result = parseIdentityRecords({ identity: "empty.VNS@", contentmultimap: {} });
     expect(result.records).toEqual([]);
-    expect(result.warnings[0]).toContain("No VNS records");
+    expect(result.warnings[0]).toContain("No vDNS records");
   });
 
   it("parses real Verus DataDescriptor hex objectdata when VDXF IDs are provided", () => {

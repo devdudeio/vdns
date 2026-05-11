@@ -1,6 +1,6 @@
-# VNS CLI
+# vDNS Compatibility CLI
 
-The `vns` CLI is the local operator tool behind vDNS. It inspects Verus identities, resolves VNS VDXF keys, and prepares guarded `updateidentity` writes that the vDNS resolver later serves as DNS-compatible records.
+The `vns` CLI is the compatibility operator tool behind vDNS. It inspects Verus identities, resolves vDNS VDXF keys, and prepares guarded `updateidentity` writes that the vDNS resolver later serves as DNS-compatible records.
 
 Build it first:
 
@@ -60,7 +60,7 @@ VERUS_RPC_URL=https://api.verustest.net/ \
 node dist/cli/index.js identity raw VRSCTEST@
 ```
 
-Inspect VNS records for a local or configured endpoint:
+Inspect vDNS records for a local or configured endpoint:
 
 ```sh
 VERUS_RPC_URL=http://127.0.0.1:27486 \
@@ -122,7 +122,7 @@ node dist/cli/index.js record remove chainvue.dude@ A @
 
 Write commands always:
 
-- validate the VNS record before write RPC calls
+- validate the vDNS record before write RPC calls
 - fetch the raw identity first
 - merge into the existing `contentmultimap`
 - preserve unrelated `contentmultimap` keys and unrelated DataDescriptor entries
@@ -136,7 +136,7 @@ Use `--yes` only after reviewing the command carefully:
 node dist/cli/index.js record set chainvue.dude@ TXT @ "hello=vns" --yes
 ```
 
-Use `--verify` to refetch and print VNS records after the write:
+Use `--verify` to refetch and print vDNS records after the write:
 
 ```sh
 node dist/cli/index.js record set chainvue.dude@ A www 192.0.2.11 --yes --verify
@@ -172,7 +172,7 @@ Identity address: i7Mki7dLpVxdanKubmZJksuJBLtUqY4MyS
 
 The following JSON preview then starts with `name: "chainvue"` and the parent i-address. The full target identity is still used for lookup and `--verify` refetches `chainvue.fum@` after confirmation.
 
-VNS DataDescriptor `objectdata` values are written as lowercase hex-encoded UTF-8 JSON. Inline raw JSON objectdata is accepted only for older fixtures and backward compatibility. `objectdata: null` indicates incorrectly encoded or unusable stored data and is skipped with a warning. Decode a stored value manually with:
+vDNS DataDescriptor `objectdata` values are written as lowercase hex-encoded UTF-8 JSON. Inline raw JSON objectdata is accepted only for older fixtures and backward compatibility. `objectdata: null` indicates incorrectly encoded or unusable stored data and is skipped with a warning. Decode a stored value manually with:
 
 ```sh
 echo "<hex>" | xxd -r -p | jq .

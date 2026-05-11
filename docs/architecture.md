@@ -7,7 +7,7 @@ The current resolver foundation is:
 ```text
 HTTP client
   -> Fastify HTTP API
-  -> VNS resolver core
+  -> vDNS resolver core
   -> Verus RPC-like interface
   -> mock fixture client or read-only Verus JSON-RPC client
 ```
@@ -143,7 +143,7 @@ Debug routes share this boundary:
 
 Step 2 includes:
 
-- normalized VNS record schema
+- normalized vDNS record schema
 - mock Verus identity fixtures
 - resolver core library
 - Fastify resolver API

@@ -139,7 +139,7 @@ describe("vns CLI", () => {
     const payload = parseJsonOutputs(result.stdout)[0];
 
     expect(Object.keys(payload.contentmultimap)).toContain("id:fum.vrsc::vns.record");
-    expect(result.stderr).toContain("Warning: using default VNS root identity fum@");
+    expect(result.stderr).toContain("Warning: using default vDNS root identity fum@");
     expect(result.exitCode).toBeUndefined();
   });
 
@@ -297,7 +297,7 @@ describe("vns CLI", () => {
 
     expect(client.getIdentity).not.toHaveBeenCalled();
     expect(client.updateIdentity).not.toHaveBeenCalled();
-    expect(result.stderr).toContain("Invalid VNS record");
+    expect(result.stderr).toContain("Invalid vDNS record");
     expect(result.exitCode).toBe(1);
   });
 

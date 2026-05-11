@@ -21,7 +21,7 @@ const tldSchema = z
 const intFromEnv = (name: string, value: string | undefined, fallback: number): number => {
   const raw = value ?? String(fallback);
   if (!/^\d+$/.test(raw)) {
-    throw new Error(`Invalid VNS configuration: ${name} must be an integer`);
+    throw new Error(`Invalid vDNS configuration: ${name} must be an integer`);
   }
   return Number(raw);
 };
@@ -61,7 +61,7 @@ export function loadConfigFromEnv(env: NodeJS.ProcessEnv = process.env): VnsConf
 
   if (!parsed.success) {
     const message = parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ");
-    throw new Error(`Invalid VNS configuration: ${message}`);
+    throw new Error(`Invalid vDNS configuration: ${message}`);
   }
 
   return parsed.data;

@@ -51,7 +51,7 @@ describe("redirect service", () => {
     const server = await makeApp(record("https://chainvue.io/"));
     const response = await server.inject({ method: "GET", url: "/health", headers: { host: "example.com" } });
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ status: "ok", service: "vns-redirect" });
+    expect(response.json()).toEqual({ status: "ok", service: "vdns-gateway" });
   });
 
   it("redirects a vrsc host with a REDIRECT record", async () => {

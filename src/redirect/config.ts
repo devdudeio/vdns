@@ -33,7 +33,7 @@ const tldSchema = z
 const intFromEnv = (name: string, value: string | undefined, fallback: number): number => {
   const raw = value ?? String(fallback);
   if (!/^\d+$/.test(raw)) {
-    throw new Error(`Invalid VNS redirect configuration: ${name} must be an integer`);
+    throw new Error(`Invalid vDNS gateway configuration: ${name} must be an integer`);
   }
   return Number(raw);
 };
@@ -122,7 +122,7 @@ export function loadRedirectConfigFromEnv(env: NodeJS.ProcessEnv = process.env):
 
   if (!parsed.success) {
     const message = parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ");
-    throw new Error(`Invalid VNS redirect configuration: ${message}`);
+    throw new Error(`Invalid vDNS gateway configuration: ${message}`);
   }
 
   return parsed.data;

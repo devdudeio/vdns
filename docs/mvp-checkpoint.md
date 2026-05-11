@@ -1,12 +1,12 @@
 # vDNS MVP Checkpoint
 
-vDNS turns VerusID identities into locally resolvable DNS records. The MVP keeps the code/package terminology as VNS, but the user-facing path is vDNS: a VerusID-native, DNS-compatible local resolver.
+vDNS turns VerusID identities into locally resolvable DNS records. Some internal schemas and compatibility commands still use VNS terminology, but the user-facing path is vDNS: a VerusID-native, DNS-compatible local resolver.
 
 ## Confirmed Path
 
 ```text
 VerusID contentmultimap records
-  -> VNS HTTP resolver
+  -> vDNS HTTP resolver
   -> CoreDNS vns plugin on 127.0.0.1:1053
   -> macOS /etc/resolver/vrsc split-DNS
   -> local HTTP redirect service on 127.0.0.1:80

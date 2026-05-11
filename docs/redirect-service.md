@@ -1,6 +1,6 @@
 # vDNS Local Web Gateway
 
-The local web gateway is the HTTP leg of vDNS for `.vrsc` browser URLs. It is a separate Fastify process that reads the incoming `Host`, asks the VNS resolver API for web records, and either returns a redirect or, when explicitly enabled, proxies the request to an upstream HTTP(S) target.
+The local web gateway is the HTTP leg of vDNS for `.vrsc` browser URLs. It is a separate Fastify process that reads the incoming `Host`, asks the vDNS resolver API for web records, and either returns a redirect or, when explicitly enabled, proxies the request to an upstream HTTP(S) target.
 
 By default it preserves the original redirect-only behavior. Proxying is opt-in with `VDNS_PROXY_ENABLED=true`.
 
@@ -67,7 +67,7 @@ The gateway listens on `127.0.0.1:8081` by default. Browser use without a port r
 
 ## Making `http://*.vrsc` Work On macOS
 
-`.vrsc` names resolve to `127.0.0.1` through macOS split-DNS and the local CoreDNS VNS plugin. Normal HTTP URLs use port `80`, so this works only when something is listening on `127.0.0.1:80`.
+`.vrsc` names resolve to `127.0.0.1` through macOS split-DNS and the local CoreDNS vDNS plugin. Normal HTTP URLs use port `80`, so this works only when something is listening on `127.0.0.1:80`.
 
 If the gateway is running only on `8081`, Host-header tests can pass:
 

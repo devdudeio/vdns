@@ -2,20 +2,20 @@
 
 vDNS is a local VerusID-native naming stack. It lets a macOS machine resolve `.vrsc` names from VerusID `contentmultimap` records and route browser requests through local DNS plus a local web gateway.
 
-The code still uses VNS for package names, schemas, internals, and environment variables. The public workflow is vDNS.
+The code still uses VNS for schemas, internals, compatibility CLI commands, and environment variables. The public app workflow is vDNS.
 
 ## What Works Today?
 
 Current alpha support includes:
 
-- VNS record schema and validation
+- vDNS record schema and validation
 - configurable root identity and TLD
 - mock fixture-backed resolver
 - Fastify HTTP resolver API
 - separate local Fastify web gateway for `.vrsc` `REDIRECT` records and opt-in `PROXY` records
 - read-only Verus JSON-RPC client for `getidentity`, `getinfo`, and `getblockchaininfo`
 - redacted debug endpoints for config, raw identity payloads, and RPC health
-- local `vns` CLI for VDXF key inspection, raw identity reads, VNS record inspection, and guarded `updateidentity` writes
+- compatibility `vns` CLI for VDXF key inspection, raw identity reads, vDNS record inspection, and guarded `updateidentity` writes
 - CoreDNS plugin MVP that adapts DNS queries to the HTTP resolver
 - macOS split-DNS helper scripts for routing `.vrsc` lookups to a local CoreDNS resolver
 - `vdns` wrapper commands for setup, install, start, status, doctor, demo, logs, and uninstall
@@ -129,7 +129,7 @@ Local redirect service configuration:
 | --- | --- | --- |
 | `VNS_REDIRECT_HOST` | `127.0.0.1` | Redirect service listen host |
 | `VNS_REDIRECT_PORT` | `8081` | Redirect service listen port |
-| `VNS_RESOLVER_URL` | `http://127.0.0.1:8080` | Existing VNS HTTP resolver base URL |
+| `VNS_RESOLVER_URL` | `http://127.0.0.1:8080` | Existing vDNS HTTP resolver base URL |
 | `VNS_TLD` | `vrsc` | TLD handled by this redirect service |
 | `VNS_REDIRECT_DEFAULT_STATUS` | `302` | Fallback redirect status when a record status is not `301` or `302` |
 | `VNS_REDIRECT_TIMEOUT_MS` | `5000` | Resolver request timeout in milliseconds |
@@ -282,7 +282,7 @@ Start the local vDNS stack:
 pnpm vdns:up
 ```
 
-`vdns:up` starts the built HTTP resolver, starts `coredns/coredns-vns` on `127.0.0.1:1053`, installs `/etc/resolver/vrsc` if needed, and starts the built redirect service on `127.0.0.1:80`. It may prompt for `sudo` when installing split-DNS or binding port 80.
+`vdns:up` starts the built HTTP resolver, starts `coredns/coredns-vns` on `127.0.0.1:1053`, installs `/etc/resolver/vrsc` if needed, and starts the built web gateway on `127.0.0.1:80`. It may prompt for `sudo` when installing split-DNS or binding port 80.
 
 Check status and run the demo:
 
@@ -326,7 +326,7 @@ pnpm vdns:stop
 pnpm vdns:uninstall
 ```
 
-`pnpm vdns:install`, `pnpm vdns:start`, `pnpm vdns:stop`, and `pnpm vdns:uninstall` install and manage launchd jobs. The HTTP resolver and CoreDNS run as user LaunchAgents. The browser-style redirect service runs as a root LaunchDaemon because `http://chainvue.vrsc` requires binding privileged port `80`. HTTPS, local TLS, and local CA support remain future work.
+`pnpm vdns:install`, `pnpm vdns:start`, `pnpm vdns:stop`, and `pnpm vdns:uninstall` install and manage launchd jobs. The HTTP resolver and CoreDNS run as user LaunchAgents. The browser-style gateway runs as a root LaunchDaemon because `http://chainvue.vrsc` requires binding privileged port `80`; HTTPS can also bind privileged port `443`.
 
 See [docs/macos-services.md](docs/macos-services.md) for installed plist paths, logs, troubleshooting, uninstall options, and alpha limitations.
 
@@ -352,7 +352,7 @@ node dist/cli/index.js --help
 node dist/cli/index.js vdxf keys --root dude@ --tld vrsc
 ```
 
-When linked or installed as a package, the bin name is `vns`:
+The compatibility CLI bin is `vns`:
 
 ```sh
 vns --help
@@ -406,7 +406,7 @@ Stop the port 80 redirect service with:
 sudo scripts/macos/stop-redirect-port80.sh
 ```
 
-Diagnose the full VNS/CoreDNS/macOS resolver/redirect path:
+Diagnose the full vDNS/CoreDNS/macOS resolver/gateway path:
 
 ```sh
 scripts/macos/diagnose-vdns.sh
@@ -561,7 +561,7 @@ With `VNS_ROOT_IDENTITY=VERUSNAMESERVICE@`:
 
 - `myname.vrsc` -> `myname.VERUSNAMESERVICE@`, host `@`
 
-VNS Step 2 rejects deep domains such as `a.b.myname.vrsc`.
+vDNS Step 2 rejects deep domains such as `a.b.myname.vrsc`.
 
 ## Integration Tests
 
@@ -583,7 +583,7 @@ echo "<hex>" | xxd -r -p | jq .
 
 ## CoreDNS Plugin MVP
 
-The CoreDNS plugin is a thin DNS adapter. It receives DNS queries, calls the existing VNS HTTP resolver, and converts normalized VNS records into DNS answers. It does not talk to Verus RPC directly.
+The CoreDNS plugin is a thin DNS adapter. It receives DNS queries, calls the existing vDNS HTTP resolver, and converts normalized vDNS records into DNS answers. It does not talk to Verus RPC directly.
 
 Supported DNS record types in this MVP:
 
@@ -596,7 +596,7 @@ Supported DNS record types in this MVP:
 
 Manual flow:
 
-1. Start the VNS HTTP resolver in RPC mode:
+1. Start the vDNS HTTP resolver in RPC mode:
 
 ```sh
 VNS_MODE=rpc \
@@ -614,7 +614,7 @@ pnpm dev
 curl http://127.0.0.1:8080/resolve-domain/google.vrsc | jq .
 ```
 
-3. Build a custom CoreDNS binary with the VNS plugin:
+3. Build a custom CoreDNS binary with the vDNS plugin:
 
 ```sh
 cd coredns
@@ -641,7 +641,7 @@ Expected answer:
 google.vrsc. 300 IN A 142.250.181.238
 ```
 
-For a name that currently has only a VNS `REDIRECT` record:
+For a name that currently has only a vDNS `REDIRECT` record:
 
 ```sh
 dig @127.0.0.1 -p 1053 chainvue.vrsc A
@@ -659,7 +659,7 @@ This may return `REFUSED` or no useful answer, depending on the CoreDNS response
 
 ## CoreDNS Local Resolver Mode
 
-Local resolver mode handles `.vrsc` through VNS and forwards every other DNS name to normal upstream resolvers.
+Local resolver mode handles `.vrsc` through vDNS and forwards every other DNS name to normal upstream resolvers.
 
 Run it after building `coredns-vns`:
 
@@ -697,7 +697,7 @@ You can run both checks with:
 CoreDNS configuration files:
 
 - [coredns/Corefile.vrsc-only.example](coredns/Corefile.vrsc-only.example): `.vrsc` only on port `1053`.
-- [coredns/Corefile.local-resolver.example](coredns/Corefile.local-resolver.example): `.vrsc` via VNS plus public DNS forwarding on port `1053`.
+- [coredns/Corefile.local-resolver.example](coredns/Corefile.local-resolver.example): `.vrsc` via vDNS plus public DNS forwarding on port `1053`.
 - [coredns/Corefile.local-resolver-53.example](coredns/Corefile.local-resolver-53.example): same as local resolver mode, but on port `53`.
 - [coredns/Corefile.local-resolver.env.example](coredns/Corefile.local-resolver.env.example): same localhost-bound pattern with CoreDNS environment variable substitution.
 
@@ -707,9 +707,9 @@ Docker Desktop users can set `resolver_url http://host.docker.internal:8080`; lo
 
 ## macOS Split-DNS Setup For `.vrsc`
 
-macOS can route only `.vrsc` lookups to the local CoreDNS/VNS resolver with `/etc/resolver/vrsc`. Normal DNS names stay on the system resolver path.
+macOS can route only `.vrsc` lookups to the local CoreDNS/vDNS resolver with `/etc/resolver/vrsc`. Normal DNS names stay on the system resolver path.
 
-Start the VNS HTTP resolver in RPC mode:
+Start the vDNS HTTP resolver in RPC mode:
 
 ```sh
 VNS_MODE=rpc \
@@ -806,7 +806,7 @@ Troubleshooting:
 - Confirm CoreDNS is listening on `127.0.0.1:1053` with `scripts/macos/status-vrsc-resolver.sh`.
 - Confirm `/etc/resolver/vrsc` exists and contains `nameserver 127.0.0.1` and `port 1053`.
 - Confirm `scutil --dns` shows a `vrsc` resolver.
-- Confirm the VNS HTTP resolver is running at `http://127.0.0.1:8080`.
+- Confirm the vDNS HTTP resolver is running at `http://127.0.0.1:8080`.
 - Do not edit `/etc/resolv.conf`; macOS manages that file.
 
 Plugin tests:

@@ -24,7 +24,7 @@ case "${VNS_DNS_PORT}" in
     ;;
 esac
 
-echo "macOS VNS split-DNS status"
+echo "macOS vDNS split-DNS status"
 echo "domain: ${VNS_TLD}"
 echo "expected resolver: 127.0.0.1:${VNS_DNS_PORT}"
 echo

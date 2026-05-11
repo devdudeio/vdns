@@ -26,10 +26,10 @@ if [[ ! -e "${RESOLVER_FILE}" ]]; then
   exit 0
 fi
 
-if ! grep -q "Managed by VNS" "${RESOLVER_FILE}"; then
+if ! grep -Eq "Managed by (VNS|vDNS)" "${RESOLVER_FILE}"; then
   echo "Refusing to delete unmanaged resolver file: ${RESOLVER_FILE}" >&2
   exit 1
 fi
 
 rm "${RESOLVER_FILE}"
-echo "Removed managed VNS resolver file: ${RESOLVER_FILE}"
+echo "Removed managed vDNS resolver file: ${RESOLVER_FILE}"

@@ -66,7 +66,7 @@ const preservedResponseHeaders = new Set([
 ]);
 
 export async function registerRedirectRoutes(app: FastifyInstance, options: RouteOptions): Promise<void> {
-  app.get("/health", async () => ({ status: "ok", service: "vns-redirect" }));
+  app.get("/health", async () => ({ status: "ok", service: "vdns-gateway" }));
 
   app.get<{ Querystring: DebugResolveQuery }>("/debug/resolve", async (request, reply) => {
     if (!isLocalClient(request.ip)) {
@@ -499,9 +499,9 @@ function sendProxyTargetRejected(reply: FastifyReply, error: Error) {
 function sendResolverError(reply: FastifyReply, error: unknown) {
   if (error instanceof RedirectResolverError) {
     if (error.kind === "timeout") {
-      return reply.code(504).send({ statusCode: 504, error: "Gateway Timeout", message: "VNS resolver request timed out" });
+      return reply.code(504).send({ statusCode: 504, error: "Gateway Timeout", message: "vDNS resolver request timed out" });
     }
-    return reply.code(502).send({ statusCode: 502, error: "Bad Gateway", message: "VNS resolver upstream error" });
+    return reply.code(502).send({ statusCode: 502, error: "Bad Gateway", message: "vDNS resolver upstream error" });
   }
 
   throw error;

@@ -56,11 +56,11 @@ export function extractVnsRecords(
   const input = identityPayload.contentmultimap?.[vnsRecordKey]
     ?? (symbolicFallback ? identityPayload.contentmultimap?.[VNS_VDXF_KEYS.RECORD] : undefined);
   if (input === undefined) {
-    return { records: [], warnings: [`No VNS records found for ${identityPayload.identity}`] };
+    return { records: [], warnings: [`No vDNS records found for ${identityPayload.identity}`] };
   }
 
   if (!Array.isArray(input)) {
-    return { records: [], warnings: [`VNS record payload for ${identityPayload.identity} must be an array`] };
+    return { records: [], warnings: [`vDNS record payload for ${identityPayload.identity} must be an array`] };
   }
 
   const records: VnsRecord[] = [];
@@ -68,7 +68,7 @@ export function extractVnsRecords(
 
   input.forEach((entry, index) => {
     const unwrapped = unwrapRecord(entry, labelIds);
-    warnings.push(...unwrapped.warnings.map((warning) => `Skipping invalid VNS record at index ${index}: ${warning}`));
+    warnings.push(...unwrapped.warnings.map((warning) => `Skipping invalid vDNS record at index ${index}: ${warning}`));
     const candidate = unwrapped.record;
     if (!candidate) {
       return;
@@ -78,7 +78,7 @@ export function extractVnsRecords(
       records.push(validateRecord(candidate));
     } catch (error) {
       const reason = error instanceof Error ? error.message : "unknown validation error";
-      warnings.push(`Skipping invalid VNS record at index ${index}: ${reason}`);
+      warnings.push(`Skipping invalid vDNS record at index ${index}: ${reason}`);
     }
   });
 
