@@ -1,12 +1,12 @@
 # vDNS
 
-vDNS turns VerusID identities into locally resolvable DNS records. It maps `.vrsc` domains to Verus sub-identities and reads DNS/web records from VerusID `contentmultimap` data using a VDXF-based record schema.
+vDNS is a local VerusID-native naming stack. It lets a macOS machine resolve `.vrsc` names from VerusID `contentmultimap` records and route browser requests through local DNS plus a local web gateway.
 
-The implementation still uses VNS for package names, code internals, schemas, and environment variables. This repository currently contains the macOS MVP foundation: schema, fixtures, resolver core, mock-backed HTTP API, read-only Verus JSON-RPC mode, guarded local `vns` CLI writes, a CoreDNS plugin, macOS split-DNS helpers, and a local redirect service.
+The code still uses VNS for package names, schemas, internals, and environment variables. The public workflow is vDNS.
 
-## Scope
+## What Works Today?
 
-Implemented now:
+Current alpha support includes:
 
 - VNS record schema and validation
 - configurable root identity and TLD
@@ -18,15 +18,85 @@ Implemented now:
 - local `vns` CLI for VDXF key inspection, raw identity reads, VNS record inspection, and guarded `updateidentity` writes
 - CoreDNS plugin MVP that adapts DNS queries to the HTTP resolver
 - macOS split-DNS helper scripts for routing `.vrsc` lookups to a local CoreDNS resolver
-- macOS vDNS scripts for starting, checking, demoing, and stopping the local stack
-- alpha macOS launchd service scripts for installing the resolver, CoreDNS, and port 80 redirect as services
+- `vdns` wrapper commands for setup, install, start, status, doctor, demo, logs, and uninstall
+- alpha macOS launchd services for the resolver, CoreDNS, and local web gateway
 
-Not implemented yet:
+## Quick Install With Homebrew
+
+```sh
+brew tap devdudeio/vdns
+brew install vdns
+vdns setup
+vdns install
+vdns start
+vdns doctor
+vdns demo
+```
+
+`brew install` installs files only. It does not install launchd services, write `/etc/resolver`, bind port 80, or start background processes. Those steps are explicit through `vdns install` and `vdns start`.
+
+Homebrew configuration lives at `~/.vdns/.env.local`; logs live at `~/.vdns/logs`.
+
+## Quick Demo
+
+After setup and service start:
+
+```sh
+vdns status
+vdns doctor
+vdns demo
+curl -i --max-time 10 http://chainvue.vrsc
+```
+
+Expected demo records:
+
+```text
+google.vrsc    -> A 142.250.181.238
+chainvue.vrsc  -> REDIRECT http://chainvue.io/
+verus.vrsc     -> PROXY https://verus.io/
+```
+
+On macOS, `dig google.vrsc` may not use `/etc/resolver`. Prefer:
+
+```sh
+dscacheutil -q host -a name google.vrsc
+dig @127.0.0.1 -p 1053 google.vrsc A +short
+```
+
+## How It Works
+
+```text
+browser/system resolver
+  -> /etc/resolver/vrsc
+  -> CoreDNS on 127.0.0.1:1053
+  -> HTTP resolver on 127.0.0.1:8080
+  -> Verus RPC
+  -> VerusID contentmultimap records
+```
+
+For web requests:
+
+```text
+browser -> 127.0.0.1:80 web gateway -> REDIRECT or PROXY record
+```
+
+See [docs/architecture.md](docs/architecture.md) for details.
+
+More alpha docs:
+
+- [Homebrew install](docs/homebrew.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Security notes](docs/security.md)
+- [Alpha release checklist](docs/alpha-release-checklist.md)
+
+## Current Limitations
 
 - local TLS/CA
 - desktop client
 - payment/product logic
 - real VDXF key registration
+- global ICANN DNS trust; vDNS is local-first
+- PROXY is experimental and intentionally constrained
 
 ## Configuration
 
@@ -107,8 +177,8 @@ It verifies:
 - `google.vrsc` resolves to `142.250.181.238`
 - `chainvue.vrsc` resolves to `127.0.0.1`
 - the `chainvue.vrsc` VerusID record contains `REDIRECT -> http://chainvue.io/`
-- the `chainvue.vrsc` VerusID record contains `PROXY -> https://chainvue.io/`
-- `curl http://chainvue.vrsc` returns `x-vdns-proxy: 1` with target host `chainvue.io`
+- the `verus.vrsc` VerusID record contains `PROXY -> https://verus.io/`
+- `curl -I http://verus.vrsc` returns `x-vdns-proxy: 1` with target host `verus.io`
 
 Expected final output:
 
@@ -126,8 +196,8 @@ The demo uses these defaults, which can be overridden for another showcase ident
 | `VDNS_DEMO_REDIRECT_HOST` | `chainvue.vrsc` |
 | `VDNS_DEMO_REDIRECT_A` | `127.0.0.1` |
 | `VDNS_DEMO_REDIRECT_LOCATION` | `http://chainvue.io/` |
-| `VDNS_DEMO_PROXY_HOST` | `chainvue.vrsc` |
-| `VDNS_DEMO_PROXY_TARGET_HOST` | `chainvue.io` |
+| `VDNS_DEMO_PROXY_HOST` | `verus.vrsc` |
+| `VDNS_DEMO_PROXY_TARGET_HOST` | `verus.io` |
 
 If the demo fails, run:
 
@@ -172,7 +242,8 @@ The demo assumes these records exist under `VNS_ROOT_IDENTITY=fum@` and `VNS_TLD
 google.fum@:   A @ -> 142.250.181.238
 chainvue.fum@: A @ -> 127.0.0.1
 chainvue.fum@: REDIRECT @ -> http://chainvue.io/ status 302
-chainvue.fum@: PROXY @ -> https://chainvue.io/
+verus.fum@:    A @ -> 127.0.0.1
+verus.fum@:    PROXY @ -> https://verus.io/
 ```
 
 The `vns` CLI can prepare those writes:
@@ -181,7 +252,8 @@ The `vns` CLI can prepare those writes:
 node dist/cli/index.js record set google.fum@ A @ 142.250.181.238 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
 node dist/cli/index.js record set chainvue.fum@ A @ 127.0.0.1 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
 node dist/cli/index.js record set chainvue.fum@ REDIRECT @ http://chainvue.io/ --status 302 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
-node dist/cli/index.js record set chainvue.fum@ PROXY @ https://chainvue.io/ --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
+node dist/cli/index.js record set verus.fum@ A @ 127.0.0.1 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
+node dist/cli/index.js record set verus.fum@ PROXY @ https://verus.io/ --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
 ```
 
 Start the local vDNS stack:
@@ -205,6 +277,7 @@ Expected checks:
 dscacheutil -q host -a name google.vrsc
 dscacheutil -q host -a name chainvue.vrsc
 curl -i --max-time 10 http://chainvue.vrsc
+curl -I --max-time 20 http://verus.vrsc
 ```
 
 `chainvue.vrsc` should return `302` with `Location: http://chainvue.io/`.
@@ -289,7 +362,7 @@ Run the local web gateway in a second terminal:
 VDNS_PROXY_ENABLED=true VNS_RESOLVER_URL=http://127.0.0.1:8080 VNS_REDIRECT_PORT=8081 pnpm redirect:dev
 ```
 
-For the Chainvue local gateway demo, `chainvue.fum@` should contain `A @ -> 127.0.0.1`, `REDIRECT @ -> http://chainvue.io/`, and `PROXY @ -> https://chainvue.io/`. With `VDNS_PROXY_ENABLED=true`, PROXY wins over REDIRECT. Then test:
+For the local gateway demo, `chainvue.fum@` should contain `A @ -> 127.0.0.1` and `REDIRECT @ -> http://chainvue.io/`; `verus.fum@` should contain `A @ -> 127.0.0.1` and `PROXY @ -> https://verus.io/`. With `VDNS_PROXY_ENABLED=true`, PROXY records are served before REDIRECT fallback. Then test:
 
 ```sh
 curl http://127.0.0.1:8081/health

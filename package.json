@@ -25,6 +25,7 @@
     "vdns:up": "scripts/macos/vdns-up.sh",
     "vdns:down": "scripts/macos/vdns-down.sh",
     "vdns:status": "scripts/macos/vdns-status.sh",
+    "vdns:doctor": "bin/vdns doctor",
     "vdns:demo": "scripts/macos/vdns-demo.sh",
     "vdns:terminal-demo": "scripts/macos/vdns-terminal-demo.sh",
     "vdns:install": "scripts/macos/install-services.sh",

@@ -189,16 +189,72 @@ case "${1:-help}" in
   status) shift; run_script vdns-status.sh "$@" ;;
   service-status) shift; run_script print-service-status.sh "$@" ;;
   demo) shift; run_script vdns-demo.sh "$@" ;;
-  doctor) shift; "${VDNS_HOME}/scripts/macos/vdns-status.sh" "$@"; echo; "${VDNS_HOME}/scripts/macos/diagnose-vdns.sh" "$@" ;;
+  doctor)
+    shift
+    entry="${VDNS_HOME}/dist/doctor/index.js"
+    if [[ ! -f "${entry}" ]]; then
+      echo "Missing doctor entrypoint: ${entry}" >&2
+      echo "Run: pnpm build" >&2
+      exit 1
+    fi
+    exec node "${entry}" "$@"
+    ;;
   logs)
     shift
     mkdir -p "${VDNS_LOG_DIR}"
-    if [[ "${1:-}" == "--tail" || "${1:-}" == "-f" ]]; then
-      shift
-      exec tail -f "${VDNS_LOG_DIR}"/*.log "${VDNS_LOG_DIR}"/*.err "$@"
+    log_target="all"
+    tail_logs=0
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        resolver|coredns|gateway) log_target="$1"; shift ;;
+        --tail|-f) tail_logs=1; shift ;;
+        -h|--help)
+          cat <<LOGS
+Usage: vdns logs [resolver|coredns|gateway] [--tail]
+
+Prints known vDNS log paths. Use --tail to follow matching logs.
+LOGS
+          exit 0
+          ;;
+        *) echo "Unknown logs option: $1" >&2; exit 1 ;;
+      esac
+    done
+
+    logs=()
+    case "${log_target}" in
+      all)
+        logs+=("${VDNS_LOG_DIR}/resolver.launchd.log" "${VDNS_LOG_DIR}/resolver.launchd.err")
+        logs+=("${VDNS_LOG_DIR}/coredns.launchd.log" "${VDNS_LOG_DIR}/coredns.launchd.err")
+        logs+=("${VDNS_LOG_DIR}/redirect.launchd.log" "${VDNS_LOG_DIR}/redirect.launchd.err")
+        ;;
+      resolver) logs+=("${VDNS_LOG_DIR}/resolver.launchd.log" "${VDNS_LOG_DIR}/resolver.launchd.err") ;;
+      coredns) logs+=("${VDNS_LOG_DIR}/coredns.launchd.log" "${VDNS_LOG_DIR}/coredns.launchd.err") ;;
+      gateway) logs+=("${VDNS_LOG_DIR}/redirect.launchd.log" "${VDNS_LOG_DIR}/redirect.launchd.err") ;;
+    esac
+
+    if [[ "${tail_logs}" == "1" ]]; then
+      existing_logs=()
+      for log_path in "${logs[@]}"; do
+        [[ -f "${log_path}" ]] && existing_logs+=("${log_path}")
+      done
+      if [[ "${#existing_logs[@]}" == "0" ]]; then
+        echo "No log files exist yet under ${VDNS_LOG_DIR}" >&2
+        exit 1
+      fi
+      exec tail -f "${existing_logs[@]}"
     fi
+
     echo "Logs: ${VDNS_LOG_DIR}"
-    ls -1 "${VDNS_LOG_DIR}"/*.log "${VDNS_LOG_DIR}"/*.err 2>/dev/null || true
+    for log_path in "${logs[@]}"; do
+      if [[ -f "${log_path}" ]]; then
+        echo "${log_path}"
+      else
+        echo "${log_path} (missing)"
+      fi
+    done
+    echo
+    echo "Tail all logs: vdns logs --tail"
+    echo "Tail resolver logs: vdns logs resolver --tail"
     ;;
   resolver) shift; exec node "${VDNS_HOME}/dist/index.js" "$@" ;;
   gateway) shift; exec node "${VDNS_HOME}/dist/redirect-index.js" "$@" ;;

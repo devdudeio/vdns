@@ -36,6 +36,37 @@ describe("vdns wrapper", () => {
     expect(paths.stdout).toContain("VDNS_ENV_FILE=");
   });
 
+  it("routes doctor help through the built entrypoint", async () => {
+    const { stdout } = await runVdns(["doctor", "--help"]);
+    expect(stdout).toContain("Usage:");
+    expect(stdout).toContain("vdns doctor [--strict]");
+  });
+
+  it("prints expected log paths by service", async () => {
+    const stateDir = await mkdtemp(path.join(os.tmpdir(), "vdns-wrapper-logs-"));
+    try {
+      const env = { VDNS_STATE_DIR: stateDir, VDNS_LOG_DIR: path.join(stateDir, "logs") };
+      const all = await runVdns(["logs"], env);
+      expect(all.stdout).toContain(path.join(stateDir, "logs", "resolver.launchd.log"));
+      expect(all.stdout).toContain(path.join(stateDir, "logs", "coredns.launchd.log"));
+      expect(all.stdout).toContain(path.join(stateDir, "logs", "redirect.launchd.log"));
+
+      const resolver = await runVdns(["logs", "resolver"], env);
+      expect(resolver.stdout).toContain("resolver.launchd.log");
+      expect(resolver.stdout).not.toContain("coredns.launchd.log");
+
+      const coredns = await runVdns(["logs", "coredns"], env);
+      expect(coredns.stdout).toContain("coredns.launchd.log");
+      expect(coredns.stdout).not.toContain("resolver.launchd.log");
+
+      const gateway = await runVdns(["logs", "gateway"], env);
+      expect(gateway.stdout).toContain("redirect.launchd.log");
+      expect(gateway.stdout).not.toContain("resolver.launchd.log");
+    } finally {
+      await rm(stateDir, { recursive: true, force: true });
+    }
+  });
+
   it("creates setup env file without printing password", async () => {
     const stateDir = await mkdtemp(path.join(os.tmpdir(), "vdns-wrapper-"));
     const envFile = path.join(stateDir, ".env.local");

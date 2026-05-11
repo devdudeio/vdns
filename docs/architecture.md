@@ -17,7 +17,7 @@ The resolver core owns domain parsing, record parsing, validation, filtering, an
 
 ## Local DNS Architecture
 
-The local macOS stack has two paths: DNS resolution for `.vrsc` names and HTTP redirect handling for browser-style URLs.
+The local macOS stack has two paths: DNS resolution for `.vrsc` names and HTTP handling for browser-style URLs.
 
 ```mermaid
 flowchart LR
@@ -26,7 +26,7 @@ flowchart LR
     ResolverConfig["/etc/resolver/vrsc"]
     CoreDNS[CoreDNS vDNS plugin\n127.0.0.1:1053]
     HTTPResolver[Fastify resolver API\n127.0.0.1:8080]
-    Redirect[Redirect service\n127.0.0.1:80]
+    Gateway[Web gateway\n127.0.0.1:80]
   end
 
   subgraph Verus[Verus data source]
@@ -39,19 +39,34 @@ flowchart LR
   CoreDNS -->|HTTP resolve-domain request| HTTPResolver
   HTTPResolver -->|getidentity / getvdxfid| RPC
   RPC --> Identity
-  Identity -->|A, CNAME, TXT, REDIRECT records| HTTPResolver
+  Identity -->|A, CNAME, TXT, REDIRECT, PROXY records| HTTPResolver
   HTTPResolver -->|DNS-compatible answer| CoreDNS
   CoreDNS -->|A 142.250.181.238| App
 
-  App -->|HTTP request: chainvue.vrsc| Redirect
-  Redirect -->|lookup REDIRECT record| HTTPResolver
-  HTTPResolver -->|REDIRECT http://chainvue.io/| Redirect
-  Redirect -->|302 Location header| App
+  App -->|HTTP request: chainvue.vrsc| Gateway
+  Gateway -->|lookup REDIRECT or PROXY record| HTTPResolver
+  HTTPResolver -->|REDIRECT http://chainvue.io/| Gateway
+  Gateway -->|302 Location header| App
+  Gateway -->|optional PROXY target fetch| Upstream[Upstream website]
 ```
 
 DNS answers are produced by CoreDNS, but CoreDNS does not talk to Verus directly. It delegates `.vrsc` record lookup to the local HTTP resolver. The HTTP resolver owns Verus identity lookup, VDXF key resolution, contentmultimap parsing, record validation, filtering by requested DNS type, and cache behavior.
 
-The redirect service is separate from DNS. DNS first maps a `.vrsc` name such as `chainvue.vrsc` to `127.0.0.1`; then the browser connects to local port `80`, where the redirect service asks the HTTP resolver for a `REDIRECT` record and returns an HTTP `302`.
+The web gateway is separate from DNS. DNS first maps a `.vrsc` name such as `chainvue.vrsc` to `127.0.0.1`; then the browser connects to local port `80`, where the gateway asks the HTTP resolver for a `PROXY` or `REDIRECT` record. `PROXY` is attempted first when enabled. If no usable PROXY record exists, the gateway falls back to `REDIRECT` and returns an HTTP `301` or `302`.
+
+## Flow Summary
+
+DNS flow:
+
+```text
+browser/system resolver -> /etc/resolver/vrsc -> CoreDNS -> HTTP resolver -> Verus RPC -> VerusID records
+```
+
+Web flow:
+
+```text
+browser -> 127.0.0.1:80 web gateway -> REDIRECT or PROXY
+```
 
 ## Namespace Configuration
 

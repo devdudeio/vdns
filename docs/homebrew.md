@@ -2,7 +2,7 @@
 
 vDNS is packaged for Homebrew through a custom tap, not Homebrew Core.
 
-User flow:
+## Install
 
 ```sh
 brew tap devdudeio/vdns
@@ -10,11 +10,84 @@ brew install vdns
 vdns setup
 vdns install
 vdns start
-vdns status
+vdns doctor
 vdns demo
 ```
 
-`brew install` only installs files. It does not use `sudo`, install launchd services, write `/etc/resolver`, or start anything. Service installation is explicit through `vdns install`.
+`brew install` only installs files. It does not use `sudo`, install launchd services, write `/etc/resolver`, bind port `80`, or start anything. Service installation is explicit through `vdns install`.
+
+`vdns install` installs launchd plists and `/etc/resolver/<tld>`. It may prompt for `sudo` because the web gateway runs on local port `80` and split-DNS resolver files live under `/etc/resolver`.
+
+## Setup
+
+```sh
+vdns setup \
+  --root fum@ \
+  --tld vrsc \
+  --rpc-url http://127.0.0.1:18843 \
+  --rpc-user user \
+  --rpc-password pass
+```
+
+Homebrew config is written to `~/.vdns/.env.local` with mode `600`. Edit that file to change Verus RPC settings, the root identity, TLD, DNS port, gateway port, or PROXY settings.
+
+## Service Flow
+
+```sh
+vdns install
+vdns start
+vdns status
+vdns doctor
+vdns demo
+vdns logs
+```
+
+Useful log commands:
+
+```sh
+vdns logs
+vdns logs resolver
+vdns logs coredns
+vdns logs gateway
+vdns logs --tail
+vdns logs gateway --tail
+```
+
+Logs live in `~/.vdns/logs`.
+
+## Demo Checks
+
+```sh
+dig @127.0.0.1 -p 1053 google.vrsc A +short
+dscacheutil -q host -a name google.vrsc
+curl -i --max-time 10 http://chainvue.vrsc
+curl -I --max-time 20 http://verus.vrsc
+```
+
+`chainvue.vrsc` should return `302` with `Location: http://chainvue.io/`. `verus.vrsc` should include `x-vdns-proxy: 1` and `x-vdns-proxy-target-host: verus.io`.
+
+On macOS, `dig google.vrsc` without `@127.0.0.1 -p 1053` may not use `/etc/resolver`. Use `dscacheutil` for system resolver behavior.
+
+## Upgrade
+
+```sh
+brew update
+brew upgrade vdns
+vdns restart
+vdns doctor
+```
+
+User state under `~/.vdns` survives Cellar upgrades.
+
+## Stop And Uninstall
+
+```sh
+vdns stop
+vdns uninstall
+brew uninstall vdns
+```
+
+`vdns uninstall` removes the launchd services installed by `vdns install`. `brew uninstall vdns` removes Homebrew-managed files. User config and logs under `~/.vdns` are left for inspection or reuse.
 
 ## Runtime Paths
 
@@ -38,7 +111,7 @@ VDNS_PID_DIR=$HOME/.vdns/pids
 
 Override these with `VDNS_HOME`, `VDNS_STATE_DIR`, or `VDNS_ENV_FILE` when needed.
 
-## Commands
+## Command Reference
 
 ```sh
 vdns --version
@@ -48,23 +121,14 @@ vdns setup
 vdns install
 vdns start
 vdns status
+vdns doctor
 vdns demo
 vdns logs
 vdns stop
 vdns uninstall
 ```
 
-`vdns setup` creates the env file with mode `600`. It can run interactively or with flags:
-
-```sh
-vdns setup \
-  --root fum@ \
-  --tld vrsc \
-  --rpc-url http://127.0.0.1:18843 \
-  --rpc-user user \
-  --rpc-password pass \
-  --force
-```
+`vdns doctor --strict` promotes demo record, REDIRECT, and PROXY warnings to failures for release or demo validation.
 
 ## Tap Maintenance
 
