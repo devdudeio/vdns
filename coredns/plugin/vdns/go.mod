@@ -1,4 +1,4 @@
-module github.com/devdudeio/vns/coredns/plugin/vns
+module github.com/devdudeio/vdns/coredns/plugin/vdns
 
 go 1.23.0
 

@@ -19,7 +19,7 @@ fi
 
 vdns_load_env "${REPO_ROOT}" >/dev/null
 PORT="${PORT:-8080}"
-VNS_DNS_PORT="${VNS_DNS_PORT:-1053}"
+VDNS_DNS_PORT="${VDNS_DNS_PORT:-1053}"
 
 vdns_require_file "$(vdns_resolver_plist)" "Missing LaunchAgent: $(vdns_resolver_plist). Run: vdns install"
 vdns_require_file "$(vdns_coredns_plist)" "Missing LaunchAgent: $(vdns_coredns_plist). Run: vdns install"
@@ -39,13 +39,13 @@ else
   [[ "${status}" -eq 2 ]] && RESOLVER_ALREADY=1 || exit "${status}"
 fi
 
-if vdns_check_port_for_service "CoreDNS" TCP "${VNS_DNS_PORT}" "coredns-vns"; then
+if vdns_check_port_for_service "CoreDNS" TCP "${VDNS_DNS_PORT}" "coredns-vdns"; then
   :
 else
   status=$?
   [[ "${status}" -eq 2 ]] && COREDNS_ALREADY=1 || exit "${status}"
 fi
-if vdns_check_port_for_service "CoreDNS" UDP "${VNS_DNS_PORT}" "coredns-vns"; then
+if vdns_check_port_for_service "CoreDNS" UDP "${VDNS_DNS_PORT}" "coredns-vdns"; then
   :
 else
   status=$?

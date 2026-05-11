@@ -1,13 +1,13 @@
-import type { VnsConfig } from "../config.js";
-import { parseVnsDomain } from "./domain.js";
+import type { VdnsConfig } from "../config.js";
+import { parseVdnsDomain } from "./domain.js";
 import { parseIdentityRecords } from "./parser.js";
 import { filterRecordsForHostAndType } from "./records.js";
-import type { IdentityPayload, ResolveResult, VerusRpcLike, VnsRecord, VnsRecordType } from "./types.js";
+import type { IdentityPayload, ResolveResult, VerusRpcLike, VdnsRecord, VdnsRecordType } from "./types.js";
 import { TtlCache } from "./cache.js";
-import { buildVnsVdxfKeyNames, resolveVnsVdxfIds, type VnsVdxfIds, type VnsVdxfKeyNames } from "./vdxf.js";
+import { buildVdnsVdxfKeyNames, resolveVdnsVdxfIds, type VdnsVdxfIds, type VdnsVdxfKeyNames } from "./vdxf.js";
 
 type CachedParsedIdentity = {
-  records: VnsRecord[];
+  records: VdnsRecord[];
   warnings: string[];
 };
 
@@ -34,19 +34,19 @@ export class IdentityNotFoundError extends Error {
   }
 }
 
-export class VnsResolver {
-  private static readonly vdxfIdsCache = new Map<string, Promise<VnsVdxfIds>>();
+export class VdnsResolver {
+  private static readonly vdxfIdsCache = new Map<string, Promise<VdnsVdxfIds>>();
   private readonly cache: TtlCache<CachedParsedIdentity>;
 
   constructor(
-    private readonly config: VnsConfig,
+    private readonly config: VdnsConfig,
     private readonly rpcClient: VerusRpcLike,
     cache?: TtlCache<CachedParsedIdentity>
   ) {
     this.cache = cache ?? new TtlCache<CachedParsedIdentity>();
   }
 
-  async resolveIdentity(identity: string, typeFilter?: VnsRecordType): Promise<ResolveResult> {
+  async resolveIdentity(identity: string, typeFilter?: VdnsRecordType): Promise<ResolveResult> {
     const parsed = await this.getParsedIdentity(identity);
     return {
       identity,
@@ -55,7 +55,7 @@ export class VnsResolver {
     };
   }
 
-  getConfig(): VnsConfig {
+  getConfig(): VdnsConfig {
     return this.config;
   }
 
@@ -115,8 +115,8 @@ export class VnsResolver {
     };
   }
 
-  async resolveDomain(domain: string, typeFilter?: VnsRecordType): Promise<ResolveResult> {
-    const parsedDomain = parseVnsDomain(domain, this.config);
+  async resolveDomain(domain: string, typeFilter?: VdnsRecordType): Promise<ResolveResult> {
+    const parsedDomain = parseVdnsDomain(domain, this.config);
     const parsed = await this.getParsedIdentity(parsedDomain.identity);
     return {
       identity: parsedDomain.identity,
@@ -138,16 +138,16 @@ export class VnsResolver {
       throw new IdentityNotFoundError(identity);
     }
 
-    const vnsVdxfIds = await this.getParserVdxfIds();
+    const vdnsVdxfIds = await this.getParserVdxfIds();
     const parsed = parseIdentityRecords(this.normalizeIdentityPayload(identity, payload), {
-      ...(vnsVdxfIds ? { vnsVdxfIds } : {}),
+      ...(vdnsVdxfIds ? { vdnsVdxfIds } : {}),
       symbolicFallback: this.config.mode === "mock"
     });
     this.cache.set(identity, parsed, this.config.defaultTtl);
     return parsed;
   }
 
-  private async getParserVdxfIds(): Promise<VnsVdxfIds | undefined> {
+  private async getParserVdxfIds(): Promise<VdnsVdxfIds | undefined> {
     if (this.config.mode === "mock") {
       return undefined;
     }
@@ -155,29 +155,29 @@ export class VnsResolver {
     return this.getVdxfIds();
   }
 
-  private async getVdxfIds(): Promise<VnsVdxfIds> {
+  private async getVdxfIds(): Promise<VdnsVdxfIds> {
     const cacheKey = [
       this.config.mode,
       this.config.rootIdentity,
       this.config.tld,
       this.config.verusRpcUrl ?? "mock"
     ].join("|");
-    const cached = VnsResolver.vdxfIdsCache.get(cacheKey);
+    const cached = VdnsResolver.vdxfIdsCache.get(cacheKey);
     if (cached) {
       return cached;
     }
 
     const resolver = this.resolveVdxfIds();
-    VnsResolver.vdxfIdsCache.set(cacheKey, resolver);
+    VdnsResolver.vdxfIdsCache.set(cacheKey, resolver);
     try {
       return await resolver;
     } catch (error) {
-      VnsResolver.vdxfIdsCache.delete(cacheKey);
+      VdnsResolver.vdxfIdsCache.delete(cacheKey);
       throw error;
     }
   }
 
-  private async resolveVdxfIds(): Promise<VnsVdxfIds> {
+  private async resolveVdxfIds(): Promise<VdnsVdxfIds> {
     const keyNames = this.getVdxfKeyNames();
     const getVdxfId = this.rpcClient.getVdxfId?.bind(this.rpcClient);
     if (!getVdxfId) {
@@ -187,11 +187,11 @@ export class VnsResolver {
       throw new Error("Configured RPC client does not support getvdxfid");
     }
 
-    return resolveVnsVdxfIds({ getVdxfId }, keyNames);
+    return resolveVdnsVdxfIds({ getVdxfId }, keyNames);
   }
 
-  private getVdxfKeyNames(): VnsVdxfKeyNames {
-    return buildVnsVdxfKeyNames(this.config.rootIdentity, this.config.tld);
+  private getVdxfKeyNames(): VdnsVdxfKeyNames {
+    return buildVdnsVdxfKeyNames(this.config.rootIdentity, this.config.tld);
   }
 
   private normalizeIdentityPayload(identity: string, payload: IdentityPayload): IdentityPayload {

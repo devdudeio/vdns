@@ -1,7 +1,7 @@
 {
   "identity": "myname.VERUSNAMESERVICE@",
   "contentmultimap": {
-    "VNS.vrsc::record": [
+    "VDNS.vdns::record": [
       {
         "version": 1,
         "type": "A",

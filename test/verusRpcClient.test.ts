@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { VNS_VDXF_KEYS } from "../src/core/constants.js";
+import { VDNS_VDXF_KEYS } from "../src/core/constants.js";
 import { VerusRpcClient, VerusRpcError } from "../src/rpc/verusRpcClient.js";
 
 type FetchCall = {
@@ -40,29 +40,29 @@ describe("VerusRpcClient", () => {
     const { client } = makeClient(jsonResponse({
       result: {
         identity: {
-          name: "VRSCTEST@",
+          name: "VDNSTEST@",
           contentmultimap: {
-            [VNS_VDXF_KEYS.RECORD]: [{ version: 1, type: "TXT", name: "@", value: "ok", ttl: 300 }]
+            [VDNS_VDXF_KEYS.RECORD]: [{ version: 1, type: "TXT", name: "@", value: "ok", ttl: 300 }]
           }
         }
       }
     }));
 
     await expect(client.getIdentity("ignored@")).resolves.toEqual({
-      identity: "VRSCTEST@",
+      identity: "VDNSTEST@",
       contentmultimap: {
-        [VNS_VDXF_KEYS.RECORD]: [{ version: 1, type: "TXT", name: "@", value: "ok", ttl: 300 }]
+        [VDNS_VDXF_KEYS.RECORD]: [{ version: 1, type: "TXT", name: "@", value: "ok", ttl: 300 }]
       }
     });
   });
 
   it("appends @ to identity names when needed", async () => {
     const { client } = makeClient(jsonResponse({
-      result: { identity: { name: "VRSCTEST", contentmultimap: {} } }
+      result: { identity: { name: "VDNSTEST", contentmultimap: {} } }
     }));
 
-    await expect(client.getIdentity("VRSCTEST@")).resolves.toEqual({
-      identity: "VRSCTEST@",
+    await expect(client.getIdentity("VDNSTEST@")).resolves.toEqual({
+      identity: "VDNSTEST@",
       contentmultimap: {}
     });
   });
@@ -77,11 +77,11 @@ describe("VerusRpcClient", () => {
 
   it("sets Basic Auth only when credentials are configured", async () => {
     const unauthenticated = makeClient(jsonResponse({ result: null }));
-    await unauthenticated.client.getRawIdentity("VRSCTEST@");
+    await unauthenticated.client.getRawIdentity("VDNSTEST@");
     expect(unauthenticated.calls[0].init.headers).not.toHaveProperty("authorization");
 
     const authenticated = makeClient(jsonResponse({ result: null }), { user: "user", password: "secret" });
-    await authenticated.client.getRawIdentity("VRSCTEST@");
+    await authenticated.client.getRawIdentity("VDNSTEST@");
     expect(authenticated.calls[0].init.headers).toHaveProperty(
       "authorization",
       `Basic ${Buffer.from("user:secret").toString("base64")}`
@@ -134,7 +134,7 @@ describe("VerusRpcClient", () => {
   it("calls expected RPC methods", async () => {
     const { client, calls } = makeClient(jsonResponse({ result: {} }));
 
-    await client.getRawIdentity("VRSCTEST@");
+    await client.getRawIdentity("VDNSTEST@");
     await client.getInfo();
     await client.getBlockchainInfo();
     await client.getRawTransaction("tx");
@@ -163,21 +163,21 @@ describe("VerusRpcClient", () => {
 
   it("calls getvdxfid and accepts string or object response shapes", async () => {
     const stringResult = makeClient(jsonResponse({ result: "vdxf-id" }));
-    await expect(stringResult.client.getVdxfId("dude.vrsc::vns.record")).resolves.toBe("vdxf-id");
+    await expect(stringResult.client.getVdxfId("dude.vdns::vdns.record")).resolves.toBe("vdxf-id");
 
     const objectResult = makeClient(jsonResponse({ result: { vdxfid: "vdxf-id-2" } }));
-    await expect(objectResult.client.getVdxfId("dude.vrsc::vns.record")).resolves.toBe("vdxf-id-2");
+    await expect(objectResult.client.getVdxfId("dude.vdns::vdns.record")).resolves.toBe("vdxf-id-2");
 
     expect(JSON.parse(String(stringResult.calls[0].init.body))).toMatchObject({
       method: "getvdxfid",
-      params: ["dude.vrsc::vns.record"]
+      params: ["dude.vdns::vdns.record"]
     });
   });
 
   it("throws a typed error when getvdxfid cannot extract an id", async () => {
     const { client } = makeClient(jsonResponse({ result: { notVdxfid: "nope" } }));
 
-    await expect(client.getVdxfId("dude.vrsc::vns.record")).rejects.toMatchObject({
+    await expect(client.getVdxfId("dude.vdns::vdns.record")).rejects.toMatchObject({
       kind: "unexpected-result"
     });
   });

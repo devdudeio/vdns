@@ -56,7 +56,7 @@ export class VerusRpcClient implements VerusRpcLike {
   }
 
   async getIdentity(identity: string): Promise<IdentityPayload | null> {
-    const result = await this.call("getidentity", [identity], "vns-getidentity");
+    const result = await this.call("getidentity", [identity], "vdns-getidentity");
     if (!result || typeof result !== "object") {
       return null;
     }
@@ -65,25 +65,25 @@ export class VerusRpcClient implements VerusRpcLike {
   }
 
   async getRawIdentity(identity: string): Promise<unknown | null> {
-    return this.call("getidentity", [identity], "vns-raw-getidentity");
+    return this.call("getidentity", [identity], "vdns-raw-getidentity");
   }
 
   async getInfo(): Promise<Record<string, unknown>> {
-    const result = await this.call("getinfo", [], "vns-getinfo");
+    const result = await this.call("getinfo", [], "vdns-getinfo");
     return isRecord(result) ? result : {};
   }
 
   async getBlockchainInfo(): Promise<Record<string, unknown>> {
-    const result = await this.call("getblockchaininfo", [], "vns-getblockchaininfo");
+    const result = await this.call("getblockchaininfo", [], "vdns-getblockchaininfo");
     return isRecord(result) ? result : {};
   }
 
   async getRawTransaction(txid: string, verbose = false): Promise<unknown | null> {
-    return this.call("getrawtransaction", [txid, verbose ? 1 : 0], "vns-getrawtransaction");
+    return this.call("getrawtransaction", [txid, verbose ? 1 : 0], "vdns-getrawtransaction");
   }
 
   async getVdxfId(key: string): Promise<string> {
-    const result = await this.call("getvdxfid", [key], "vns-getvdxfid");
+    const result = await this.call("getvdxfid", [key], "vdns-getvdxfid");
     if (typeof result === "string" && result.length > 0) {
       return result;
     }
@@ -96,10 +96,10 @@ export class VerusRpcClient implements VerusRpcLike {
   }
 
   async updateIdentity(payload: unknown): Promise<unknown | null> {
-    return this.call("updateidentity", [payload], "vns-updateidentity");
+    return this.call("updateidentity", [payload], "vdns-updateidentity");
   }
 
-  async call<T = unknown>(method: string, params: unknown[] = [], id = `vns-${method}`): Promise<T | null> {
+  async call<T = unknown>(method: string, params: unknown[] = [], id = `vdns-${method}`): Promise<T | null> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 

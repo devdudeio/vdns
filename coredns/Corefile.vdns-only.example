@@ -1,7 +1,7 @@
-vrsc:1053 {
+vdns:1053 {
   bind 127.0.0.1
 
-  vns {
+  vdns {
     resolver_url http://127.0.0.1:8080
     timeout 3s
   }

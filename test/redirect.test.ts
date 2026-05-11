@@ -15,7 +15,7 @@ const config: RedirectConfig = {
   host: "127.0.0.1",
   port: 8081,
   resolverUrl: "http://127.0.0.1:8080",
-  tld: "vrsc",
+  tld: "vdns",
   defaultStatus: 302,
   timeoutMs: 5000,
   proxyEnabled: false,
@@ -26,7 +26,7 @@ const config: RedirectConfig = {
   httpsEnabled: false,
   httpsHost: "127.0.0.1",
   httpsPort: 443,
-  tlsTld: "vrsc",
+  tlsTld: "vdns",
   tlsCaDir: undefined,
   tlsCertDir: undefined,
   tlsCertValidityDays: 397,
@@ -54,14 +54,14 @@ describe("redirect service", () => {
     expect(response.json()).toEqual({ status: "ok", service: "vdns-gateway" });
   });
 
-  it("redirects a vrsc host with a REDIRECT record", async () => {
+  it("redirects a vdns host with a REDIRECT record", async () => {
     const server = await makeApp(record("https://chainvue.io/"));
-    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns" } });
     expect(response.statusCode).toBe(302);
     expect(response.headers.location).toBe("https://chainvue.io/");
   });
 
-  it.each(["chainvue.vrsc", "chainvue.vrsc:80", "chainvue.vrsc:8081"])(
+  it.each(["chainvue.vdns", "chainvue.vdns:80", "chainvue.vdns:8081"])(
     "accepts curl-style Host %s",
     async (host) => {
       let requestedHost = "";
@@ -71,13 +71,13 @@ describe("redirect service", () => {
       const response = await server.inject({ method: "GET", url: "/", headers: { host } });
       expect(response.statusCode).toBe(302);
       expect(response.headers.location).toBe("https://chainvue.io/");
-      expect(requestedHost).toBe("chainvue.vrsc");
+      expect(requestedHost).toBe("chainvue.vdns");
     }
   );
 
   it("honors REDIRECT status 301", async () => {
     const server = await makeApp(record("https://chainvue.io/", 301));
-    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns" } });
     expect(response.statusCode).toBe(301);
     expect(response.headers.location).toBe("https://chainvue.io/");
   });
@@ -88,11 +88,11 @@ describe("redirect service", () => {
 
   it("rejects invalid Host values", async () => {
     const server = await makeApp(record("https://chainvue.io/"));
-    const response = await server.inject({ method: "GET", url: "/", headers: { host: "bad host.vrsc" } });
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "bad host.vdns" } });
     expect(response.statusCode).toBe(400);
   });
 
-  it("returns 404 for non-vrsc hosts", async () => {
+  it("returns 404 for non-vdns hosts", async () => {
     const server = await makeApp(record("https://chainvue.io/"));
     const response = await server.inject({ method: "GET", url: "/", headers: { host: "example.com" } });
     expect(response.statusCode).toBe(404);
@@ -100,31 +100,31 @@ describe("redirect service", () => {
 
   it("maps resolver 404 or no matching redirect to 404", async () => {
     const server = await makeApp(null);
-    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns" } });
     expect(response.statusCode).toBe(404);
   });
 
   it("maps resolver 500 to 502", async () => {
     const server = await makeApp(new RedirectResolverError("upstream", "Resolver returned 500"));
-    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns" } });
     expect(response.statusCode).toBe(502);
   });
 
   it("maps resolver timeout to 504", async () => {
     const server = await makeApp(new RedirectResolverError("timeout", "Resolver request timed out"));
-    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns" } });
     expect(response.statusCode).toBe(504);
   });
 
   it("rejects invalid target schemes", async () => {
     const server = await makeApp(record("javascript:alert(1)"));
-    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns" } });
     expect(response.statusCode).toBe(502);
   });
 
   it("rejects same-host redirect loops", async () => {
-    const server = await makeApp(record("https://chainvue.vrsc/path"));
-    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+    const server = await makeApp(record("https://chainvue.vdns/path"));
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns" } });
     expect(response.statusCode).toBe(508);
   });
 
@@ -133,14 +133,14 @@ describe("redirect service", () => {
     const server = await makeApp(record("https://chainvue.io/"), (hostname) => {
       requestedHost = hostname;
     });
-    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc:8081" } });
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns:8081" } });
     expect(response.statusCode).toBe(302);
-    expect(requestedHost).toBe("chainvue.vrsc");
+    expect(requestedHost).toBe("chainvue.vdns");
   });
 
   it("returns HEAD redirects with Location and no body", async () => {
     const server = await makeApp(record("https://chainvue.io/"));
-    const response = await server.inject({ method: "HEAD", url: "/", headers: { host: "chainvue.vrsc" } });
+    const response = await server.inject({ method: "HEAD", url: "/", headers: { host: "chainvue.vdns" } });
     expect(response.statusCode).toBe(302);
     expect(response.headers.location).toBe("https://chainvue.io/");
     expect(response.body).toBe("");
@@ -148,16 +148,16 @@ describe("redirect service", () => {
 
   it("optionally redirects HTTP vDNS requests to HTTPS before record handling", async () => {
     const server = await makeApp(record("https://chainvue.io/"), undefined, null, { forceHttps: true });
-    const response = await server.inject({ method: "GET", url: "/docs?a=1", headers: { host: "chainvue.vrsc" } });
+    const response = await server.inject({ method: "GET", url: "/docs?a=1", headers: { host: "chainvue.vdns" } });
 
     expect(response.statusCode).toBe(302);
-    expect(response.headers.location).toBe("https://chainvue.vrsc/docs?a=1");
+    expect(response.headers.location).toBe("https://chainvue.vdns/docs?a=1");
   });
 
   it("does not proxy when VDNS_PROXY_ENABLED is false", async () => {
     const fetchImpl = vi.fn();
     const server = await makeApp(record("https://chainvue.io/"), undefined, proxyRecord("https://upstream.example/"), {}, fetchImpl as typeof fetch);
-    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns" } });
     expect(response.statusCode).toBe(302);
     expect(fetchImpl).not.toHaveBeenCalled();
   });
@@ -168,21 +168,21 @@ describe("redirect service", () => {
       headers: { "content-type": "text/plain", "cache-control": "max-age=60" }
     }));
     const server = await makeApp(null, undefined, proxyRecord("https://upstream.example/base/"), { proxyEnabled: true }, fetchImpl as typeof fetch);
-    const response = await server.inject({ method: "GET", url: "/docs?a=1", headers: { host: "chainvue.vrsc" } });
+    const response = await server.inject({ method: "GET", url: "/docs?a=1", headers: { host: "chainvue.vdns" } });
 
     expect(response.statusCode).toBe(200);
     expect(response.body).toBe("proxied");
     expect(response.headers["content-type"]).toContain("text/plain");
     expect(response.headers["x-vdns-proxy"]).toBe("1");
     expect(response.headers["x-vdns-proxy-target-host"]).toBe("upstream.example");
-    expect(response.headers["x-vdns-source-host"]).toBe("chainvue.vrsc");
+    expect(response.headers["x-vdns-source-host"]).toBe("chainvue.vdns");
     expect(fetchImpl).toHaveBeenCalledWith("https://upstream.example/base/docs?a=1", expect.objectContaining({ redirect: "manual" }));
   });
 
   it("maps proxy root target paths safely", async () => {
     const fetchImpl = vi.fn(async () => new Response("ok"));
     const server = await makeApp(null, undefined, proxyRecord("https://verus.io/"), { proxyEnabled: true }, fetchImpl as typeof fetch);
-    await server.inject({ method: "GET", url: "/technology?x=1", headers: { host: "verus.vrsc" } });
+    await server.inject({ method: "GET", url: "/technology?x=1", headers: { host: "verus.vdns" } });
 
     expect(fetchImpl).toHaveBeenCalledWith("https://verus.io/technology?x=1", expect.anything());
   });
@@ -193,7 +193,7 @@ describe("redirect service", () => {
       headers: { "content-type": "text/html" }
     }));
     const server = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true }, fetchImpl as typeof fetch);
-    const response = await server.inject({ method: "HEAD", url: "/", headers: { host: "chainvue.vrsc" } });
+    const response = await server.inject({ method: "HEAD", url: "/", headers: { host: "chainvue.vdns" } });
 
     expect(response.statusCode).toBe(200);
     expect(response.body).toBe("");
@@ -207,7 +207,7 @@ describe("redirect service", () => {
       method: "GET",
       url: "/",
       headers: {
-        host: "chainvue.vrsc",
+        host: "chainvue.vdns",
         "accept-encoding": "gzip",
         "content-length": "12",
         "x-custom": "kept"
@@ -224,7 +224,7 @@ describe("redirect service", () => {
   it("returns 405 for unsupported gateway methods", async () => {
     const fetchImpl = vi.fn();
     const server = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true }, fetchImpl as typeof fetch);
-    const response = await server.inject({ method: "POST", url: "/", headers: { host: "chainvue.vrsc" } });
+    const response = await server.inject({ method: "POST", url: "/", headers: { host: "chainvue.vdns" } });
 
     expect(response.statusCode).toBe(405);
     expect(response.headers.allow).toBe("GET, HEAD");
@@ -245,7 +245,7 @@ describe("redirect service", () => {
       }
     }));
     const server = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true }, fetchImpl as typeof fetch);
-    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns" } });
 
     expect(response.headers["content-type"]).toContain("text/plain");
     expect(response.headers["content-security-policy"]).toBeUndefined();
@@ -263,7 +263,7 @@ describe("redirect service", () => {
       return new Response("final", { status: 200, headers: { "content-type": "text/plain" } });
     });
     const server = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true }, fetchImpl as typeof fetch);
-    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns" } });
     expect(response.statusCode).toBe(200);
     expect(response.body).toBe("final");
     expect(response.headers.location).toBeUndefined();
@@ -273,7 +273,7 @@ describe("redirect service", () => {
   it("rejects unsafe upstream redirects before fetching them", async () => {
     const fetchImpl = vi.fn(async () => new Response(null, { status: 302, headers: { location: "http://127.0.0.1/admin" } }));
     const server = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true }, fetchImpl as typeof fetch);
-    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns" } });
 
     expect(response.statusCode).toBe(502);
     expect(response.json().message).toContain("PROXY target rejected:");
@@ -283,7 +283,7 @@ describe("redirect service", () => {
   it("rejects malformed upstream redirects", async () => {
     const fetchImpl = vi.fn(async () => new Response(null, { status: 302, headers: { location: "http://[::1" } }));
     const server = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true }, fetchImpl as typeof fetch);
-    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns" } });
 
     expect(response.statusCode).toBe(502);
     expect(response.json().message).toContain("PROXY target rejected:");
@@ -293,7 +293,7 @@ describe("redirect service", () => {
   it("stops following redirects at the configured limit", async () => {
     const fetchImpl = vi.fn(async () => new Response(null, { status: 302, headers: { location: "https://target.example/next" } }));
     const server = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true, proxyMaxRedirects: 1 }, fetchImpl as typeof fetch);
-    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns" } });
 
     expect(response.statusCode).toBe(502);
     expect(response.json().message).toBe("PROXY redirect limit exceeded");
@@ -302,15 +302,15 @@ describe("redirect service", () => {
 
   it("rejects private proxy targets and same-host loops", async () => {
     const privateServer = await makeApp(null, undefined, proxyRecord("http://127.0.0.1:9000/"), { proxyEnabled: true });
-    const privateResponse = await privateServer.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+    const privateResponse = await privateServer.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns" } });
     expect(privateResponse.statusCode).toBe(502);
     expect(privateResponse.json().message).toContain("PROXY target rejected:");
 
     await privateServer.close();
     app = undefined;
 
-    const loopServer = await makeApp(null, undefined, proxyRecord("https://chainvue.vrsc/"), { proxyEnabled: true });
-    const loopResponse = await loopServer.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+    const loopServer = await makeApp(null, undefined, proxyRecord("https://chainvue.vdns/"), { proxyEnabled: true });
+    const loopResponse = await loopServer.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns" } });
     expect(loopResponse.statusCode).toBe(508);
   });
 
@@ -320,7 +320,7 @@ describe("redirect service", () => {
       return new Response("late");
     });
     const timeoutServer = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true, proxyTimeoutMs: 1 }, timeoutFetch as typeof fetch);
-    const timeoutResponse = await timeoutServer.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+    const timeoutResponse = await timeoutServer.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns" } });
     expect(timeoutResponse.statusCode).toBe(504);
 
     await timeoutServer.close();
@@ -328,7 +328,7 @@ describe("redirect service", () => {
 
     const upstreamFetch = vi.fn(async () => new Response("upstream failed", { status: 500 }));
     const upstreamServer = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true }, upstreamFetch as typeof fetch);
-    const upstreamResponse = await upstreamServer.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+    const upstreamResponse = await upstreamServer.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns" } });
     expect(upstreamResponse.statusCode).toBe(500);
     expect(upstreamResponse.body).toBe("upstream failed");
   });
@@ -336,7 +336,7 @@ describe("redirect service", () => {
   it("rejects oversized proxied responses", async () => {
     const fetchImpl = vi.fn(async () => new Response("abc", { headers: { "content-length": "3" } }));
     const server = await makeApp(null, undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true, proxyMaxBodyBytes: 2 }, fetchImpl as typeof fetch);
-    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vrsc" } });
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "chainvue.vdns" } });
 
     expect(response.statusCode).toBe(502);
     expect(response.json().message).toBe("Proxy upstream response is too large");
@@ -367,12 +367,12 @@ describe("redirect service", () => {
     });
     const server = await makeApp(null, undefined, null, {}, fetchImpl as typeof fetch, siteRecord("https://cdn.example/manifest.json", sha256Hex(manifestBody)));
 
-    const root = await server.inject({ method: "GET", url: "/", headers: { host: "site.vrsc" } });
+    const root = await server.inject({ method: "GET", url: "/", headers: { host: "site.vdns" } });
     expect(root.statusCode).toBe(200);
     expect(root.body).toBe("<main>home</main>");
     expect(root.headers["x-vdns-site"]).toBe("1");
 
-    const asset = await server.inject({ method: "GET", url: "/assets/app.js", headers: { host: "site.vrsc" } });
+    const asset = await server.inject({ method: "GET", url: "/assets/app.js", headers: { host: "site.vdns" } });
     expect(asset.statusCode).toBe(200);
     expect(asset.headers["content-type"]).toContain("text/javascript");
     expect(asset.body).toBe("console.log('ok');");
@@ -381,7 +381,7 @@ describe("redirect service", () => {
   it("keeps PROXY and REDIRECT priority ahead of SITE", async () => {
     const fetchImpl = vi.fn(async () => new Response("proxied"));
     const server = await makeApp(record("https://chainvue.io/"), undefined, proxyRecord("https://upstream.example/"), { proxyEnabled: true }, fetchImpl as typeof fetch, siteRecord("https://cdn.example/manifest.json"));
-    const response = await server.inject({ method: "GET", url: "/", headers: { host: "site.vrsc" } });
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "site.vdns" } });
 
     expect(response.statusCode).toBe(200);
     expect(response.body).toBe("proxied");
@@ -390,7 +390,7 @@ describe("redirect service", () => {
   it("rejects SITE hash mismatches", async () => {
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ version: 1, type: "VDNS_SITE_MANIFEST", entry: "/index.html", spaFallback: false, files: [] })));
     const server = await makeApp(null, undefined, null, {}, fetchImpl as typeof fetch, siteRecord("https://cdn.example/manifest.json", "a".repeat(64)));
-    const response = await server.inject({ method: "GET", url: "/", headers: { host: "site.vrsc" } });
+    const response = await server.inject({ method: "GET", url: "/", headers: { host: "site.vdns" } });
 
     expect(response.statusCode).toBe(502);
     expect(response.json().message).toBe("SITE manifest hash mismatch");
@@ -404,8 +404,8 @@ describe("redirect service", () => {
       const resolver = makeResolver(record("https://chainvue.io/"));
       app = await buildHttpsRedirectServer({ ...config, tlsCaDir: paths.caDir, tlsCertDir: paths.certDir }, { resolver });
 
-      await expect(stat(path.join(paths.certDir, "verus.vrsc", "cert.pem"))).resolves.toBeTruthy();
-      await expect(stat(path.join(paths.certDir, "verus.vrsc", "key.pem"))).resolves.toBeTruthy();
+      await expect(stat(path.join(paths.certDir, "verus.vdns", "cert.pem"))).resolves.toBeTruthy();
+      await expect(stat(path.join(paths.certDir, "verus.vdns", "key.pem"))).resolves.toBeTruthy();
     } finally {
       await rm(stateDir, { recursive: true, force: true });
     }

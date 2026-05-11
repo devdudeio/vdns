@@ -1,7 +1,7 @@
 {
-  "identity": "invalid-records.VNS@",
+  "identity": "invalid-records.VDNS@",
   "contentmultimap": {
-    "VNS.vrsc::record": [
+    "VDNS.vdns::record": [
       {
         "version": 2,
         "type": "A",

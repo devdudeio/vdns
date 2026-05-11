@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { filterRecordsForHostAndType, validateRecord } from "../src/core/records.js";
-import type { VnsRecord } from "../src/core/types.js";
+import type { VdnsRecord } from "../src/core/types.js";
 
 describe("records", () => {
   it.each([
     [{ version: 1, type: "A", name: "@", value: "203.0.113.42", ttl: 300 }],
     [{ version: 1, type: "AAAA", name: "@", value: "2001:db8::1", ttl: 300 }],
     [{ version: 1, type: "CNAME", name: "www", value: "example.pages.dev", ttl: 300 }],
-    [{ version: 1, type: "TXT", name: "@", value: "vns=verus", ttl: 300 }],
+    [{ version: 1, type: "TXT", name: "@", value: "vdns=verus", ttl: 300 }],
     [{ version: 1, type: "REDIRECT", name: "@", url: "https://example.com", status: 302, ttl: 300 }],
     [{ version: 1, type: "PROXY", name: "@", url: "https://example.com", ttl: 300 }],
     [{ version: 1, type: "SITE", name: "@", entry: "/index.html", manifestUri: "https://example.com/manifest.json", sha256: "a".repeat(64), ttl: 300 }],
@@ -35,9 +35,9 @@ describe("records", () => {
   });
 
   it("filters by host and optional type", () => {
-    const records: VnsRecord[] = [
+    const records: VdnsRecord[] = [
       { version: 1, type: "A", name: "@", value: "203.0.113.42", ttl: 300 },
-      { version: 1, type: "TXT", name: "@", value: "vns=verus", ttl: 300 },
+      { version: 1, type: "TXT", name: "@", value: "vdns=verus", ttl: 300 },
       { version: 1, type: "CNAME", name: "www", value: "example.pages.dev", ttl: 300 }
     ];
 

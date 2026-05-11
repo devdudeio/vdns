@@ -14,9 +14,9 @@ const redirectHex = "7b2276657273696f6e223a312c2274797065223a2252454449524543542
 
 describe("objectdata codec", () => {
   it("encodes JSON as lowercase UTF-8 hex", () => {
-    const encoded = encodeJsonObjectData({ hello: "VNS" });
+    const encoded = encodeJsonObjectData({ hello: "vDNS" });
 
-    expect(encoded).toBe("7b2268656c6c6f223a22564e53227d");
+    expect(encoded).toBe("7b2268656c6c6f223a2276444e53227d");
     expect(encoded).toBe(encoded.toLowerCase());
   });
 

@@ -1,6 +1,6 @@
 # vDNS Compatibility CLI
 
-The `vns` CLI is the compatibility operator tool behind vDNS. It inspects Verus identities, resolves vDNS VDXF keys, and prepares guarded `updateidentity` writes that the vDNS resolver later serves as DNS-compatible records.
+The `vdns` CLI is the compatibility operator tool behind vDNS. It inspects Verus identities, resolves vDNS VDXF keys, and prepares guarded `updateidentity` writes that the vDNS resolver later serves as DNS-compatible records.
 
 Build it first:
 
@@ -12,7 +12,7 @@ node dist/cli/index.js --help
 If the package is linked or installed, use the bin name:
 
 ```sh
-vns --help
+vdns --help
 ```
 
 ## RPC Configuration
@@ -29,8 +29,8 @@ Command-line flags override environment variables.
 | `--write-rpc-user` | `VERUS_WRITE_RPC_USER` | optional write RPC username |
 | `--write-rpc-password` | `VERUS_WRITE_RPC_PASSWORD` | optional write RPC password |
 | `--write-rpc-timeout-ms` | `VERUS_WRITE_RPC_TIMEOUT_MS` | optional write RPC timeout |
-| `--root` | `VNS_ROOT_IDENTITY` | optional, defaults to `fum@` |
-| `--tld` | `VNS_TLD` | optional, defaults to `vrsc` |
+| `--root` | `VDNS_ROOT_IDENTITY` | optional, defaults to `fum@` |
+| `--tld` | `VDNS_TLD` | optional, defaults to `vdns` |
 
 No-auth RPC endpoints are supported by omitting user and password.
 
@@ -41,14 +41,14 @@ The HTTP server entrypoint loads `.env` and `.env.local`; shell variables still 
 Print symbolic key names without RPC:
 
 ```sh
-node dist/cli/index.js vdxf keys --root dude@ --tld vrsc
+node dist/cli/index.js vdxf keys --root dude@ --tld vdns
 ```
 
 With RPC configured, the output also includes resolved VDXF IDs:
 
 ```sh
 VERUS_RPC_URL=http://127.0.0.1:27486 \
-node dist/cli/index.js vdxf keys --root dude@ --tld vrsc
+node dist/cli/index.js vdxf keys --root dude@ --tld vdns
 ```
 
 ## Read-Only Examples
@@ -57,14 +57,14 @@ Public testnet endpoints are useful for read-only smoke tests. Do not use public
 
 ```sh
 VERUS_RPC_URL=https://api.verustest.net/ \
-node dist/cli/index.js identity raw VRSCTEST@
+node dist/cli/index.js identity raw VDNSTEST@
 ```
 
 Inspect vDNS records for a local or configured endpoint:
 
 ```sh
 VERUS_RPC_URL=http://127.0.0.1:27486 \
-node dist/cli/index.js record inspect chainvue.dude@ --root dude@ --tld vrsc
+node dist/cli/index.js record inspect chainvue.dude@ --root dude@ --tld vdns
 ```
 
 Missing identities exit with code `2`.
@@ -79,8 +79,8 @@ Example local environment:
 export VERUS_RPC_URL=http://127.0.0.1:27486
 export VERUS_RPC_USER=yourrpcuser
 export VERUS_RPC_PASSWORD=yourrpcpassword
-export VNS_ROOT_IDENTITY=dude@
-export VNS_TLD=vrsc
+export VDNS_ROOT_IDENTITY=dude@
+export VDNS_TLD=vdns
 ```
 
 Set an A record:
@@ -133,7 +133,7 @@ Write commands always:
 Use `--yes` only after reviewing the command carefully:
 
 ```sh
-node dist/cli/index.js record set chainvue.dude@ TXT @ "hello=vns" --yes
+node dist/cli/index.js record set chainvue.dude@ TXT @ "hello=vdns" --yes
 ```
 
 Use `--verify` to refetch and print vDNS records after the write:
@@ -145,7 +145,7 @@ node dist/cli/index.js record set chainvue.dude@ A www 192.0.2.11 --yes --verify
 By default, `--verify` waits until the returned `updateidentity` transaction has one confirmation, then refetches the original CLI target identity. For example, this verifies `google.fum@`, while the submitted update payload may use `name: "google"` plus the `fum@` parent i-address:
 
 ```sh
-node dist/cli/index.js record set google.fum@ A @ 142.250.181.238 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
+node dist/cli/index.js record set google.fum@ A @ 142.250.181.238 --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
 ```
 
 Confirmation wait options:
@@ -159,7 +159,7 @@ Confirmation wait options:
 
 `--no-wait-confirmation` preserves immediate refetch behavior and prints a stale-state warning. Immediate mode can show stale `getidentity` state because `updateidentity` returns a transaction id before the identity update is mined and confirmed.
 
-When neither `--root` nor `VNS_ROOT_IDENTITY` is set, write commands warn before using the default `fum@`.
+When neither `--root` nor `VDNS_ROOT_IDENTITY` is set, write commands warn before using the default `fum@`.
 
 For a subidentity such as `chainvue.fum@`, the preview shows both the user-facing target and the payload target:
 

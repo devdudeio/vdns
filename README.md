@@ -1,8 +1,8 @@
 # vDNS
 
-vDNS is a local VerusID-native naming stack. It lets a macOS machine resolve `.vrsc` names from VerusID `contentmultimap` records and route browser requests through local DNS plus a local web gateway.
+vDNS is a local VerusID-native naming stack. It lets a macOS machine resolve `.vdns` names from VerusID `contentmultimap` records and route browser requests through local DNS plus a local web gateway.
 
-The code still uses VNS for schemas, internals, compatibility CLI commands, and environment variables. The public app workflow is vDNS.
+The public app workflow, CLI, environment variables, VDXF key names, and local TLD use vDNS naming. Legacy VNS environment variables and record keys are accepted only as migration fallbacks.
 
 ## What Works Today?
 
@@ -12,15 +12,15 @@ Current alpha support includes:
 - configurable root identity and TLD
 - mock fixture-backed resolver
 - Fastify HTTP resolver API
-- separate local Fastify web gateway for `.vrsc` `REDIRECT` records and opt-in `PROXY` records
+- separate local Fastify web gateway for `.vdns` `REDIRECT` records and opt-in `PROXY` records
 - read-only Verus JSON-RPC client for `getidentity`, `getinfo`, and `getblockchaininfo`
 - redacted debug endpoints for config, raw identity payloads, and RPC health
-- compatibility `vns` CLI for VDXF key inspection, raw identity reads, vDNS record inspection, and guarded `updateidentity` writes
+- `vdns` CLI for VDXF key inspection, raw identity reads, vDNS record inspection, and guarded `updateidentity` writes
 - CoreDNS plugin MVP that adapts DNS queries to the HTTP resolver
-- macOS split-DNS helper scripts for routing `.vrsc` lookups to a local CoreDNS resolver
+- macOS split-DNS helper scripts for routing `.vdns` lookups to a local CoreDNS resolver
 - `vdns` wrapper commands for setup, install, start, status, doctor, demo, logs, and uninstall
 - alpha macOS launchd services for the resolver, CoreDNS, and local web gateway
-- experimental opt-in local HTTPS for `https://*.vrsc` with a per-device vDNS root CA
+- experimental opt-in local HTTPS for `https://*.vdns` with a per-device vDNS root CA
 
 ## Quick Install With Homebrew
 
@@ -44,29 +44,29 @@ After setup and service start:
 vdns status
 vdns doctor
 vdns demo
-curl -i --max-time 10 http://chainvue.vrsc
+curl -i --max-time 10 http://chainvue.vdns
 ```
 
 Expected demo records:
 
 ```text
-google.vrsc    -> A 142.250.181.238
-chainvue.vrsc  -> REDIRECT http://chainvue.io/
-verus.vrsc     -> PROXY https://verus.io/
+google.vdns    -> A 142.250.181.238
+chainvue.vdns  -> REDIRECT http://chainvue.io/
+verus.vdns     -> PROXY https://verus.io/
 ```
 
-On macOS, `dig google.vrsc` may not use `/etc/resolver`. Prefer:
+On macOS, `dig google.vdns` may not use `/etc/resolver`. Prefer:
 
 ```sh
-dscacheutil -q host -a name google.vrsc
-dig @127.0.0.1 -p 1053 google.vrsc A +short
+dscacheutil -q host -a name google.vdns
+dig @127.0.0.1 -p 1053 google.vdns A +short
 ```
 
 ## How It Works
 
 ```text
 browser/system resolver
-  -> /etc/resolver/vrsc
+  -> /etc/resolver/vdns
   -> CoreDNS on 127.0.0.1:1053
   -> HTTP resolver on 127.0.0.1:8080
   -> Verus RPC
@@ -109,10 +109,10 @@ More alpha docs:
 
 | Env var | Default | Description |
 | --- | --- | --- |
-| `VNS_MODE` | `rpc` | `rpc` or explicit `mock` |
-| `VNS_ROOT_IDENTITY` | `fum@` | Root Verus identity namespace |
-| `VNS_TLD` | `vrsc` | TLD handled by this resolver |
-| `VNS_DEFAULT_TTL` | `300` | Default cache TTL in seconds |
+| `VDNS_MODE` | `rpc` | `rpc` or explicit `mock` |
+| `VDNS_ROOT_IDENTITY` | `fum@` | Root Verus identity namespace |
+| `VDNS_TLD` | `vdns` | TLD handled by this resolver |
+| `VDNS_DEFAULT_TTL` | `300` | Default cache TTL in seconds |
 | `PORT` | `8080` | HTTP API port |
 | `VERUS_RPC_URL` | `https://api.verustest.net/` | Read/DNS RPC endpoint |
 | `VERUS_RPC_USER` | unset | Optional read RPC username |
@@ -127,12 +127,12 @@ Local redirect service configuration:
 
 | Env var | Default | Description |
 | --- | --- | --- |
-| `VNS_REDIRECT_HOST` | `127.0.0.1` | Redirect service listen host |
-| `VNS_REDIRECT_PORT` | `8081` | Redirect service listen port |
-| `VNS_RESOLVER_URL` | `http://127.0.0.1:8080` | Existing vDNS HTTP resolver base URL |
-| `VNS_TLD` | `vrsc` | TLD handled by this redirect service |
-| `VNS_REDIRECT_DEFAULT_STATUS` | `302` | Fallback redirect status when a record status is not `301` or `302` |
-| `VNS_REDIRECT_TIMEOUT_MS` | `5000` | Resolver request timeout in milliseconds |
+| `VDNS_GATEWAY_HOST` | `127.0.0.1` | Redirect service listen host |
+| `VDNS_GATEWAY_PORT` | `8081` | Redirect service listen port |
+| `VDNS_RESOLVER_URL` | `http://127.0.0.1:8080` | Existing vDNS HTTP resolver base URL |
+| `VDNS_TLD` | `vdns` | TLD handled by this redirect service |
+| `VDNS_GATEWAY_DEFAULT_STATUS` | `302` | Fallback redirect status when a record status is not `301` or `302` |
+| `VDNS_GATEWAY_TIMEOUT_MS` | `5000` | Resolver request timeout in milliseconds |
 | `VDNS_PROXY_ENABLED` | `false` | Enable `PROXY @` gateway behavior before falling back to `REDIRECT @` |
 | `VDNS_PROXY_TIMEOUT_MS` | `10000` | Upstream proxy request timeout in milliseconds |
 | `VDNS_PROXY_MAX_BODY_BYTES` | `10485760` | Maximum proxied response body size |
@@ -146,9 +146,9 @@ Experimental local HTTPS configuration:
 | `VDNS_HTTPS_ENABLED` | `false` | Start the local HTTPS gateway on `127.0.0.1:443` when a local CA exists |
 | `VDNS_HTTPS_HOST` | `127.0.0.1` | HTTPS gateway bind host |
 | `VDNS_HTTPS_PORT` | `443` | HTTPS gateway bind port |
-| `VDNS_TLS_TLD` | `VNS_TLD` or `vrsc` | TLD allowed for generated certificates |
+| `VDNS_TLS_TLD` | `VDNS_TLD` or `vdns` | TLD allowed for generated certificates |
 | `VDNS_TLS_CERT_VALIDITY_DAYS` | `397` | Host certificate validity |
-| `VDNS_FORCE_HTTPS` | `false` | Experimental HTTP-to-HTTPS redirect for `.vrsc` gateway requests |
+| `VDNS_FORCE_HTTPS` | `false` | Experimental HTTP-to-HTTPS redirect for `.vdns` gateway requests |
 
 ## Install And Run
 
@@ -194,11 +194,11 @@ VerusID records -> HTTP resolver -> CoreDNS -> macOS split-DNS -> local HTTP gat
 It verifies:
 
 - the HTTP resolver is running in RPC mode
-- `google.vrsc` resolves to `142.250.181.238`
-- `chainvue.vrsc` resolves to `127.0.0.1`
-- the `chainvue.vrsc` VerusID record contains `REDIRECT -> http://chainvue.io/`
-- the `verus.vrsc` VerusID record contains `PROXY -> https://verus.io/`
-- `curl -I http://verus.vrsc` returns `x-vdns-proxy: 1` with target host `verus.io`
+- `google.vdns` resolves to `142.250.181.238`
+- `chainvue.vdns` resolves to `127.0.0.1`
+- the `chainvue.vdns` VerusID record contains `REDIRECT -> http://chainvue.io/`
+- the `verus.vdns` VerusID record contains `PROXY -> https://verus.io/`
+- `curl -I http://verus.vdns` returns `x-vdns-proxy: 1` with target host `verus.io`
 
 Expected final output:
 
@@ -211,12 +211,12 @@ The demo uses these defaults, which can be overridden for another showcase ident
 
 | Env var | Default |
 | --- | --- |
-| `VDNS_DEMO_GOOGLE_HOST` | `google.vrsc` |
+| `VDNS_DEMO_GOOGLE_HOST` | `google.vdns` |
 | `VDNS_DEMO_GOOGLE_A` | `142.250.181.238` |
-| `VDNS_DEMO_REDIRECT_HOST` | `chainvue.vrsc` |
+| `VDNS_DEMO_REDIRECT_HOST` | `chainvue.vdns` |
 | `VDNS_DEMO_REDIRECT_A` | `127.0.0.1` |
 | `VDNS_DEMO_REDIRECT_LOCATION` | `http://chainvue.io/` |
-| `VDNS_DEMO_PROXY_HOST` | `verus.vrsc` |
+| `VDNS_DEMO_PROXY_HOST` | `verus.vdns` |
 | `VDNS_DEMO_PROXY_TARGET_HOST` | `verus.io` |
 
 If the demo fails, run:
@@ -234,7 +234,7 @@ pnpm vdns:down
 
 ## macOS Local vDNS Quickstart
 
-This is the polished MVP path for local `.vrsc` resolution on macOS:
+This is the polished MVP path for local `.vdns` resolution on macOS:
 
 ```text
 VerusID records -> HTTP resolver -> CoreDNS -> macOS split-DNS -> local port 80 redirect
@@ -256,7 +256,7 @@ $EDITOR .env.local
 
 At minimum, set `VERUS_RPC_URL` and replace `VERUS_RPC_PASSWORD=replace_me` for your local Verus RPC node. `.env.local` is ignored by git.
 
-The demo assumes these records exist under `VNS_ROOT_IDENTITY=fum@` and `VNS_TLD=vrsc`:
+The demo assumes these records exist under `VDNS_ROOT_IDENTITY=fum@` and `VDNS_TLD=vdns`:
 
 ```text
 google.fum@:   A @ -> 142.250.181.238
@@ -266,14 +266,14 @@ verus.fum@:    A @ -> 127.0.0.1
 verus.fum@:    PROXY @ -> https://verus.io/
 ```
 
-The `vns` CLI can prepare those writes:
+The `vdns` CLI can prepare those writes:
 
 ```sh
-node dist/cli/index.js record set google.fum@ A @ 142.250.181.238 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
-node dist/cli/index.js record set chainvue.fum@ A @ 127.0.0.1 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
-node dist/cli/index.js record set chainvue.fum@ REDIRECT @ http://chainvue.io/ --status 302 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
-node dist/cli/index.js record set verus.fum@ A @ 127.0.0.1 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
-node dist/cli/index.js record set verus.fum@ PROXY @ https://verus.io/ --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
+node dist/cli/index.js record set google.fum@ A @ 142.250.181.238 --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set chainvue.fum@ A @ 127.0.0.1 --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set chainvue.fum@ REDIRECT @ http://chainvue.io/ --status 302 --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set verus.fum@ A @ 127.0.0.1 --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set verus.fum@ PROXY @ https://verus.io/ --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
 ```
 
 Start the local vDNS stack:
@@ -282,7 +282,7 @@ Start the local vDNS stack:
 pnpm vdns:up
 ```
 
-`vdns:up` starts the built HTTP resolver, starts `coredns/coredns-vns` on `127.0.0.1:1053`, installs `/etc/resolver/vrsc` if needed, and starts the built web gateway on `127.0.0.1:80`. It may prompt for `sudo` when installing split-DNS or binding port 80.
+`vdns:up` starts the built HTTP resolver, starts `coredns/coredns-vdns` on `127.0.0.1:1053`, installs `/etc/resolver/vdns` if needed, and starts the built web gateway on `127.0.0.1:80`. It may prompt for `sudo` when installing split-DNS or binding port 80.
 
 Check status and run the demo:
 
@@ -294,13 +294,13 @@ pnpm vdns:demo
 Expected checks:
 
 ```sh
-dscacheutil -q host -a name google.vrsc
-dscacheutil -q host -a name chainvue.vrsc
-curl -i --max-time 10 http://chainvue.vrsc
-curl -I --max-time 20 http://verus.vrsc
+dscacheutil -q host -a name google.vdns
+dscacheutil -q host -a name chainvue.vdns
+curl -i --max-time 10 http://chainvue.vdns
+curl -I --max-time 20 http://verus.vdns
 ```
 
-`chainvue.vrsc` should return `302` with `Location: http://chainvue.io/`.
+`chainvue.vdns` should return `302` with `Location: http://chainvue.io/`.
 
 Stop local services:
 
@@ -308,7 +308,7 @@ Stop local services:
 pnpm vdns:down
 ```
 
-This stops the resolver, CoreDNS, and port 80 redirect service, while leaving `/etc/resolver/vrsc` installed.
+This stops the resolver, CoreDNS, and port 80 redirect service, while leaving `/etc/resolver/vdns` installed.
 
 `pnpm vdns:up` and `pnpm vdns:down` are dev-process scripts. They start background processes from the current checkout and stop those PID-file-managed processes.
 
@@ -326,7 +326,7 @@ pnpm vdns:stop
 pnpm vdns:uninstall
 ```
 
-`pnpm vdns:install`, `pnpm vdns:start`, `pnpm vdns:stop`, and `pnpm vdns:uninstall` install and manage launchd jobs. The HTTP resolver and CoreDNS run as user LaunchAgents. The browser-style gateway runs as a root LaunchDaemon because `http://chainvue.vrsc` requires binding privileged port `80`; HTTPS can also bind privileged port `443`.
+`pnpm vdns:install`, `pnpm vdns:start`, `pnpm vdns:stop`, and `pnpm vdns:uninstall` install and manage launchd jobs. The HTTP resolver and CoreDNS run as user LaunchAgents. The browser-style gateway runs as a root LaunchDaemon because `http://chainvue.vdns` requires binding privileged port `80`; HTTPS can also bind privileged port `443`.
 
 See [docs/macos-services.md](docs/macos-services.md) for installed plist paths, logs, troubleshooting, uninstall options, and alpha limitations.
 
@@ -336,7 +336,7 @@ Manual fallback commands:
 pnpm build
 node dist/index.js
 cd coredns && ./run-local-resolver.sh
-sudo scripts/macos/install-vrsc-resolver.sh
+sudo scripts/macos/install-vdns-resolver.sh
 sudo scripts/macos/start-redirect-port80.sh
 scripts/macos/diagnose-vdns.sh
 scripts/macos/test-chainvue-redirect.sh
@@ -349,29 +349,29 @@ After `pnpm build`, the CLI entrypoint is available at:
 
 ```sh
 node dist/cli/index.js --help
-node dist/cli/index.js vdxf keys --root dude@ --tld vrsc
+node dist/cli/index.js vdxf keys --root dude@ --tld vdns
 ```
 
-The compatibility CLI bin is `vns`:
+The CLI bin is `vdns`:
 
 ```sh
-vns --help
-vns record inspect chainvue.dude@
+vdns --help
+vdns record inspect chainvue.dude@
 ```
 
 With RPC configuration loaded, check the server in another terminal:
 
 ```sh
 curl http://localhost:8080/health
-curl http://localhost:8080/resolve-domain/myname.vrsc
-curl "http://localhost:8080/resolve-domain/www.myname.vrsc?type=CNAME"
+curl http://localhost:8080/resolve-domain/myname.vdns
+curl "http://localhost:8080/resolve-domain/www.myname.vdns?type=CNAME"
 ```
 
 Use a custom root identity:
 
 ```sh
-VNS_ROOT_IDENTITY=VERUSNAMESERVICE@ pnpm dev
-curl http://localhost:8080/resolve-domain/myname.vrsc
+VDNS_ROOT_IDENTITY=VERUSNAMESERVICE@ pnpm dev
+curl http://localhost:8080/resolve-domain/myname.vdns
 ```
 
 The response identity will be `myname.VERUSNAMESERVICE@`.
@@ -379,25 +379,25 @@ The response identity will be `myname.VERUSNAMESERVICE@`.
 Run the local web gateway in a second terminal:
 
 ```sh
-VDNS_PROXY_ENABLED=true VNS_RESOLVER_URL=http://127.0.0.1:8080 VNS_REDIRECT_PORT=8081 pnpm redirect:dev
+VDNS_PROXY_ENABLED=true VDNS_RESOLVER_URL=http://127.0.0.1:8080 VDNS_GATEWAY_PORT=8081 pnpm redirect:dev
 ```
 
 For the local gateway demo, `chainvue.fum@` should contain `A @ -> 127.0.0.1` and `REDIRECT @ -> http://chainvue.io/`; `verus.fum@` should contain `A @ -> 127.0.0.1` and `PROXY @ -> https://verus.io/`. With `VDNS_PROXY_ENABLED=true`, PROXY records are served before REDIRECT fallback. Then test:
 
 ```sh
 curl http://127.0.0.1:8081/health
-curl "http://127.0.0.1:8081/debug/resolve?host=chainvue.vrsc"
-curl -i -H "Host: chainvue.vrsc" http://127.0.0.1:8081/
+curl "http://127.0.0.1:8081/debug/resolve?host=chainvue.vdns"
+curl -i -H "Host: chainvue.vdns" http://127.0.0.1:8081/
 ```
 
-By default the web gateway only returns HTTP redirects. `REDIRECT` changes the browser URL to the target site and is the more robust mode. With `VDNS_PROXY_ENABLED=true`, `PROXY @` records are proxied before falling back to `REDIRECT @`; `PROXY` keeps the `.vrsc` URL in the browser, supports only `GET` and `HEAD` in V1, and is experimental/best-effort. Proxying forwards paths and queries, follows a small number of validated upstream redirects server-side, strips hop-by-hop and problematic browser-security/session headers, rejects same-host loops and explicit localhost/private targets, and does not expose resolver/RPC credentials. Complex sites may still break because of CSP, cookies, absolute URLs, auth/OAuth, service workers, WebSockets, CORS, and the lack of HTTPS `.vrsc`. `VDNS_PROXY_ALLOW_PRIVATE_TARGETS=true` is unsafe and only for advanced local development. DNS rebinding protection is not implemented in V1; literal private/internal IPs and obvious localhost names are blocked.
+By default the web gateway only returns HTTP redirects. `REDIRECT` changes the browser URL to the target site and is the more robust mode. With `VDNS_PROXY_ENABLED=true`, `PROXY @` records are proxied before falling back to `REDIRECT @`; `PROXY` keeps the `.vdns` URL in the browser, supports only `GET` and `HEAD` in V1, and is experimental/best-effort. Proxying forwards paths and queries, follows a small number of validated upstream redirects server-side, strips hop-by-hop and problematic browser-security/session headers, rejects same-host loops and explicit localhost/private targets, and does not expose resolver/RPC credentials. Complex sites may still break because of CSP, cookies, absolute URLs, auth/OAuth, service workers, WebSockets, CORS, and the lack of HTTPS `.vdns`. `VDNS_PROXY_ALLOW_PRIVATE_TARGETS=true` is unsafe and only for advanced local development. DNS rebinding protection is not implemented in V1; literal private/internal IPs and obvious localhost names are blocked.
 
 For normal local HTTP on macOS:
 
 ```sh
 pnpm build
 sudo scripts/macos/start-redirect-port80.sh
-curl -i --max-time 10 http://chainvue.vrsc
+curl -i --max-time 10 http://chainvue.vdns
 ```
 
 Stop the port 80 redirect service with:
@@ -418,19 +418,19 @@ See [docs/redirect-service.md](docs/redirect-service.md) for the complete redire
 Run against a read-only public Verus testnet RPC endpoint:
 
 ```sh
-VNS_MODE=rpc VERUS_RPC_URL=https://api.verustest.net/ pnpm dev
+VDNS_MODE=rpc VERUS_RPC_URL=https://api.verustest.net/ pnpm dev
 ```
 
-The public endpoint is an example only. Do not put credentials in URLs you share. `fum@` may not exist on testnet yet, so `VRSCTEST@` is a better smoke-test identity.
+The public endpoint is an example only. Do not put credentials in URLs you share. `fum@` may not exist on testnet yet, so `VDNSTEST@` is a better smoke-test identity.
 
 ## Running HTTP Resolver In RPC Mode
 
 Create `.env.local`. Runtime DNS can use the default public read RPC; record writes need your own fullnode RPC:
 
 ```dotenv
-VNS_MODE=rpc
-VNS_ROOT_IDENTITY=fum@
-VNS_TLD=vrsc
+VDNS_MODE=rpc
+VDNS_ROOT_IDENTITY=fum@
+VDNS_TLD=vdns
 VERUS_RPC_URL=https://api.verustest.net/
 VERUS_WRITE_RPC_URL=http://192.168.0.106:18843
 VERUS_WRITE_RPC_USER=user972661718
@@ -457,10 +457,10 @@ Check the running mode and VDXF IDs:
 curl http://127.0.0.1:8080/debug/config | jq .
 curl http://127.0.0.1:8080/debug/vdxf-keys | jq .
 curl http://127.0.0.1:8080/debug/raw-identity/google.fum@ | jq '.identity.contentmultimap'
-curl http://127.0.0.1:8080/resolve-domain/google.vrsc | jq .
+curl http://127.0.0.1:8080/resolve-domain/google.vdns | jq .
 ```
 
-If `/debug/config` shows `"mode": "mock"`, the server was started with `pnpm dev:mock` or `VNS_MODE=mock` is set in the shell. Check with `echo $VNS_MODE` and clear it with `unset VNS_MODE`. In RPC mode with `VNS_ROOT_IDENTITY=fum@` and `VNS_TLD=vrsc`, `google.vrsc` maps to `google.fum@`. Real Verus records are stored as DataDescriptor entries whose `objectdata` is hex-encoded JSON; the HTTP resolver parses the same shape as `vns record inspect`.
+If `/debug/config` shows `"mode": "mock"`, the server was started with `pnpm dev:mock` or `VDNS_MODE=mock` is set in the shell. Check with `echo $VDNS_MODE` and clear it with `unset VDNS_MODE`. In RPC mode with `VDNS_ROOT_IDENTITY=fum@` and `VDNS_TLD=vdns`, `google.vdns` maps to `google.fum@`. Real Verus records are stored as DataDescriptor entries whose `objectdata` is hex-encoded JSON; the HTTP resolver parses the same shape as `vdns record inspect`.
 
 If `/debug/config` shows `"rpcUrlConfigured": false`, `VERUS_RPC_URL` is missing. Check `.env.local` and shell environment variables.
 
@@ -475,7 +475,7 @@ pnpm dev:mock
 or:
 
 ```sh
-VNS_MODE=mock pnpm dev
+VDNS_MODE=mock pnpm dev
 ```
 
 ## CLI Quick Start
@@ -488,10 +488,10 @@ export VERUS_RPC_USER=yourrpcuser
 export VERUS_RPC_PASSWORD=yourrpcpassword
 
 node dist/cli/index.js identity raw chainvue.dude@
-node dist/cli/index.js record inspect chainvue.dude@ --root dude@ --tld vrsc
+node dist/cli/index.js record inspect chainvue.dude@ --root dude@ --tld vdns
 node dist/cli/index.js record set chainvue.dude@ A @ 192.0.2.10 --root dude@ --yes --verify
 node dist/cli/index.js record remove chainvue.dude@ A @ --root dude@ --yes --verify
-node dist/cli/index.js record set google.fum@ A @ 142.250.181.238 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
+node dist/cli/index.js record set google.fum@ A @ 142.250.181.238 --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
 ```
 
 Write commands always fetch the current raw identity first, merge into the existing `contentmultimap`, print the exact `updateidentity` payload, and ask `Continue? [y/N]` unless `--yes` is supplied. For subidentities, the submitted payload uses the local identity name plus the parent identity i-address, for example `chainvue.fum@` is submitted as `name: "chainvue"` with `parent: "<fum i-address>"`. Test writes on testnet first and prefer a local fullnode for writes. Never commit RPC credentials or put them in shared shell history.
@@ -529,20 +529,20 @@ Debug examples:
 ```sh
 curl http://localhost:8080/debug/config
 curl http://localhost:8080/debug/rpc-health
-curl http://localhost:8080/debug/raw-identity/VRSCTEST@
-curl http://localhost:8080/resolve/VRSCTEST@
+curl http://localhost:8080/debug/raw-identity/VDNSTEST@
+curl http://localhost:8080/resolve/VDNSTEST@
 ```
 
 `/debug/config` reports only safe RPC details such as whether a URL/auth is configured and the parseable URL host. It never returns credentials or the full RPC URL.
 
-Missing identities return `404` from `/resolve/:identity`, `/resolve-domain/:domain`, and `/debug/raw-identity/:identity`. Existing identities without `VNS.vrsc::record` return `records: []` with parser warnings.
+Missing identities return `404` from `/resolve/:identity`, `/resolve-domain/:domain`, and `/debug/raw-identity/:identity`. Existing identities without `VDNS.vdns::record` return `records: []` with parser warnings.
 
 Example response:
 
 ```json
 {
   "identity": "myname.fum@",
-  "domain": "www.myname.vrsc",
+  "domain": "www.myname.vdns",
   "host": "www",
   "records": [],
   "warnings": []
@@ -551,17 +551,17 @@ Example response:
 
 ## Domain Mapping
 
-With `VNS_ROOT_IDENTITY=fum@` and `VNS_TLD=vrsc`:
+With `VDNS_ROOT_IDENTITY=fum@` and `VDNS_TLD=vdns`:
 
-- `myname.vrsc` -> `myname.fum@`, host `@`
-- `www.myname.vrsc` -> `myname.fum@`, host `www`
-- `api.myname.vrsc` -> `myname.fum@`, host `api`
+- `myname.vdns` -> `myname.fum@`, host `@`
+- `www.myname.vdns` -> `myname.fum@`, host `www`
+- `api.myname.vdns` -> `myname.fum@`, host `api`
 
-With `VNS_ROOT_IDENTITY=VERUSNAMESERVICE@`:
+With `VDNS_ROOT_IDENTITY=VERUSNAMESERVICE@`:
 
-- `myname.vrsc` -> `myname.VERUSNAMESERVICE@`, host `@`
+- `myname.vdns` -> `myname.VERUSNAMESERVICE@`, host `@`
 
-vDNS Step 2 rejects deep domains such as `a.b.myname.vrsc`.
+vDNS Step 2 rejects deep domains such as `a.b.myname.vdns`.
 
 ## Integration Tests
 
@@ -599,9 +599,9 @@ Manual flow:
 1. Start the vDNS HTTP resolver in RPC mode:
 
 ```sh
-VNS_MODE=rpc \
-VNS_ROOT_IDENTITY=fum@ \
-VNS_TLD=vrsc \
+VDNS_MODE=rpc \
+VDNS_ROOT_IDENTITY=fum@ \
+VDNS_TLD=vdns \
 VERUS_RPC_URL=http://192.168.0.106:18843 \
 VERUS_RPC_USER=... \
 VERUS_RPC_PASSWORD=... \
@@ -611,7 +611,7 @@ pnpm dev
 2. Verify the HTTP resolver:
 
 ```sh
-curl http://127.0.0.1:8080/resolve-domain/google.vrsc | jq .
+curl http://127.0.0.1:8080/resolve-domain/google.vdns | jq .
 ```
 
 3. Build a custom CoreDNS binary with the vDNS plugin:
@@ -621,35 +621,35 @@ cd coredns
 ./build-coredns.sh
 ```
 
-The build script clones pinned CoreDNS source, injects the local `vns` plugin into `plugin.cfg`, adds a local Go `replace`, and writes `coredns/coredns-vns`.
+The build script clones pinned CoreDNS source, injects the local `vdns` plugin into `plugin.cfg`, adds a local Go `replace`, and writes `coredns/coredns-vdns`.
 
-4. Run CoreDNS in `.vrsc`-only mode:
+4. Run CoreDNS in `.vdns`-only mode:
 
 ```sh
-./run-vrsc-only.sh
+./run-vdns-only.sh
 ```
 
 5. Query it directly:
 
 ```sh
-dig @127.0.0.1 -p 1053 google.vrsc A
+dig @127.0.0.1 -p 1053 google.vdns A
 ```
 
 Expected answer:
 
 ```text
-google.vrsc. 300 IN A 142.250.181.238
+google.vdns. 300 IN A 142.250.181.238
 ```
 
 For a name that currently has only a vDNS `REDIRECT` record:
 
 ```sh
-dig @127.0.0.1 -p 1053 chainvue.vrsc A
+dig @127.0.0.1 -p 1053 chainvue.vdns A
 ```
 
 That should return `NOERROR` with no answers, because `REDIRECT` is not an `A` record.
 
-In `.vrsc`-only mode, normal DNS names are not forwarded:
+In `.vdns`-only mode, normal DNS names are not forwarded:
 
 ```sh
 dig @127.0.0.1 -p 1053 google.com A
@@ -659,19 +659,19 @@ This may return `REFUSED` or no useful answer, depending on the CoreDNS response
 
 ## CoreDNS Local Resolver Mode
 
-Local resolver mode handles `.vrsc` through vDNS and forwards every other DNS name to normal upstream resolvers.
+Local resolver mode handles `.vdns` through vDNS and forwards every other DNS name to normal upstream resolvers.
 
-Run it after building `coredns-vns`:
+Run it after building `coredns-vdns`:
 
 ```sh
 cd coredns
 ./run-local-resolver.sh
 ```
 
-Test `.vrsc`:
+Test `.vdns`:
 
 ```sh
-dig @127.0.0.1 -p 1053 google.vrsc A +short
+dig @127.0.0.1 -p 1053 google.vdns A +short
 ```
 
 Expected:
@@ -696,8 +696,8 @@ You can run both checks with:
 
 CoreDNS configuration files:
 
-- [coredns/Corefile.vrsc-only.example](coredns/Corefile.vrsc-only.example): `.vrsc` only on port `1053`.
-- [coredns/Corefile.local-resolver.example](coredns/Corefile.local-resolver.example): `.vrsc` via vDNS plus public DNS forwarding on port `1053`.
+- [coredns/Corefile.vdns-only.example](coredns/Corefile.vdns-only.example): `.vdns` only on port `1053`.
+- [coredns/Corefile.local-resolver.example](coredns/Corefile.local-resolver.example): `.vdns` via vDNS plus public DNS forwarding on port `1053`.
 - [coredns/Corefile.local-resolver-53.example](coredns/Corefile.local-resolver-53.example): same as local resolver mode, but on port `53`.
 - [coredns/Corefile.local-resolver.env.example](coredns/Corefile.local-resolver.env.example): same localhost-bound pattern with CoreDNS environment variable substitution.
 
@@ -705,16 +705,16 @@ Port `53` usually requires elevated privileges/admin/root and may conflict with 
 
 Docker Desktop users can set `resolver_url http://host.docker.internal:8080`; local non-Docker runs should use `http://127.0.0.1:8080`.
 
-## macOS Split-DNS Setup For `.vrsc`
+## macOS Split-DNS Setup For `.vdns`
 
-macOS can route only `.vrsc` lookups to the local CoreDNS/vDNS resolver with `/etc/resolver/vrsc`. Normal DNS names stay on the system resolver path.
+macOS can route only `.vdns` lookups to the local CoreDNS/vDNS resolver with `/etc/resolver/vdns`. Normal DNS names stay on the system resolver path.
 
 Start the vDNS HTTP resolver in RPC mode:
 
 ```sh
-VNS_MODE=rpc \
-VNS_ROOT_IDENTITY=fum@ \
-VNS_TLD=vrsc \
+VDNS_MODE=rpc \
+VDNS_ROOT_IDENTITY=fum@ \
+VDNS_TLD=vdns \
 VERUS_RPC_URL=http://192.168.0.106:18843 \
 VERUS_RPC_USER=... \
 VERUS_RPC_PASSWORD=... \
@@ -732,7 +732,7 @@ cd coredns
 The local resolver Corefile binds CoreDNS to `127.0.0.1:1053`. From the repo root, install the macOS split-DNS resolver file:
 
 ```sh
-sudo scripts/macos/install-vrsc-resolver.sh
+sudo scripts/macos/install-vdns-resolver.sh
 ```
 
 Equivalent package scripts are available:
@@ -746,33 +746,33 @@ pnpm macos:resolver:uninstall
 Verify split-DNS routing:
 
 ```sh
-scutil --dns | grep -A5 'domain   : vrsc'
-dig google.vrsc A +short
+scutil --dns | grep -A5 'domain   : vdns'
+dig google.vdns A +short
 dig google.com A +short
 ```
 
-Some command-line DNS tools may bypass macOS split-DNS behavior. For `.vrsc`, prefer:
+Some command-line DNS tools may bypass macOS split-DNS behavior. For `.vdns`, prefer:
 
 ```sh
-dscacheutil -q host -a name google.vrsc
-dns-sd -G v4 google.vrsc
-dig @127.0.0.1 -p 1053 google.vrsc A +short
+dscacheutil -q host -a name google.vdns
+dns-sd -G v4 google.vdns
+dig @127.0.0.1 -p 1053 google.vdns A +short
 ```
 
-## Making `http://*.vrsc` Work On macOS
+## Making `http://*.vdns` Work On macOS
 
-macOS split-DNS and CoreDNS make `chainvue.vrsc` resolve to `127.0.0.1`. A normal URL like `http://chainvue.vrsc` then connects to port `80`, not port `8081`.
+macOS split-DNS and CoreDNS make `chainvue.vdns` resolve to `127.0.0.1`. A normal URL like `http://chainvue.vdns` then connects to port `80`, not port `8081`.
 
 If the redirect service is running on `8081`, this Host-header test can pass:
 
 ```sh
-curl -i -H "Host: chainvue.vrsc" http://127.0.0.1:8081/
+curl -i -H "Host: chainvue.vdns" http://127.0.0.1:8081/
 ```
 
 while this still fails because no redirect service is listening on `127.0.0.1:80`:
 
 ```sh
-curl -i --max-time 10 http://chainvue.vrsc
+curl -i --max-time 10 http://chainvue.vdns
 ```
 
 Start the built redirect service directly on port `80`:
@@ -798,27 +798,27 @@ scripts/macos/test-chainvue-redirect.sh
 Uninstall the managed resolver file:
 
 ```sh
-sudo scripts/macos/uninstall-vrsc-resolver.sh
+sudo scripts/macos/uninstall-vdns-resolver.sh
 ```
 
 Troubleshooting:
 
-- Confirm CoreDNS is listening on `127.0.0.1:1053` with `scripts/macos/status-vrsc-resolver.sh`.
-- Confirm `/etc/resolver/vrsc` exists and contains `nameserver 127.0.0.1` and `port 1053`.
-- Confirm `scutil --dns` shows a `vrsc` resolver.
+- Confirm CoreDNS is listening on `127.0.0.1:1053` with `scripts/macos/status-vdns-resolver.sh`.
+- Confirm `/etc/resolver/vdns` exists and contains `nameserver 127.0.0.1` and `port 1053`.
+- Confirm `scutil --dns` shows a `vdns` resolver.
 - Confirm the vDNS HTTP resolver is running at `http://127.0.0.1:8080`.
 - Do not edit `/etc/resolv.conf`; macOS manages that file.
 
 Plugin tests:
 
 ```sh
-cd coredns/plugin/vns
+cd coredns/plugin/vdns
 CGO_ENABLED=0 go test ./...
 ```
 
 Limitations:
 
 - This is not system-wide DNS.
-- Use `dscacheutil`, `dns-sd`, or direct `dig @127.0.0.1 -p 1053` checks for `.vrsc` resolver diagnostics.
-- Browser HTTPS and `.vrsc` local CA support are not part of this step.
+- Use `dscacheutil`, `dns-sd`, or direct `dig @127.0.0.1 -p 1053` checks for `.vdns` resolver diagnostics.
+- Browser HTTPS and `.vdns` local CA support are not part of this step.
 - Production deployment later needs local resolver setup, caching policy, rate limits, and likely DoH/DoT.

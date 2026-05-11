@@ -1,58 +1,58 @@
 import { describe, expect, it } from "vitest";
-import type { VnsConfig } from "../src/config.js";
-import { parseVnsDomain } from "../src/core/domain.js";
+import type { VdnsConfig } from "../src/config.js";
+import { parseVdnsDomain } from "../src/core/domain.js";
 
-const config = (rootIdentity: string): VnsConfig => ({
+const config = (rootIdentity: string): VdnsConfig => ({
   rootIdentity,
-  tld: "vrsc",
+  tld: "vdns",
   defaultTtl: 300,
   mode: "mock",
   port: 8080,
   verusRpcTimeoutMs: 10000
 });
 
-describe("parseVnsDomain", () => {
+describe("parseVdnsDomain", () => {
   it("maps default fum root domains", () => {
-    expect(parseVnsDomain("myname.vrsc", config("fum@"))).toEqual({
-      domain: "myname.vrsc",
+    expect(parseVdnsDomain("myname.vdns", config("fum@"))).toEqual({
+      domain: "myname.vdns",
       identity: "myname.fum@",
       host: "@"
     });
-    expect(parseVnsDomain("www.myname.vrsc", config("fum@"))).toEqual({
-      domain: "www.myname.vrsc",
+    expect(parseVdnsDomain("www.myname.vdns", config("fum@"))).toEqual({
+      domain: "www.myname.vdns",
       identity: "myname.fum@",
       host: "www"
     });
   });
 
   it("maps VERUSNAMESERVICE root domains", () => {
-    expect(parseVnsDomain("api.myname.vrsc", config("VERUSNAMESERVICE@"))).toEqual({
-      domain: "api.myname.vrsc",
+    expect(parseVdnsDomain("api.myname.vdns", config("VERUSNAMESERVICE@"))).toEqual({
+      domain: "api.myname.vdns",
       identity: "myname.VERUSNAMESERVICE@",
       host: "api"
     });
   });
 
   it("maps nested root identity domains", () => {
-    expect(parseVnsDomain("www.alice.vrsc", config("myname.vns@"))).toEqual({
-      domain: "www.alice.vrsc",
-      identity: "alice.myname.vns@",
+    expect(parseVdnsDomain("www.alice.vdns", config("myname.vdns@"))).toEqual({
+      domain: "www.alice.vdns",
+      identity: "alice.myname.vdns@",
       host: "www"
     });
   });
 
   it("normalizes case and trailing dot", () => {
-    expect(parseVnsDomain("WWW.MYNAME.VRSC.", config("fum@"))).toEqual({
-      domain: "www.myname.vrsc",
+    expect(parseVdnsDomain("WWW.MYNAME.VDNS.", config("fum@"))).toEqual({
+      domain: "www.myname.vdns",
       identity: "myname.fum@",
       host: "www"
     });
   });
 
-  it.each(["a.b.myname.vrsc", "myname.com", "vrsc", ".vrsc", "myname.vrsc.example.com", "bad_name.vrsc"])(
+  it.each(["a.b.myname.vdns", "myname.com", "vdns", ".vdns", "myname.vdns.example.com", "bad_name.vdns"])(
     "rejects invalid domain %s",
     (domain) => {
-      expect(() => parseVnsDomain(domain, config("fum@"))).toThrow();
+      expect(() => parseVdnsDomain(domain, config("fum@"))).toThrow();
     }
   );
 });

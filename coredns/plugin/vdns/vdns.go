@@ -1,4 +1,4 @@
-package vns
+package vdns
 
 import (
 	"context"
@@ -11,9 +11,9 @@ import (
 	"github.com/miekg/dns"
 )
 
-var logger = log.NewWithPlugin("vns")
+var logger = log.NewWithPlugin("vdns")
 
-type VNS struct {
+type VDNS struct {
 	Next   plugin.Handler
 	Zones  []string
 	Client resolverClient
@@ -23,9 +23,9 @@ type resolverClient interface {
 	ResolveDomain(ctx context.Context, domain string, qtype string) (*ResolveResult, error)
 }
 
-func (v VNS) Name() string { return "vns" }
+func (v VDNS) Name() string { return "vdns" }
 
-func (v VNS) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+func (v VDNS) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	if len(r.Question) == 0 {
 		return dns.RcodeFormatError, nil
 	}
@@ -63,7 +63,7 @@ func (v VNS) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (in
 	return writeResponse(w, r, dns.RcodeSuccess, answers), nil
 }
 
-func (v VNS) handlesZone(qname string) bool {
+func (v VDNS) handlesZone(qname string) bool {
 	for _, zone := range v.Zones {
 		if dns.IsSubDomain(dns.Fqdn(zone), dns.Fqdn(qname)) {
 			return true

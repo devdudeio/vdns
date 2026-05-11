@@ -10,15 +10,15 @@ REPO_ROOT="$(vdns_repo_root)"
 cd "${REPO_ROOT}"
 vdns_load_env "${REPO_ROOT}" >/dev/null || true
 
-VNS_TLD="${VNS_TLD:-vrsc}"
-VNS_DNS_PORT="${VNS_DNS_PORT:-1053}"
-VNS_RESOLVER_URL="$(vdns_resolver_url)"
-GOOGLE_HOST="${VDNS_DEMO_GOOGLE_HOST:-google.${VNS_TLD}}"
+VDNS_TLD="${VDNS_TLD:-vdns}"
+VDNS_DNS_PORT="${VDNS_DNS_PORT:-1053}"
+VDNS_RESOLVER_URL="$(vdns_resolver_url)"
+GOOGLE_HOST="${VDNS_DEMO_GOOGLE_HOST:-google.${VDNS_TLD}}"
 GOOGLE_EXPECTED_A="${VDNS_DEMO_GOOGLE_A:-142.250.181.238}"
-REDIRECT_HOST="${VDNS_DEMO_REDIRECT_HOST:-chainvue.${VNS_TLD}}"
+REDIRECT_HOST="${VDNS_DEMO_REDIRECT_HOST:-chainvue.${VDNS_TLD}}"
 REDIRECT_EXPECTED_A="${VDNS_DEMO_REDIRECT_A:-127.0.0.1}"
 REDIRECT_EXPECTED_LOCATION="${VDNS_DEMO_REDIRECT_LOCATION:-http://chainvue.io/}"
-PROXY_HOST="${VDNS_DEMO_PROXY_HOST:-verus.${VNS_TLD}}"
+PROXY_HOST="${VDNS_DEMO_PROXY_HOST:-verus.${VDNS_TLD}}"
 PROXY_EXPECTED_TARGET_HOST="${VDNS_DEMO_PROXY_TARGET_HOST:-verus.io}"
 VDNS_HTTPS_ENABLED="${VDNS_HTTPS_ENABLED:-false}"
 FAILED=0
@@ -129,21 +129,21 @@ if [[ "${FAILED}" -ne 0 ]]; then
 fi
 
 section "1. HTTP resolver"
-show_cmd curl -fsS --max-time 5 "${VNS_RESOLVER_URL}/debug/config"
-CONFIG_OUTPUT="$(run_capture 7 curl -fsS --max-time 5 "${VNS_RESOLVER_URL}/debug/config")"
+show_cmd curl -fsS --max-time 5 "${VDNS_RESOLVER_URL}/debug/config"
+CONFIG_OUTPUT="$(run_capture 7 curl -fsS --max-time 5 "${VDNS_RESOLVER_URL}/debug/config")"
 CONFIG_STATUS=$?
 printf '%s\n' "${CONFIG_OUTPUT}"
 if [[ "${CONFIG_STATUS}" -eq 0 ]] &&
   printf '%s\n' "${CONFIG_OUTPUT}" | grep -q '"mode":"rpc"' &&
-  printf '%s\n' "${CONFIG_OUTPUT}" | grep -q "\"tld\":\"${VNS_TLD}\""; then
-  pass "resolver is reachable at ${VNS_RESOLVER_URL}"
+  printf '%s\n' "${CONFIG_OUTPUT}" | grep -q "\"tld\":\"${VDNS_TLD}\""; then
+  pass "resolver is reachable at ${VDNS_RESOLVER_URL}"
 else
-  fail "resolver is not ready at ${VNS_RESOLVER_URL}"
+  fail "resolver is not ready at ${VDNS_RESOLVER_URL}"
 fi
 
 section "2. VerusID-backed records"
-show_cmd curl -fsS --max-time 5 "${VNS_RESOLVER_URL}/resolve-domain/${GOOGLE_HOST}?type=A"
-GOOGLE_JSON="$(run_capture 7 curl -fsS --max-time 5 "${VNS_RESOLVER_URL}/resolve-domain/${GOOGLE_HOST}?type=A")"
+show_cmd curl -fsS --max-time 5 "${VDNS_RESOLVER_URL}/resolve-domain/${GOOGLE_HOST}?type=A"
+GOOGLE_JSON="$(run_capture 7 curl -fsS --max-time 5 "${VDNS_RESOLVER_URL}/resolve-domain/${GOOGLE_HOST}?type=A")"
 GOOGLE_JSON_STATUS=$?
 printf '%s\n' "${GOOGLE_JSON}"
 if [[ "${GOOGLE_JSON_STATUS}" -eq 0 ]] && printf '%s\n' "${GOOGLE_JSON}" | grep -q "\"value\":\"${GOOGLE_EXPECTED_A}\""; then
@@ -153,8 +153,8 @@ else
 fi
 
 echo
-show_cmd curl -fsS --max-time 5 "${VNS_RESOLVER_URL}/resolve-domain/${REDIRECT_HOST}?type=REDIRECT"
-REDIRECT_JSON="$(run_capture 7 curl -fsS --max-time 5 "${VNS_RESOLVER_URL}/resolve-domain/${REDIRECT_HOST}?type=REDIRECT")"
+show_cmd curl -fsS --max-time 5 "${VDNS_RESOLVER_URL}/resolve-domain/${REDIRECT_HOST}?type=REDIRECT"
+REDIRECT_JSON="$(run_capture 7 curl -fsS --max-time 5 "${VDNS_RESOLVER_URL}/resolve-domain/${REDIRECT_HOST}?type=REDIRECT")"
 REDIRECT_JSON_STATUS=$?
 printf '%s\n' "${REDIRECT_JSON}"
 if [[ "${REDIRECT_JSON_STATUS}" -eq 0 ]] && printf '%s\n' "${REDIRECT_JSON}" | grep -q "\"url\":\"${REDIRECT_EXPECTED_LOCATION}\""; then
@@ -164,8 +164,8 @@ else
 fi
 
 echo
-show_cmd curl -fsS --max-time 5 "${VNS_RESOLVER_URL}/resolve-domain/${PROXY_HOST}?type=PROXY"
-PROXY_JSON="$(run_capture 7 curl -fsS --max-time 5 "${VNS_RESOLVER_URL}/resolve-domain/${PROXY_HOST}?type=PROXY")"
+show_cmd curl -fsS --max-time 5 "${VDNS_RESOLVER_URL}/resolve-domain/${PROXY_HOST}?type=PROXY"
+PROXY_JSON="$(run_capture 7 curl -fsS --max-time 5 "${VDNS_RESOLVER_URL}/resolve-domain/${PROXY_HOST}?type=PROXY")"
 PROXY_JSON_STATUS=$?
 printf '%s\n' "${PROXY_JSON}"
 if [[ "${PROXY_JSON_STATUS}" -eq 0 ]] && printf '%s\n' "${PROXY_JSON}" | grep -q "\"url\":\"https://${PROXY_EXPECTED_TARGET_HOST}/\""; then
@@ -175,8 +175,8 @@ else
 fi
 
 section "3. CoreDNS direct lookup"
-show_cmd dig +time=2 +tries=1 @127.0.0.1 -p "${VNS_DNS_PORT}" "${GOOGLE_HOST}" A +short
-CORE_DNS_OUTPUT="$(run_capture 5 dig +time=2 +tries=1 @127.0.0.1 -p "${VNS_DNS_PORT}" "${GOOGLE_HOST}" A +short)"
+show_cmd dig +time=2 +tries=1 @127.0.0.1 -p "${VDNS_DNS_PORT}" "${GOOGLE_HOST}" A +short
+CORE_DNS_OUTPUT="$(run_capture 5 dig +time=2 +tries=1 @127.0.0.1 -p "${VDNS_DNS_PORT}" "${GOOGLE_HOST}" A +short)"
 CORE_DNS_STATUS=$?
 printf '%s\n' "${CORE_DNS_OUTPUT}"
 if [[ "${CORE_DNS_STATUS}" -eq 0 ]] && expect_contains_line "${CORE_DNS_OUTPUT}" "${GOOGLE_EXPECTED_A}"; then

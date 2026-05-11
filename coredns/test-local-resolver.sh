@@ -9,12 +9,12 @@ fi
 DNS_HOST="${DNS_HOST:-127.0.0.1}"
 DNS_PORT="${DNS_PORT:-1053}"
 
-echo "Testing VNS DNS through ${DNS_HOST}:${DNS_PORT}"
-VNS_OUTPUT="$(dig @"${DNS_HOST}" -p "${DNS_PORT}" google.vrsc A +short)"
-echo "google.vrsc A:"
-echo "${VNS_OUTPUT:-<empty>}"
-if [[ -z "${VNS_OUTPUT}" ]]; then
-  echo "Expected google.vrsc A to return at least one answer" >&2
+echo "Testing vDNS DNS through ${DNS_HOST}:${DNS_PORT}"
+VDNS_OUTPUT="$(dig @"${DNS_HOST}" -p "${DNS_PORT}" google.vdns A +short)"
+echo "google.vdns A:"
+echo "${VDNS_OUTPUT:-<empty>}"
+if [[ -z "${VDNS_OUTPUT}" ]]; then
+  echo "Expected google.vdns A to return at least one answer" >&2
   exit 1
 fi
 

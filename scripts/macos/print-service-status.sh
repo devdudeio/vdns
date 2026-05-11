@@ -13,7 +13,7 @@ cd "${REPO_ROOT}"
 vdns_load_env "${REPO_ROOT}" >/dev/null || true
 
 PORT="${PORT:-8080}"
-VNS_DNS_PORT="${VNS_DNS_PORT:-1053}"
+VDNS_DNS_PORT="${VDNS_DNS_PORT:-1053}"
 LOG_DIR="${VDNS_LOG_DIR}"
 GUI_DOMAIN="$(vdns_launchd_gui_domain)"
 
@@ -40,11 +40,11 @@ vdns_section "Listeners"
 echo "HTTP resolver TCP ${PORT}:"
 vdns_lsof_port TCP "${PORT}"
 echo
-echo "CoreDNS UDP ${VNS_DNS_PORT}:"
-vdns_lsof_port UDP "${VNS_DNS_PORT}"
+echo "CoreDNS UDP ${VDNS_DNS_PORT}:"
+vdns_lsof_port UDP "${VDNS_DNS_PORT}"
 echo
-echo "CoreDNS TCP ${VNS_DNS_PORT}:"
-vdns_lsof_port TCP "${VNS_DNS_PORT}"
+echo "CoreDNS TCP ${VDNS_DNS_PORT}:"
+vdns_lsof_port TCP "${VDNS_DNS_PORT}"
 echo
 echo "HTTP redirect TCP 80:"
 vdns_lsof_port_privileged_if_needed TCP 80

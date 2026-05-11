@@ -1,18 +1,18 @@
 # vDNS MVP Checkpoint
 
-vDNS turns VerusID identities into locally resolvable DNS records. Some internal schemas and compatibility commands still use VNS terminology, but the user-facing path is vDNS: a VerusID-native, DNS-compatible local resolver.
+vDNS turns VerusID identities into locally resolvable DNS records. The current setup path, CLI, environment variables, VDXF key names, and local TLD use vDNS naming.
 
 ## Confirmed Path
 
 ```text
 VerusID contentmultimap records
   -> vDNS HTTP resolver
-  -> CoreDNS vns plugin on 127.0.0.1:1053
-  -> macOS /etc/resolver/vrsc split-DNS
+  -> CoreDNS vdns plugin on 127.0.0.1:1053
+  -> macOS /etc/resolver/vdns split-DNS
   -> local HTTP redirect service on 127.0.0.1:80
 ```
 
-The checkpoint uses `.vrsc` as the local TLD and `fum@` as the default VerusID root namespace. With `VNS_ROOT_IDENTITY=fum@`, `google.vrsc` maps to `google.fum@`, and `chainvue.vrsc` maps to `chainvue.fum@`.
+The checkpoint uses `.vdns` as the local TLD and `fum@` as the default VerusID root namespace. With `VDNS_ROOT_IDENTITY=fum@`, `google.vdns` maps to `google.fum@`, and `chainvue.vdns` maps to `chainvue.fum@`.
 
 ## Verified Records
 
@@ -25,7 +25,7 @@ A @ -> 142.250.181.238
 Expected local result:
 
 ```sh
-dscacheutil -q host -a name google.vrsc
+dscacheutil -q host -a name google.vdns
 ```
 
 `chainvue.fum@`:
@@ -38,8 +38,8 @@ REDIRECT @ -> http://chainvue.io/ status 302
 Expected local result:
 
 ```sh
-dscacheutil -q host -a name chainvue.vrsc
-curl -i --max-time 10 http://chainvue.vrsc
+dscacheutil -q host -a name chainvue.vdns
+curl -i --max-time 10 http://chainvue.vdns
 ```
 
 The HTTP response should be `302` with:
@@ -85,16 +85,16 @@ Stop local services:
 pnpm vdns:down
 ```
 
-`vdns:down` stops the resolver, CoreDNS, and port 80 redirect service. It leaves `/etc/resolver/vrsc` installed so the next `vdns:up` does not need to reinstall split-DNS.
+`vdns:down` stops the resolver, CoreDNS, and port 80 redirect service. It leaves `/etc/resolver/vdns` installed so the next `vdns:up` does not need to reinstall split-DNS.
 
 ## CLI Record Writes
 
-The existing `vns` CLI writes the VerusID records that vDNS resolves:
+The existing `vdns` CLI writes the VerusID records that vDNS resolves:
 
 ```sh
-node dist/cli/index.js record set google.fum@ A @ 142.250.181.238 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
-node dist/cli/index.js record set chainvue.fum@ A @ 127.0.0.1 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
-node dist/cli/index.js record set chainvue.fum@ REDIRECT @ http://chainvue.io/ --status 302 --ttl 300 --root fum@ --tld vrsc --verify --confirmations 1
+node dist/cli/index.js record set google.fum@ A @ 142.250.181.238 --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set chainvue.fum@ A @ 127.0.0.1 --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set chainvue.fum@ REDIRECT @ http://chainvue.io/ --status 302 --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
 ```
 
 Write commands preview the exact `updateidentity` payload and prompt unless `--yes` is supplied.
@@ -107,7 +107,7 @@ If the aggregate command is not used, run the pieces directly:
 pnpm build
 node dist/index.js
 cd coredns && ./run-local-resolver.sh
-sudo scripts/macos/install-vrsc-resolver.sh
+sudo scripts/macos/install-vdns-resolver.sh
 sudo scripts/macos/start-redirect-port80.sh
 ```
 

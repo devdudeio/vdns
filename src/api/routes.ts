@@ -1,14 +1,14 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { isRecordType } from "../core/records.js";
-import { IdentityNotFoundError, type VnsResolver } from "../core/resolver.js";
-import type { VnsRecordType } from "../core/types.js";
+import { IdentityNotFoundError, type VdnsResolver } from "../core/resolver.js";
+import type { VdnsRecordType } from "../core/types.js";
 import { VerusRpcError } from "../rpc/verusRpcClient.js";
 
 type TypeQuery = {
   type?: string;
 };
 
-export async function registerRoutes(app: FastifyInstance, resolver: VnsResolver): Promise<void> {
+export async function registerRoutes(app: FastifyInstance, resolver: VdnsResolver): Promise<void> {
   app.get("/health", async () => ({ status: "ok" }));
 
   app.get("/debug/config", async () => {
@@ -91,7 +91,7 @@ export async function registerRoutes(app: FastifyInstance, resolver: VnsResolver
   });
 }
 
-function sendIdentityNotFound(reply: FastifyReply, resolver: VnsResolver, error: IdentityNotFoundError) {
+function sendIdentityNotFound(reply: FastifyReply, resolver: VdnsResolver, error: IdentityNotFoundError) {
   const config = resolver.getConfig();
   return reply.code(404).send({
     statusCode: 404,
@@ -105,7 +105,7 @@ function sendIdentityNotFound(reply: FastifyReply, resolver: VnsResolver, error:
   });
 }
 
-function parseTypeFilter(type: string | undefined): VnsRecordType | undefined | Error {
+function parseTypeFilter(type: string | undefined): VdnsRecordType | undefined | Error {
   if (!type) {
     return undefined;
   }

@@ -1,32 +1,32 @@
 # vDNS Record Schema
 
-vDNS maps a `.vrsc` domain to a VerusID sub-identity, then reads DNS and web records from that identity's `contentmultimap`. The schema and code still use VNS names for compatibility with the current package and VDXF key layout.
+vDNS maps a `.vdns` domain to a VerusID sub-identity, then reads DNS and web records from that identity's `contentmultimap`. New records should use the vDNS VDXF key layout.
 
 ## Configurable Namespace
 
-The root identity is configurable with `VNS_ROOT_IDENTITY` and defaults to `fum@`. The TLD is configurable with `VNS_TLD` and defaults to `vrsc`.
+The root identity is configurable with `VDNS_ROOT_IDENTITY` and defaults to `fum@`. The TLD is configurable with `VDNS_TLD` and defaults to `vdns`.
 
-Examples with `VNS_ROOT_IDENTITY=fum@` and `VNS_TLD=vrsc`:
-
-| Domain | Identity | Host |
-| --- | --- | --- |
-| `myname.vrsc` | `myname.fum@` | `@` |
-| `www.myname.vrsc` | `myname.fum@` | `www` |
-| `api.myname.vrsc` | `myname.fum@` | `api` |
-
-Examples with `VNS_ROOT_IDENTITY=VERUSNAMESERVICE@`:
+Examples with `VDNS_ROOT_IDENTITY=fum@` and `VDNS_TLD=vdns`:
 
 | Domain | Identity | Host |
 | --- | --- | --- |
-| `myname.vrsc` | `myname.VERUSNAMESERVICE@` | `@` |
-| `www.myname.vrsc` | `myname.VERUSNAMESERVICE@` | `www` |
+| `myname.vdns` | `myname.fum@` | `@` |
+| `www.myname.vdns` | `myname.fum@` | `www` |
+| `api.myname.vdns` | `myname.fum@` | `api` |
 
-Examples with `VNS_ROOT_IDENTITY=myname.vns@`:
+Examples with `VDNS_ROOT_IDENTITY=VERUSNAMESERVICE@`:
 
 | Domain | Identity | Host |
 | --- | --- | --- |
-| `alice.vrsc` | `alice.myname.vns@` | `@` |
-| `www.alice.vrsc` | `alice.myname.vns@` | `www` |
+| `myname.vdns` | `myname.VERUSNAMESERVICE@` | `@` |
+| `www.myname.vdns` | `myname.VERUSNAMESERVICE@` | `www` |
+
+Examples with `VDNS_ROOT_IDENTITY=myname.vdns@`:
+
+| Domain | Identity | Host |
+| --- | --- | --- |
+| `alice.vdns` | `alice.myname.vdns@` | `@` |
+| `www.alice.vdns` | `alice.myname.vdns@` | `www` |
 
 ## Domain Rules
 
@@ -37,17 +37,17 @@ vDNS Step 2 supports only:
 
 Valid examples:
 
-- `myname.vrsc`
-- `www.myname.vrsc`
-- `api.myname.vrsc`
+- `myname.vdns`
+- `www.myname.vdns`
+- `api.myname.vdns`
 
 Invalid examples:
 
-- `a.b.myname.vrsc`
+- `a.b.myname.vdns`
 - `myname.com`
-- `vrsc`
-- `.vrsc`
-- `myname.vrsc.example.com`
+- `vdns`
+- `.vdns`
+- `myname.vdns.example.com`
 
 ## Records
 
@@ -75,13 +75,13 @@ Type-specific fields:
 
 ## Contentmultimap Shape
 
-Fixtures may use symbolic VDXF placeholder keys. Records are parsed from `contentmultimap["VNS.vrsc::record"]` in fixture mode, and the CLI can inspect records under resolved VDXF IDs.
+Fixtures may use symbolic VDXF placeholder keys. Records are parsed from `contentmultimap["VDNS.vdns::record"]` in fixture mode, and the CLI can inspect records under resolved VDXF IDs.
 
 ```json
 {
   "identity": "myname.fum@",
   "contentmultimap": {
-    "VNS.vrsc::record": [
+    "VDNS.vdns::record": [
       {
         "version": 1,
         "type": "A",
@@ -99,11 +99,11 @@ Real Verus writes use DataDescriptor wrappers under resolved VDXF IDs. The DataD
 ```json
 {
   "contentmultimap": {
-    "id:fum.vrsc::vns.record": [
+    "id:fum.vdns::vdns.record": [
       {
         "i4GC1YGEVD21afWudGoFJVdnfjJ5XWnCQv": {
           "version": 1,
-          "label": "id:fum.vrsc::vns.web.redirect",
+          "label": "id:fum.vdns::vdns.web.redirect",
           "mimetype": "application/json",
           "objectdata": "7b2276657273696f6e223a312c2274797065223a225245444952454354222c226e616d65223a2240222c2275726c223a22687474703a2f2f636861696e7675652e696f2f222c22737461747573223a3330322c2274746c223a3330307d"
         }

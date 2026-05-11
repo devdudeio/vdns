@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { applyVdnsEnvCompatibility, envValue, envValueWithDefault } from "../envCompat.js";
 
 export type RedirectConfig = {
   host: string;
@@ -44,12 +45,13 @@ const boolFromEnv = (value: string | undefined, fallback: boolean): boolean => {
 };
 
 export function loadRedirectConfigFromEnv(env: NodeJS.ProcessEnv = process.env): RedirectConfig {
-  const host = env.VNS_REDIRECT_HOST ?? "127.0.0.1";
-  const port = intFromEnv("VNS_REDIRECT_PORT", env.VNS_REDIRECT_PORT, 8081);
-  const resolverUrl = env.VNS_RESOLVER_URL ?? "http://127.0.0.1:8080";
-  const tld = env.VNS_TLD ?? "vrsc";
-  const defaultStatus = intFromEnv("VNS_REDIRECT_DEFAULT_STATUS", env.VNS_REDIRECT_DEFAULT_STATUS, 302);
-  const timeoutMs = intFromEnv("VNS_REDIRECT_TIMEOUT_MS", env.VNS_REDIRECT_TIMEOUT_MS, 5000);
+  const resolvedEnv = applyVdnsEnvCompatibility({ ...env });
+  const host = envValueWithDefault(resolvedEnv, "VDNS_GATEWAY_HOST", "VNS_REDIRECT_HOST", "127.0.0.1");
+  const port = intFromEnv("VDNS_GATEWAY_PORT", envValue(resolvedEnv, "VDNS_GATEWAY_PORT", "VNS_REDIRECT_PORT"), 8081);
+  const resolverUrl = envValueWithDefault(resolvedEnv, "VDNS_RESOLVER_URL", "VNS_RESOLVER_URL", "http://127.0.0.1:8080");
+  const tld = envValueWithDefault(resolvedEnv, "VDNS_TLD", "VNS_TLD", "vdns");
+  const defaultStatus = intFromEnv("VDNS_GATEWAY_DEFAULT_STATUS", envValue(resolvedEnv, "VDNS_GATEWAY_DEFAULT_STATUS", "VNS_REDIRECT_DEFAULT_STATUS"), 302);
+  const timeoutMs = intFromEnv("VDNS_GATEWAY_TIMEOUT_MS", envValue(resolvedEnv, "VDNS_GATEWAY_TIMEOUT_MS", "VNS_REDIRECT_TIMEOUT_MS"), 5000);
   const proxyEnabled = boolFromEnv(env.VDNS_PROXY_ENABLED, false);
   const proxyTimeoutMs = intFromEnv("VDNS_PROXY_TIMEOUT_MS", env.VDNS_PROXY_TIMEOUT_MS, 10000);
   const proxyMaxBodyBytes = intFromEnv("VDNS_PROXY_MAX_BODY_BYTES", env.VDNS_PROXY_MAX_BODY_BYTES, 10485760);

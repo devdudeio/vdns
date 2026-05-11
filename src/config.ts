@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { applyVdnsEnvCompatibility, envValue, envValueWithDefault } from "./envCompat.js";
 
-export type VnsConfig = {
+export type VdnsConfig = {
   rootIdentity: string;
   tld: string;
   defaultTtl: number;
@@ -26,11 +27,12 @@ const intFromEnv = (name: string, value: string | undefined, fallback: number): 
   return Number(raw);
 };
 
-export function loadConfigFromEnv(env: NodeJS.ProcessEnv = process.env): VnsConfig {
-  const rootIdentity = env.VNS_ROOT_IDENTITY ?? "fum@";
-  const tld = env.VNS_TLD ?? "vrsc";
-  const defaultTtl = intFromEnv("VNS_DEFAULT_TTL", env.VNS_DEFAULT_TTL, 300);
-  const mode = env.VNS_MODE ?? "rpc";
+export function loadConfigFromEnv(env: NodeJS.ProcessEnv = process.env): VdnsConfig {
+  const resolvedEnv = applyVdnsEnvCompatibility({ ...env });
+  const rootIdentity = envValueWithDefault(resolvedEnv, "VDNS_ROOT_IDENTITY", "VNS_ROOT_IDENTITY", "fum@");
+  const tld = envValueWithDefault(resolvedEnv, "VDNS_TLD", "VNS_TLD", "vdns");
+  const defaultTtl = intFromEnv("VDNS_DEFAULT_TTL", envValue(resolvedEnv, "VDNS_DEFAULT_TTL", "VNS_DEFAULT_TTL"), 300);
+  const mode = envValueWithDefault(resolvedEnv, "VDNS_MODE", "VNS_MODE", "rpc");
   const port = intFromEnv("PORT", env.PORT, 8080);
   const verusRpcTimeoutMs = intFromEnv("VERUS_RPC_TIMEOUT_MS", env.VERUS_RPC_TIMEOUT_MS, 10_000);
   const verusRpcUrl = mode === "rpc" ? (env.VERUS_RPC_URL ?? DEFAULT_VERUS_READ_RPC_URL) : env.VERUS_RPC_URL;

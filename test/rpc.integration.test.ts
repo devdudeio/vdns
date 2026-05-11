@@ -20,17 +20,17 @@ if (runIntegration) {
       await expect(client.getBlockchainInfo()).resolves.toEqual(expect.any(Object));
     });
 
-    it("gets raw VRSCTEST identity", async () => {
-      await expect(client.getRawIdentity("VRSCTEST@")).resolves.toEqual(expect.any(Object));
+    it("gets raw VDNSTEST identity", async () => {
+      await expect(client.getRawIdentity("VDNSTEST@")).resolves.toEqual(expect.any(Object));
     });
 
     it("returns null for a missing identity", async () => {
-      const missing = `missing-${Date.now()}.VNS@`;
+      const missing = `missing-${Date.now()}.VDNS@`;
       await expect(client.getRawIdentity(missing)).resolves.toBeNull();
     });
 
-    it("adapts VRSCTEST identity", async () => {
-      const identity = await client.getIdentity("VRSCTEST@");
+    it("adapts VDNSTEST identity", async () => {
+      const identity = await client.getIdentity("VDNSTEST@");
       expect(identity).toMatchObject({ identity: expect.stringMatching(/@$/) });
     });
   });

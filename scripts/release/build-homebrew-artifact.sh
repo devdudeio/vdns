@@ -37,8 +37,8 @@ if [[ "${SKIP_TESTS}" != "1" ]]; then
   pnpm test
 fi
 
-if [[ ! -x "coredns/coredns-vns" ]]; then
-  echo "CoreDNS binary missing; building coredns/coredns-vns"
+if [[ ! -x "coredns/coredns-vdns" ]]; then
+  echo "CoreDNS binary missing; building coredns/coredns-vdns"
   (cd coredns && ./build-coredns.sh)
 fi
 
@@ -72,8 +72,8 @@ done
 
 pnpm --dir "${STAGING}" install --prod --frozen-lockfile
 rm -rf "${STAGING}/coredns/.git" \
-  "${STAGING}/coredns/plugin/vns/.git" \
-  "${STAGING}/coredns/plugin/vns/.cache" \
+  "${STAGING}/coredns/plugin/vdns/.git" \
+  "${STAGING}/coredns/plugin/vdns/.cache" \
   "${STAGING}/.vdns"
 find "${STAGING}" -name '.DS_Store' -delete
 

@@ -1,8 +1,8 @@
 # macOS launchd services
 
-The launchd service installer is an alpha packaging layer for the local vDNS stack. It uses the same built resolver, CoreDNS binary, redirect service, `.env.local`, and `/etc/resolver/vrsc` split-DNS file as the dev scripts.
+The launchd service installer is an alpha packaging layer for the local vDNS stack. It uses the same built resolver, CoreDNS binary, redirect service, `.env.local`, and `/etc/resolver/vdns` split-DNS file as the dev scripts.
 
-Do not install service mode from `~/Desktop`, `~/Documents`, `~/Downloads`, or iCloud Drive. macOS privacy controls can block background launchd jobs from reading those folders, which appears as launchd exit code `126` and `Operation not permitted` in `.vdns/logs/*.launchd.err`. Put the checkout somewhere like `~/Developer/vns`.
+Do not install service mode from `~/Desktop`, `~/Documents`, `~/Downloads`, or iCloud Drive. macOS privacy controls can block background launchd jobs from reading those folders, which appears as launchd exit code `126` and `Operation not permitted` in `.vdns/logs/*.launchd.err`. Put the checkout somewhere like `~/Developer/vdns`.
 
 ## Dev mode vs service mode
 
@@ -31,7 +31,7 @@ pnpm vdns:stop
 pnpm vdns:uninstall
 ```
 
-`vdns:install` writes launchd plist files and installs `/etc/resolver/vrsc` when needed. `vdns:start` bootstraps and kickstarts the jobs. `vdns:stop` bootouts the jobs but leaves plist files installed. `vdns:uninstall` stops jobs and removes plist files.
+`vdns:install` writes launchd plist files and installs `/etc/resolver/vdns` when needed. `vdns:start` bootstraps and kickstarts the jobs. `vdns:stop` bootouts the jobs but leaves plist files installed. `vdns:uninstall` stops jobs and removes plist files.
 
 
 ## Service architecture
@@ -49,13 +49,13 @@ flowchart TB
     ResolverPlist["~/Library/LaunchAgents/io.vdns.resolver.plist"]
     CoreDNSPlist["~/Library/LaunchAgents/io.vdns.coredns.plist"]
     RedirectPlist["/Library/LaunchDaemons/io.vdns.redirect.plist"]
-    SplitDNS["/etc/resolver/vrsc"]
+    SplitDNS["/etc/resolver/vdns"]
     Logs[.vdns/logs/*.launchd.*]
   end
 
   subgraph processes[Runtime processes]
     Resolver[node dist/index.js\nHTTP resolver :8080]
-    CoreDNS[coredns-vns\nDNS :1053]
+    CoreDNS[coredns-vdns\nDNS :1053]
     Redirect[node dist/redirect-index.js\nHTTP redirect :80]
   end
 
@@ -102,9 +102,9 @@ The plists do not embed RPC secrets. The wrappers load `.env.local` at runtime.
 
 ## Split DNS
 
-The installer verifies `/etc/resolver/vrsc` and runs the existing resolver installer when the file is missing or has the wrong local DNS port.
+The installer verifies `/etc/resolver/vdns` and runs the existing resolver installer when the file is missing or has the wrong local DNS port.
 
-By default, uninstall leaves `/etc/resolver/vrsc` installed:
+By default, uninstall leaves `/etc/resolver/vdns` installed:
 
 ```sh
 pnpm vdns:uninstall
@@ -152,19 +152,19 @@ sudo lsof -nP -iTCP:80 -sTCP:LISTEN
 Check split DNS:
 
 ```sh
-cat /etc/resolver/vrsc
+cat /etc/resolver/vdns
 scutil --dns
-dscacheutil -q host -a name google.vrsc
+dscacheutil -q host -a name google.vdns
 ```
 
 Run the demo checks:
 
 ```sh
 pnpm vdns:demo
-curl -i --max-time 10 http://chainvue.vrsc
+curl -i --max-time 10 http://chainvue.vdns
 ```
 
-The redirect service is installed as a root LaunchDaemon because port `80` is privileged. This is what lets browser-style URLs such as `http://chainvue.vrsc` work without an explicit port.
+The redirect service is installed as a root LaunchDaemon because port `80` is privileged. This is what lets browser-style URLs such as `http://chainvue.vdns` work without an explicit port.
 
 ## Dry run
 
@@ -191,7 +191,7 @@ pnpm vdns:uninstall -- --remove-resolver --purge
 ## Alpha limitations
 
 - macOS only.
-- Requires a built `dist/index.js`, built `dist/redirect-index.js`, executable `coredns/coredns-vns`, and `.env.local`.
+- Requires a built `dist/index.js`, built `dist/redirect-index.js`, executable `coredns/coredns-vdns`, and `.env.local`.
 - Uses the current checkout path in launchd plist files. Reinstall services if the repository moves.
 - The checkout must be outside macOS privacy-protected user folders such as Desktop, Documents, Downloads, and iCloud Drive unless you explicitly grant suitable system privacy permissions.
 - Node must be available at install time or in a common Homebrew path.

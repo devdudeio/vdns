@@ -27,7 +27,7 @@ Homebrew config is written to `~/.vdns/.env.local` with mode `600`. Edit that fi
 Advanced or repair setup remains available:
 
 ```sh
-vdns setup --force --root fum@ --tld vrsc --rpc-url https://api.verustest.net/
+vdns setup --force --root fum@ --tld vdns --rpc-url https://api.verustest.net/
 vdns install
 vdns start
 ```
@@ -59,15 +59,15 @@ Logs live in `~/.vdns/logs`.
 ## Demo Checks
 
 ```sh
-dig @127.0.0.1 -p 1053 google.vrsc A +short
-dscacheutil -q host -a name google.vrsc
-curl -i --max-time 10 http://chainvue.vrsc
-curl -I --max-time 20 http://verus.vrsc
+dig @127.0.0.1 -p 1053 google.vdns A +short
+dscacheutil -q host -a name google.vdns
+curl -i --max-time 10 http://chainvue.vdns
+curl -I --max-time 20 http://verus.vdns
 ```
 
-`chainvue.vrsc` should return `302` with `Location: http://chainvue.io/`. `verus.vrsc` should include `x-vdns-proxy: 1` and `x-vdns-proxy-target-host: verus.io`.
+`chainvue.vdns` should return `302` with `Location: http://chainvue.io/`. `verus.vdns` should include `x-vdns-proxy: 1` and `x-vdns-proxy-target-host: verus.io`.
 
-On macOS, `dig google.vrsc` without `@127.0.0.1 -p 1053` may not use `/etc/resolver`. Use `dscacheutil` for system resolver behavior.
+On macOS, `dig google.vdns` without `@127.0.0.1 -p 1053` may not use `/etc/resolver`. Use `dscacheutil` for system resolver behavior.
 
 ## Upgrade
 

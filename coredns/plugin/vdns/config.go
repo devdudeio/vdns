@@ -1,4 +1,4 @@
-package vns
+package vdns
 
 import (
 	"errors"

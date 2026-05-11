@@ -65,7 +65,7 @@ export async function initCa(options: InitCaOptions = {}): Promise<VdnsTlsPaths>
 
 export async function generateHostCert(host: string, options: GenerateCertOptions = {}): Promise<{ hostname: string; cert: string; key: string }> {
   await ensureOpenSsl();
-  const tld = options.tld ?? "vrsc";
+  const tld = options.tld ?? "vdns";
   const hostname = normalizeVdnsTlsHost(host, tld);
   if (hostname instanceof Error) {
     throw hostname;
@@ -121,7 +121,7 @@ export async function generateHostCert(host: string, options: GenerateCertOption
   return { hostname, cert: certPaths.cert, key: certPaths.key };
 }
 
-export async function removeHostCert(host: string, tld = "vrsc", paths = deriveTlsPaths()): Promise<boolean> {
+export async function removeHostCert(host: string, tld = "vdns", paths = deriveTlsPaths()): Promise<boolean> {
   const hostname = normalizeVdnsTlsHost(host, tld);
   if (hostname instanceof Error) {
     throw hostname;

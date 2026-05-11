@@ -11,11 +11,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/vdns-lib.sh"
 REPO_ROOT="$(vdns_repo_root)"
 ENTRYPOINT="${REPO_ROOT}/dist/redirect-index.js"
-RESOLVER_URL="${VNS_RESOLVER_URL:-http://127.0.0.1:8080}"
+RESOLVER_URL="${VDNS_RESOLVER_URL:-http://127.0.0.1:8080}"
 NODE_BIN="${NODE_BIN:-}"
-BACKGROUND="${VNS_BACKGROUND:-0}"
-PID_FILE="${VNS_PID_FILE:-}"
-LOG_FILE="${VNS_LOG_FILE:-}"
+BACKGROUND="${VDNS_BACKGROUND:-0}"
+PID_FILE="${VDNS_PID_FILE:-}"
+LOG_FILE="${VDNS_LOG_FILE:-}"
 
 if [[ "$(id -u)" -ne 0 ]]; then
   echo "Port 80 requires administrator privileges." >&2
@@ -45,7 +45,7 @@ fi
 echo "Checking vDNS HTTP resolver at ${RESOLVER_URL}/health"
 if ! curl -fsS --max-time 5 "${RESOLVER_URL}/health" >/dev/null; then
   echo "vDNS HTTP resolver is not reachable at ${RESOLVER_URL}" >&2
-  echo "Start the resolver first, or set VNS_RESOLVER_URL before running this helper." >&2
+  echo "Start the resolver first, or set VDNS_RESOLVER_URL before running this helper." >&2
   exit 1
 fi
 
@@ -57,7 +57,7 @@ echo
 cd "${REPO_ROOT}"
 if [[ "${BACKGROUND}" == "1" ]]; then
   if [[ -z "${PID_FILE}" || -z "${LOG_FILE}" ]]; then
-    echo "VNS_PID_FILE and VNS_LOG_FILE are required when VNS_BACKGROUND=1." >&2
+    echo "VDNS_PID_FILE and VDNS_LOG_FILE are required when VDNS_BACKGROUND=1." >&2
     exit 1
   fi
 
@@ -67,9 +67,9 @@ if [[ "${BACKGROUND}" == "1" ]]; then
   VDNS_ENV_FILE="${VDNS_ENV_FILE}" \
   VDNS_LOG_DIR="${VDNS_LOG_DIR}" \
   VDNS_PID_DIR="${VDNS_PID_DIR}" \
-  VNS_REDIRECT_HOST="${VNS_REDIRECT_HOST:-127.0.0.1}" \
-  VNS_REDIRECT_PORT=80 \
-  VNS_RESOLVER_URL="${RESOLVER_URL}" \
+  VDNS_GATEWAY_HOST="${VDNS_GATEWAY_HOST:-127.0.0.1}" \
+  VDNS_GATEWAY_PORT=80 \
+  VDNS_RESOLVER_URL="${RESOLVER_URL}" \
   VDNS_PROXY_ENABLED="${VDNS_PROXY_ENABLED:-false}" \
   VDNS_PROXY_TIMEOUT_MS="${VDNS_PROXY_TIMEOUT_MS:-10000}" \
   VDNS_PROXY_MAX_BODY_BYTES="${VDNS_PROXY_MAX_BODY_BYTES:-10485760}" \
@@ -95,9 +95,9 @@ VDNS_STATE_DIR="${VDNS_STATE_DIR}" \
 VDNS_ENV_FILE="${VDNS_ENV_FILE}" \
 VDNS_LOG_DIR="${VDNS_LOG_DIR}" \
 VDNS_PID_DIR="${VDNS_PID_DIR}" \
-VNS_REDIRECT_HOST="${VNS_REDIRECT_HOST:-127.0.0.1}" \
-VNS_REDIRECT_PORT=80 \
-VNS_RESOLVER_URL="${RESOLVER_URL}" \
+VDNS_GATEWAY_HOST="${VDNS_GATEWAY_HOST:-127.0.0.1}" \
+VDNS_GATEWAY_PORT=80 \
+VDNS_RESOLVER_URL="${RESOLVER_URL}" \
 VDNS_PROXY_ENABLED="${VDNS_PROXY_ENABLED:-false}" \
 VDNS_PROXY_TIMEOUT_MS="${VDNS_PROXY_TIMEOUT_MS:-10000}" \
 VDNS_PROXY_MAX_BODY_BYTES="${VDNS_PROXY_MAX_BODY_BYTES:-10485760}" \

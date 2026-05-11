@@ -1,8 +1,8 @@
-import type { ResolveResult, VnsRecord } from "../core/types.js";
+import type { ResolveResult, VdnsRecord } from "../core/types.js";
 
-export type RedirectRecord = Extract<VnsRecord, { type: "REDIRECT" }>;
-export type ProxyRecord = Extract<VnsRecord, { type: "PROXY" }>;
-export type SiteRecord = Extract<VnsRecord, { type: "SITE" }>;
+export type RedirectRecord = Extract<VdnsRecord, { type: "REDIRECT" }>;
+export type ProxyRecord = Extract<VdnsRecord, { type: "PROXY" }>;
+export type SiteRecord = Extract<VdnsRecord, { type: "SITE" }>;
 
 export type RedirectResolverErrorKind = "upstream" | "timeout" | "invalid-response";
 

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import validFixture from "../fixtures/identities/myname.VNS.json" with { type: "json" };
-import invalidFixture from "../fixtures/identities/invalid-records.VNS.json" with { type: "json" };
+import validFixture from "../fixtures/identities/myname.VDNS.json" with { type: "json" };
+import invalidFixture from "../fixtures/identities/invalid-records.VDNS.json" with { type: "json" };
 import { VERUS_DATA_DESCRIPTOR_KEY } from "../src/core/constants.js";
 import { encodeJsonObjectData } from "../src/core/objectDataCodec.js";
 import { parseIdentityRecords } from "../src/core/parser.js";
-import type { VnsVdxfIds } from "../src/core/vdxf.js";
+import type { VdnsVdxfIds } from "../src/core/vdxf.js";
 
-const vdxfIds: VnsVdxfIds = {
+const vdxfIds: VdnsVdxfIds = {
   record: "iFLfRN1bcVckxotkYPuWHVuoihfafbS8F5",
   labels: {
     A: "iPYBHLkzfMAnzkdQUSrqh4i7rCCW9tJpvE",
@@ -34,7 +34,7 @@ describe("parseIdentityRecords", () => {
   });
 
   it("warns when record key is missing", () => {
-    const result = parseIdentityRecords({ identity: "empty.VNS@", contentmultimap: {} });
+    const result = parseIdentityRecords({ identity: "empty.VDNS@", contentmultimap: {} });
     expect(result.records).toEqual([]);
     expect(result.warnings[0]).toContain("No vDNS records");
   });
@@ -58,7 +58,7 @@ describe("parseIdentityRecords", () => {
           }
         }]
       }
-    }, { vnsVdxfIds: vdxfIds, symbolicFallback: false });
+    }, { vdnsVdxfIds: vdxfIds, symbolicFallback: false });
 
     expect(result).toEqual({
       records: [{ version: 1, type: "A", name: "@", value: "142.250.181.238", ttl: 300 }],
@@ -85,7 +85,7 @@ describe("parseIdentityRecords", () => {
           }
         }]
       }
-    }, { vnsVdxfIds: vdxfIds, symbolicFallback: false });
+    }, { vdnsVdxfIds: vdxfIds, symbolicFallback: false });
 
     expect(result.records).toEqual([{ version: 1, type: "PROXY", name: "@", url: "https://verus.io/", ttl: 300 }]);
     expect(result.warnings).toEqual([]);

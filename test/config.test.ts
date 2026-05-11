@@ -5,7 +5,7 @@ describe("loadConfigFromEnv", () => {
   it("defaults to rpc mode and public read RPC", () => {
     expect(loadConfigFromEnv({})).toEqual({
       rootIdentity: "fum@",
-      tld: "vrsc",
+      tld: "vdns",
       defaultTtl: 300,
       mode: "rpc",
       port: 8080,
@@ -15,9 +15,9 @@ describe("loadConfigFromEnv", () => {
   });
 
   it("loads mock mode without an RPC URL when explicitly requested", () => {
-    expect(loadConfigFromEnv({ VNS_MODE: "mock" })).toEqual({
+    expect(loadConfigFromEnv({ VDNS_MODE: "mock" })).toEqual({
       rootIdentity: "fum@",
-      tld: "vrsc",
+      tld: "vdns",
       defaultTtl: 300,
       mode: "mock",
       port: 8080,
@@ -28,7 +28,7 @@ describe("loadConfigFromEnv", () => {
   it("loads default rpc mode with an RPC URL", () => {
     expect(loadConfigFromEnv({ VERUS_RPC_URL: "http://127.0.0.1:18843" })).toEqual({
       rootIdentity: "fum@",
-      tld: "vrsc",
+      tld: "vdns",
       defaultTtl: 300,
       mode: "rpc",
       port: 8080,
@@ -40,10 +40,10 @@ describe("loadConfigFromEnv", () => {
   it("loads custom values", () => {
     expect(
       loadConfigFromEnv({
-        VNS_ROOT_IDENTITY: "VERUSNAMESERVICE@",
-        VNS_TLD: "testnet",
-        VNS_DEFAULT_TTL: "600",
-        VNS_MODE: "rpc",
+        VDNS_ROOT_IDENTITY: "VERUSNAMESERVICE@",
+        VDNS_TLD: "testnet",
+        VDNS_DEFAULT_TTL: "600",
+        VDNS_MODE: "rpc",
         PORT: "9090",
         VERUS_RPC_URL: "https://api.verustest.net/",
         VERUS_RPC_USER: "user",
@@ -64,12 +64,12 @@ describe("loadConfigFromEnv", () => {
   });
 
   it.each([
-    [{ VNS_ROOT_IDENTITY: "VNS" }],
-    [{ VNS_TLD: ".vrsc" }],
-    [{ VNS_TLD: "VRSC" }],
-    [{ VNS_DEFAULT_TTL: "29" }],
-    [{ VNS_DEFAULT_TTL: "86401" }],
-    [{ VNS_MODE: "bad" }],
+    [{ VDNS_ROOT_IDENTITY: "VDNS" }],
+    [{ VDNS_TLD: ".vdns" }],
+    [{ VDNS_TLD: "VRSC" }],
+    [{ VDNS_DEFAULT_TTL: "29" }],
+    [{ VDNS_DEFAULT_TTL: "86401" }],
+    [{ VDNS_MODE: "bad" }],
     [{ PORT: "0" }],
     [{ PORT: "65536" }],
     [{ VERUS_RPC_URL: "not-a-url" }],

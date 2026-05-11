@@ -21,8 +21,8 @@ export type DoctorDeps = {
   fetch?: FetchLike;
 };
 
-const staleDocumentsPathParts = ["", "Users", "robertlech", "Documents", "vns"];
-const checkoutPathParts = ["", "Users", "robertlech", "Developer", "vns"];
+const staleDocumentsPathParts = ["", "Users", "robertlech", "Documents", "vdns"];
+const checkoutPathParts = ["", "Users", "robertlech", "Developer", "vdns"];
 
 export async function runDoctorChecks(ctx: DoctorContext, deps: DoctorDeps = {}): Promise<CheckResult[]> {
   const execFile = deps.execFile ?? defaultExecFile;
@@ -50,7 +50,7 @@ async function checkHttps(ctx: DoctorContext, execFile: ExecFile, fetchImpl: Fet
     section: "HTTPS",
     status: enabled ? "PASS" : "WARN",
     label: "HTTPS enabled",
-    message: enabled ? "VDNS_HTTPS_ENABLED=true" : "HTTPS is not enabled. HTTP vDNS is working, but https://*.vrsc will not work.",
+    message: enabled ? "VDNS_HTTPS_ENABLED=true" : "HTTPS is not enabled. HTTP vDNS is working, but https://*.vdns will not work.",
     fix: enabled ? undefined : "vdns https init-ca && vdns https install-ca; set VDNS_HTTPS_ENABLED=true; vdns restart",
     strictFailure: strictHttps
   }];
@@ -84,8 +84,8 @@ async function checkHttps(ctx: DoctorContext, execFile: ExecFile, fetchImpl: Fet
   results.push({ ...httpsPort, section: "HTTPS", strictFailure: strictHttps });
 
   if (enabled) {
-    const proxyDomain = ctx.env.VDNS_DOCTOR_PROXY_DOMAIN ?? `verus.${ctx.env.VNS_TLD ?? "vrsc"}`;
-    const redirectDomain = ctx.env.VDNS_DOCTOR_REDIRECT_DOMAIN ?? `chainvue.${ctx.env.VNS_TLD ?? "vrsc"}`;
+    const proxyDomain = ctx.env.VDNS_DOCTOR_PROXY_DOMAIN ?? `verus.${ctx.env.VDNS_TLD ?? "vdns"}`;
+    const redirectDomain = ctx.env.VDNS_DOCTOR_REDIRECT_DOMAIN ?? `chainvue.${ctx.env.VDNS_TLD ?? "vdns"}`;
     try {
       const response = await curlHead(execFile, `https://${proxyDomain}`);
       const proxy = response.headers["x-vdns-proxy"];
@@ -126,7 +126,7 @@ export async function checkInstall(ctx: DoctorContext): Promise<CheckResult[]> {
     ["Gateway entrypoint", path.join(ctx.home, "dist/redirect-index.js"), "pnpm build"],
     ["Wrapper", path.join(ctx.home, "bin/vdns"), "reinstall vdns or restore bin/vdns"],
     ["macOS scripts", path.join(ctx.home, "scripts/macos"), "reinstall vdns"],
-    ["CoreDNS binary", path.join(ctx.home, "coredns/coredns-vns"), "cd coredns && ./build-coredns.sh"]
+    ["CoreDNS binary", path.join(ctx.home, "coredns/coredns-vdns"), "cd coredns && ./build-coredns.sh"]
   ] as const;
   const results: CheckResult[] = [{
     section: "Install",
@@ -215,7 +215,7 @@ export async function checkConfig(ctx: DoctorContext): Promise<CheckResult[]> {
     fix: (mode & 0o077) === 0 ? undefined : `chmod 600 ${ctx.envFile}`
   });
 
-  const required = ["VNS_MODE", "VNS_ROOT_IDENTITY", "VNS_TLD"];
+  const required = ["VDNS_MODE", "VDNS_ROOT_IDENTITY", "VDNS_TLD"];
   for (const key of required) {
     results.push({
       section: "Config",
@@ -264,13 +264,13 @@ async function checkRpc(ctx: DoctorContext, fetchImpl: FetchLike): Promise<Check
     results.push(rpcFailure("getblockchaininfo", error));
   }
   try {
-    const identity = await client.getRawIdentity(ctx.env.VNS_ROOT_IDENTITY ?? "fum@");
+    const identity = await client.getRawIdentity(ctx.env.VDNS_ROOT_IDENTITY ?? "fum@");
     results.push({
       section: "Verus RPC",
       status: identity ? "PASS" : "FAIL",
       label: "getidentity",
-      message: identity ? `found ${ctx.env.VNS_ROOT_IDENTITY ?? "fum@"}` : `missing ${ctx.env.VNS_ROOT_IDENTITY ?? "fum@"}`,
-      fix: identity ? undefined : "Check VNS_ROOT_IDENTITY and Verus node sync state."
+      message: identity ? `found ${ctx.env.VDNS_ROOT_IDENTITY ?? "fum@"}` : `missing ${ctx.env.VDNS_ROOT_IDENTITY ?? "fum@"}`,
+      fix: identity ? undefined : "Check VDNS_ROOT_IDENTITY and Verus node sync state."
     });
   } catch (error) {
     results.push(rpcFailure("getidentity", error));
@@ -279,8 +279,8 @@ async function checkRpc(ctx: DoctorContext, fetchImpl: FetchLike): Promise<Check
 }
 
 async function checkServices(ctx: DoctorContext, execFile: ExecFile, fetchImpl: FetchLike): Promise<CheckResult[]> {
-  const resolverUrl = ctx.env.VNS_RESOLVER_URL ?? `http://127.0.0.1:${ctx.env.PORT ?? "8080"}`;
-  const dnsPort = ctx.env.VNS_DNS_PORT ?? "1053";
+  const resolverUrl = ctx.env.VDNS_RESOLVER_URL ?? `http://127.0.0.1:${ctx.env.PORT ?? "8080"}`;
+  const dnsPort = ctx.env.VDNS_DNS_PORT ?? "1053";
   const results: CheckResult[] = [];
   results.push(await checkResolverDebug(ctx, resolverUrl, fetchImpl));
   results.push(await checkPort(execFile, "CoreDNS TCP", "TCP", dnsPort, "127.0.0.1"));
@@ -289,7 +289,7 @@ async function checkServices(ctx: DoctorContext, execFile: ExecFile, fetchImpl: 
   if (!dig) {
     results.push({ section: "Services", status: "WARN", label: "dig", message: "dig is unavailable", fix: "brew install bind" });
   } else {
-    const domain = ctx.env.VDNS_DOCTOR_A_DOMAIN ?? `google.${ctx.env.VNS_TLD ?? "vrsc"}`;
+    const domain = ctx.env.VDNS_DOCTOR_A_DOMAIN ?? `google.${ctx.env.VDNS_TLD ?? "vdns"}`;
     const result = await execFile("dig", ["@127.0.0.1", "-p", dnsPort, domain, "A", "+short"], 5000);
     results.push({
       section: "Services",
@@ -310,7 +310,7 @@ async function checkResolverDebug(ctx: DoctorContext, resolverUrl: string, fetch
       return { section: "Services", status: "FAIL", label: "resolver /debug/config", message: `HTTP ${response.status}`, fix: "vdns start" };
     }
     const body = await response.json() as Record<string, unknown>;
-    const modeMatches = body.mode === (ctx.env.VNS_MODE ?? "rpc");
+    const modeMatches = body.mode === (ctx.env.VDNS_MODE ?? "rpc");
     const details = [
       `mode=${String(body.mode)}`,
       `rootIdentity=${String(body.rootIdentity)}`,
@@ -319,7 +319,7 @@ async function checkResolverDebug(ctx: DoctorContext, resolverUrl: string, fetch
       `rpcAuthConfigured=${String(body.rpcAuthConfigured)}`
     ];
     if (body.mode === "mock") {
-      return { section: "Services", status: "WARN", label: "resolver mode", message: "resolver is running in mock mode", details, fix: "Set VNS_MODE=rpc and restart.", strictFailure: true };
+      return { section: "Services", status: "WARN", label: "resolver mode", message: "resolver is running in mock mode", details, fix: "Set VDNS_MODE=rpc and restart.", strictFailure: true };
     }
     return { section: "Services", status: modeMatches ? "PASS" : "FAIL", label: "resolver /debug/config", message: modeMatches ? "matches env" : "does not match env", details, fix: modeMatches ? undefined : "vdns restart" };
   } catch (error) {
@@ -328,8 +328,8 @@ async function checkResolverDebug(ctx: DoctorContext, resolverUrl: string, fetch
 }
 
 async function checkMacDns(ctx: DoctorContext, execFile: ExecFile): Promise<CheckResult[]> {
-  const tld = ctx.env.VNS_TLD ?? "vrsc";
-  const port = ctx.env.VNS_DNS_PORT ?? "1053";
+  const tld = ctx.env.VDNS_TLD ?? "vdns";
+  const port = ctx.env.VDNS_DNS_PORT ?? "1053";
   const resolverFile = `/etc/resolver/${tld}`;
   const results: CheckResult[] = [{
     section: "macOS DNS",
@@ -381,8 +381,8 @@ async function checkMacDns(ctx: DoctorContext, execFile: ExecFile): Promise<Chec
 }
 
 async function checkWeb(ctx: DoctorContext, execFile: ExecFile, fetchImpl: FetchLike): Promise<CheckResult[]> {
-  const redirectDomain = ctx.env.VDNS_DOCTOR_REDIRECT_DOMAIN ?? `chainvue.${ctx.env.VNS_TLD ?? "vrsc"}`;
-  const proxyDomain = ctx.env.VDNS_DOCTOR_PROXY_DOMAIN ?? `verus.${ctx.env.VNS_TLD ?? "vrsc"}`;
+  const redirectDomain = ctx.env.VDNS_DOCTOR_REDIRECT_DOMAIN ?? `chainvue.${ctx.env.VDNS_TLD ?? "vdns"}`;
+  const proxyDomain = ctx.env.VDNS_DOCTOR_PROXY_DOMAIN ?? `verus.${ctx.env.VDNS_TLD ?? "vdns"}`;
   return [
     await checkPort(execFile, "Web gateway", "TCP", "80", "127.0.0.1"),
     await checkRedirect(fetchImpl, redirectDomain),
@@ -427,11 +427,11 @@ async function checkProxy(fetchImpl: FetchLike, domain: string): Promise<CheckRe
 }
 
 async function checkRecords(ctx: DoctorContext, fetchImpl: FetchLike): Promise<CheckResult[]> {
-  const resolverUrl = ctx.env.VNS_RESOLVER_URL ?? `http://127.0.0.1:${ctx.env.PORT ?? "8080"}`;
+  const resolverUrl = ctx.env.VDNS_RESOLVER_URL ?? `http://127.0.0.1:${ctx.env.PORT ?? "8080"}`;
   const domains = [
-    ["A", ctx.env.VDNS_DOCTOR_A_DOMAIN ?? `google.${ctx.env.VNS_TLD ?? "vrsc"}`],
-    ["REDIRECT", ctx.env.VDNS_DOCTOR_REDIRECT_DOMAIN ?? `chainvue.${ctx.env.VNS_TLD ?? "vrsc"}`],
-    ["PROXY", ctx.env.VDNS_DOCTOR_PROXY_DOMAIN ?? `verus.${ctx.env.VNS_TLD ?? "vrsc"}`]
+    ["A", ctx.env.VDNS_DOCTOR_A_DOMAIN ?? `google.${ctx.env.VDNS_TLD ?? "vdns"}`],
+    ["REDIRECT", ctx.env.VDNS_DOCTOR_REDIRECT_DOMAIN ?? `chainvue.${ctx.env.VDNS_TLD ?? "vdns"}`],
+    ["PROXY", ctx.env.VDNS_DOCTOR_PROXY_DOMAIN ?? `verus.${ctx.env.VDNS_TLD ?? "vdns"}`]
   ] as const;
   const results: CheckResult[] = [];
   for (const [type, domain] of domains) {

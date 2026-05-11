@@ -1,6 +1,6 @@
 # vDNS Architecture
 
-vDNS is the public local-resolution workflow: VerusID records become DNS-compatible answers on the local machine. VNS remains the internal package, schema, plugin, and environment-variable terminology.
+vDNS is the public local-resolution workflow: VerusID records become DNS-compatible answers on the local machine. Legacy VNS names are treated only as compatibility fallbacks during migration.
 
 The current resolver foundation is:
 
@@ -17,13 +17,13 @@ The resolver core owns domain parsing, record parsing, validation, filtering, an
 
 ## Local DNS Architecture
 
-The local macOS stack has two paths: DNS resolution for `.vrsc` names and HTTP handling for browser-style URLs.
+The local macOS stack has two paths: DNS resolution for `.vdns` names and HTTP handling for browser-style URLs.
 
 ```mermaid
 flowchart LR
   subgraph macOS[macOS client machine]
     App[Browser, curl, or app]
-    ResolverConfig["/etc/resolver/vrsc"]
+    ResolverConfig["/etc/resolver/vdns"]
     CoreDNS[CoreDNS vDNS plugin\n127.0.0.1:1053]
     HTTPResolver[Fastify resolver API\n127.0.0.1:8080]
     Gateway[Web gateway\n127.0.0.1:80]
@@ -34,8 +34,8 @@ flowchart LR
     Identity[VerusID identity\ncontentmultimap records]
   end
 
-  App -->|DNS query: google.vrsc A| ResolverConfig
-  ResolverConfig -->|split-DNS route for .vrsc| CoreDNS
+  App -->|DNS query: google.vdns A| ResolverConfig
+  ResolverConfig -->|split-DNS route for .vdns| CoreDNS
   CoreDNS -->|HTTP resolve-domain request| HTTPResolver
   HTTPResolver -->|getidentity / getvdxfid| RPC
   RPC --> Identity
@@ -43,23 +43,23 @@ flowchart LR
   HTTPResolver -->|DNS-compatible answer| CoreDNS
   CoreDNS -->|A 142.250.181.238| App
 
-  App -->|HTTP request: chainvue.vrsc| Gateway
+  App -->|HTTP request: chainvue.vdns| Gateway
   Gateway -->|lookup REDIRECT or PROXY record| HTTPResolver
   HTTPResolver -->|REDIRECT http://chainvue.io/| Gateway
   Gateway -->|302 Location header| App
   Gateway -->|optional PROXY target fetch| Upstream[Upstream website]
 ```
 
-DNS answers are produced by CoreDNS, but CoreDNS does not talk to Verus directly. It delegates `.vrsc` record lookup to the local HTTP resolver. The HTTP resolver owns Verus identity lookup, VDXF key resolution, contentmultimap parsing, record validation, filtering by requested DNS type, and cache behavior.
+DNS answers are produced by CoreDNS, but CoreDNS does not talk to Verus directly. It delegates `.vdns` record lookup to the local HTTP resolver. The HTTP resolver owns Verus identity lookup, VDXF key resolution, contentmultimap parsing, record validation, filtering by requested DNS type, and cache behavior.
 
-The web gateway is separate from DNS. DNS first maps a `.vrsc` name such as `chainvue.vrsc` to `127.0.0.1`; then the browser connects to local port `80`, where the gateway asks the HTTP resolver for a `PROXY` or `REDIRECT` record. `PROXY` is attempted first when enabled. If no usable PROXY record exists, the gateway falls back to `REDIRECT` and returns an HTTP `301` or `302`.
+The web gateway is separate from DNS. DNS first maps a `.vdns` name such as `chainvue.vdns` to `127.0.0.1`; then the browser connects to local port `80`, where the gateway asks the HTTP resolver for a `PROXY` or `REDIRECT` record. `PROXY` is attempted first when enabled. If no usable PROXY record exists, the gateway falls back to `REDIRECT` and returns an HTTP `301` or `302`.
 
 ## Flow Summary
 
 DNS flow:
 
 ```text
-browser/system resolver -> /etc/resolver/vrsc -> CoreDNS -> HTTP resolver -> Verus RPC -> VerusID records
+browser/system resolver -> /etc/resolver/vdns -> CoreDNS -> HTTP resolver -> Verus RPC -> VerusID records
 ```
 
 Web flow:
@@ -72,27 +72,27 @@ browser -> 127.0.0.1:80 web gateway -> REDIRECT or PROXY
 
 The root identity and TLD are runtime configuration:
 
-- `VNS_ROOT_IDENTITY`, default `fum@`
-- `VNS_TLD`, default `vrsc`
+- `VDNS_ROOT_IDENTITY`, default `fum@`
+- `VDNS_TLD`, default `vdns`
 
-For example, `myname.vrsc` resolves to `myname.fum@` by default, but with `VNS_ROOT_IDENTITY=VERUSNAMESERVICE@` it resolves to `myname.VERUSNAMESERVICE@`.
+For example, `myname.vdns` resolves to `myname.fum@` by default, but with `VDNS_ROOT_IDENTITY=VERUSNAMESERVICE@` it resolves to `myname.VERUSNAMESERVICE@`.
 
 ## Mock Vs RPC Mode
 
-`VNS_MODE=rpc` is the default. RPC mode requires `VERUS_RPC_URL`; startup fails fast if the URL is missing. `VNS_MODE=mock` must be requested explicitly and reads JSON fixtures from `fixtures/identities` instead of Verus chain data.
+`VDNS_MODE=rpc` is the default. RPC mode requires `VERUS_RPC_URL`; startup fails fast if the URL is missing. `VDNS_MODE=mock` must be requested explicitly and reads JSON fixtures from `fixtures/identities` instead of Verus chain data.
 
 For a read-only public Verus testnet endpoint:
 
 ```sh
-VNS_MODE=rpc VERUS_RPC_URL=https://api.verustest.net/ pnpm dev
+VDNS_MODE=rpc VERUS_RPC_URL=https://api.verustest.net/ pnpm dev
 ```
 
 For a local fullnode resolving the `fum@` namespace, create `.env.local`:
 
 ```dotenv
-VNS_MODE=rpc
-VNS_ROOT_IDENTITY=fum@
-VNS_TLD=vrsc
+VDNS_MODE=rpc
+VDNS_ROOT_IDENTITY=fum@
+VDNS_TLD=vdns
 VERUS_RPC_URL=http://192.168.0.106:18843
 VERUS_RPC_USER=user972661718
 VERUS_RPC_PASSWORD=your_password
@@ -119,7 +119,7 @@ pnpm dev:mock
 
 The RPC client calls `getidentity`, adapts `result.identity.name` and `result.identity.contentmultimap` into the internal payload shape, and returns `null` for Verus JSON-RPC `-5` missing-identity responses. Upstream HTTP/RPC/network failures map to gateway errors at the API boundary, while timeouts map to `504`.
 
-In RPC mode the resolver derives VNS VDXF key names from `VNS_ROOT_IDENTITY` and `VNS_TLD`, resolves them with `getvdxfid`, and caches the resolved IDs in memory. Those IDs are used to parse real Verus `contentmultimap` entries under keys such as `fum.vrsc::vns.record`. DataDescriptor `objectdata` is hex-encoded JSON and is decoded by the shared parser used by both HTTP resolution and CLI record inspection.
+In RPC mode the resolver derives vDNS VDXF key names from `VDNS_ROOT_IDENTITY` and `VDNS_TLD`, resolves them with `getvdxfid`, and caches the resolved IDs in memory. Those IDs are used to parse real Verus `contentmultimap` entries under keys such as `fum.vdns::vdns.record`. DataDescriptor `objectdata` is hex-encoded JSON and is decoded by the shared parser used by both HTTP resolution and CLI record inspection.
 
 Useful checks:
 
@@ -127,17 +127,17 @@ Useful checks:
 curl http://127.0.0.1:8080/debug/config | jq .
 curl http://127.0.0.1:8080/debug/vdxf-keys | jq .
 curl http://127.0.0.1:8080/debug/raw-identity/google.fum@ | jq '.identity.contentmultimap'
-curl http://127.0.0.1:8080/resolve-domain/google.vrsc | jq .
+curl http://127.0.0.1:8080/resolve-domain/google.vdns | jq .
 ```
 
-If `/debug/config` shows `"mode": "mock"`, the process was started with `pnpm dev:mock` or `VNS_MODE=mock` is set in the shell. Check `echo $VNS_MODE` and run `unset VNS_MODE` before starting RPC mode. If `/debug/config` shows `"rpcUrlConfigured": false`, `VERUS_RPC_URL` is missing from `.env.local` and the shell environment. With `VNS_ROOT_IDENTITY=fum@` and `VNS_TLD=vrsc`, `google.vrsc` maps to `google.fum@`.
+If `/debug/config` shows `"mode": "mock"`, the process was started with `pnpm dev:mock` or `VDNS_MODE=mock` is set in the shell. Check `echo $VDNS_MODE` and run `unset VDNS_MODE` before starting RPC mode. If `/debug/config` shows `"rpcUrlConfigured": false`, `VERUS_RPC_URL` is missing from `.env.local` and the shell environment. With `VDNS_ROOT_IDENTITY=fum@` and `VDNS_TLD=vdns`, `google.vdns` maps to `google.fum@`.
 
 Debug routes share this boundary:
 
 - `/debug/config` returns redacted runtime configuration only.
 - `/debug/raw-identity/:identity` returns the fixture payload or raw RPC `getidentity` result.
 - `/debug/rpc-health` returns mock health in mock mode, or `getinfo`/`getblockchaininfo` data in RPC mode.
-- `/debug/vdxf-keys` returns VNS key names and the resolved or placeholder VDXF IDs.
+- `/debug/vdxf-keys` returns vDNS key names and the resolved or placeholder VDXF IDs.
 
 ## Current Scope
 

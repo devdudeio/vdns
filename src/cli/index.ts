@@ -6,9 +6,9 @@ import { ZodError } from "zod";
 import { readFile } from "node:fs/promises";
 import {
   extractContentmultimap,
-  extractVnsRecords,
-  removeVnsRecord,
-  upsertVnsRecord
+  extractVdnsRecords,
+  removeVdnsRecord,
+  upsertVdnsRecord
 } from "../core/contentmultimap.js";
 import {
   deriveParentLookupIdentity,
@@ -18,11 +18,12 @@ import {
   type UpdateIdentityTarget
 } from "../core/identityTarget.js";
 import { validateRecord } from "../core/records.js";
-import type { IdentityPayload, VnsRecord, VnsRecordType } from "../core/types.js";
+import type { IdentityPayload, VdnsRecord, VdnsRecordType } from "../core/types.js";
 import { extractTxidFromUpdateIdentityResult, waitForTxConfirmation } from "../core/txConfirmation.js";
 import { buildUpdateIdentityPayload, type UpdateIdentityPayload } from "../core/updateIdentityPayload.js";
-import { buildVnsVdxfKeyNames, resolveVnsVdxfIds, type VnsVdxfIds } from "../core/vdxf.js";
+import { buildVdnsVdxfKeyNames, resolveVdnsVdxfIds, type VdnsVdxfIds } from "../core/vdxf.js";
 import { buildSiteManifest, inspectSiteManifest, loadSiteManifest, sha256Hex, writeSiteManifest } from "../core/site.js";
+import { applyVdnsEnvCompatibility } from "../envCompat.js";
 import { VerusRpcClient } from "../rpc/verusRpcClient.js";
 
 type CliIo = {
@@ -68,13 +69,13 @@ class CliExitError extends Error {
 }
 
 export function createCliProgram(options: CliOptions = {}): Command {
-  const env = options.env ?? process.env;
+  const env = applyVdnsEnvCompatibility({ ...(options.env ?? process.env) });
   const io = options.io ?? { stdout: process.stdout, stderr: process.stderr, stdin: process.stdin };
   const rpcClientFactory = options.rpcClientFactory ?? ((rpcOptions) => new VerusRpcClient(cleanRpcOptions(rpcOptions)) as RpcClient);
   const program = new Command();
 
   program
-    .name("vns")
+    .name("vdns")
     .description("Inspect and write vDNS records in VerusID contentmultimap data")
     .option("--rpc-url <url>", "Verus JSON-RPC endpoint URL")
     .option("--rpc-user <user>", "Verus JSON-RPC username")
@@ -97,12 +98,12 @@ export function createCliProgram(options: CliOptions = {}): Command {
     .description("Print vDNS symbolic VDXF keys and resolved IDs when RPC is configured"))
     .action(async () => {
       const global = readGlobalOptions(program, env, vdxf.commands[0]);
-      const keyNames = buildVnsVdxfKeyNames(global.root, global.tld);
+      const keyNames = buildVdnsVdxfKeyNames(global.root, global.tld);
       const output: Record<string, unknown> = { root: global.root, tld: global.tld, keyNames };
 
       if (global.rpc.url) {
         const client = rpcClientFactory(global.rpc);
-        output.vdxfIds = await resolveVnsVdxfIds(client, keyNames);
+        output.vdxfIds = await resolveVdnsVdxfIds(client, keyNames);
       }
 
       writeJson(io, output);
@@ -136,10 +137,10 @@ export function createCliProgram(options: CliOptions = {}): Command {
       const targetIdentity = normalizeIdentityNameForUpdate(identityName);
       const identityPayload = await fetchIdentityOrExit(client, targetIdentity);
       const vdxfIds = await resolveIds(client, global.root, global.tld);
-      const parsed = extractVnsRecords(identityPayload, vdxfIds.record, vdxfIds.labels);
+      const parsed = extractVdnsRecords(identityPayload, vdxfIds.record, vdxfIds.labels);
       writeJson(io, {
         identity: targetIdentity,
-        vnsRecordKey: vdxfIds.record,
+        vdnsRecordKey: vdxfIds.record,
         records: parsed.records,
         warnings: parsed.warnings
       });
@@ -187,7 +188,7 @@ export function createCliProgram(options: CliOptions = {}): Command {
       const updateTarget = await deriveCliUpdateTarget(client, targetIdentity, rawIdentity);
       const vdxfIds = await resolveIds(client, global.root, global.tld);
       const currentContentmultimap = extractContentmultimap(rawIdentity);
-      const nextContentmultimap = upsertVnsRecord(currentContentmultimap, vdxfIds, recordToWrite);
+      const nextContentmultimap = upsertVdnsRecord(currentContentmultimap, vdxfIds, recordToWrite);
       const payload = buildCliUpdatePayload(updateTarget, nextContentmultimap);
 
       assertPayloadTargetsUpdateTarget(payload, updateTarget);
@@ -229,7 +230,7 @@ export function createCliProgram(options: CliOptions = {}): Command {
       const updateTarget = await deriveCliUpdateTarget(client, targetIdentity, rawIdentity);
       const vdxfIds = await resolveIds(client, global.root, global.tld);
       const currentContentmultimap = extractContentmultimap(rawIdentity);
-      const nextContentmultimap = removeVnsRecord(currentContentmultimap, vdxfIds, type, name);
+      const nextContentmultimap = removeVdnsRecord(currentContentmultimap, vdxfIds, type, name);
       const payload = buildCliUpdatePayload(updateTarget, nextContentmultimap);
 
       assertPayloadTargetsUpdateTarget(payload, updateTarget);
@@ -332,7 +333,7 @@ export function createCliProgram(options: CliOptions = {}): Command {
       const rawIdentity = await fetchRawIdentityOrExit(client, targetIdentity);
       const updateTarget = await deriveCliUpdateTarget(client, targetIdentity, rawIdentity);
       const vdxfIds = await resolveIds(client, global.root, global.tld);
-      const nextContentmultimap = upsertVnsRecord(extractContentmultimap(rawIdentity), vdxfIds, recordToWrite);
+      const nextContentmultimap = upsertVdnsRecord(extractContentmultimap(rawIdentity), vdxfIds, recordToWrite);
       const payload = buildCliUpdatePayload(updateTarget, nextContentmultimap);
 
       assertPayloadTargetsUpdateTarget(payload, updateTarget);
@@ -408,8 +409,8 @@ function readGlobalOptions(program: Command, env: NodeJS.ProcessEnv, command?: C
     root?: string;
     tld?: string;
   }>() ?? {};
-  const root = commandOptions.root ?? programOptions.root ?? env.VNS_ROOT_IDENTITY ?? "fum@";
-  const tld = commandOptions.tld ?? programOptions.tld ?? env.VNS_TLD ?? "vrsc";
+  const root = commandOptions.root ?? programOptions.root ?? env.VDNS_ROOT_IDENTITY ?? "fum@";
+  const tld = commandOptions.tld ?? programOptions.tld ?? env.VDNS_TLD ?? "vdns";
   return {
     root,
     tld,
@@ -419,7 +420,7 @@ function readGlobalOptions(program: Command, env: NodeJS.ProcessEnv, command?: C
       password: commandOptions.rpcPassword ?? programOptions.rpcPassword ?? env.VERUS_RPC_PASSWORD,
       timeoutMs: commandOptions.rpcTimeoutMs ?? programOptions.rpcTimeoutMs ?? envInt(env.VERUS_RPC_TIMEOUT_MS)
     },
-    usedDefaultRoot: !commandOptions.root && !programOptions.root && !env.VNS_ROOT_IDENTITY
+    usedDefaultRoot: !commandOptions.root && !programOptions.root && !env.VDNS_ROOT_IDENTITY
   };
 }
 
@@ -522,8 +523,8 @@ async function deriveCliUpdateTarget(
   return { ...updateTarget, parent };
 }
 
-async function resolveIds(client: RpcClient, root: string, tld: string): Promise<VnsVdxfIds> {
-  return resolveVnsVdxfIds(client, buildVnsVdxfKeyNames(root, tld));
+async function resolveIds(client: RpcClient, root: string, tld: string): Promise<VdnsVdxfIds> {
+  return resolveVdnsVdxfIds(client, buildVdnsVdxfKeyNames(root, tld));
 }
 
 function buildRecord(
@@ -533,7 +534,7 @@ function buildRecord(
   ttl: number,
   status: 301 | 302,
   options: { entry?: string | undefined; sha256?: string | undefined } = {}
-): VnsRecord {
+): VdnsRecord {
   const type = parseRecordType(typeInput);
   const base = { version: 1 as const, type, name, ttl };
   const candidate = type === "REDIRECT"
@@ -567,10 +568,10 @@ function buildCliUpdatePayload(
   });
 }
 
-function parseRecordType(input: string): VnsRecordType {
+function parseRecordType(input: string): VdnsRecordType {
   const type = input.toUpperCase();
   if (["A", "AAAA", "CNAME", "TXT", "REDIRECT", "PROXY", "SITE", "TLSA"].includes(type)) {
-    return type as VnsRecordType;
+    return type as VdnsRecordType;
   }
   throw new CliExitError(`Unsupported record type: ${input}`, 1);
 }
@@ -648,7 +649,7 @@ async function maybeVerify(
   io: CliIo,
   client: RpcClient,
   identityName: string,
-  vdxfIds: VnsVdxfIds,
+  vdxfIds: VdnsVdxfIds,
   verify: boolean
 ): Promise<void> {
   if (!verify) {
@@ -657,10 +658,10 @@ async function maybeVerify(
 
   io.stdout.write(`Verifying target identity: ${identityName}\n`);
   const identityPayload = await fetchIdentityOrExit(client, identityName);
-  const parsed = extractVnsRecords(identityPayload, vdxfIds.record, vdxfIds.labels);
+  const parsed = extractVdnsRecords(identityPayload, vdxfIds.record, vdxfIds.labels);
   writeJson(io, {
     identity: identityName,
-    vnsRecordKey: vdxfIds.record,
+    vdnsRecordKey: vdxfIds.record,
     records: parsed.records,
     warnings: parsed.warnings
   });
@@ -670,7 +671,7 @@ async function handlePostUpdateVerify(
   io: CliIo,
   client: RpcClient,
   targetIdentity: string,
-  vdxfIds: VnsVdxfIds,
+  vdxfIds: VdnsVdxfIds,
   updateResult: unknown,
   options: VerifyOptions
 ): Promise<void> {
@@ -706,7 +707,7 @@ async function handlePostUpdateVerify(
 
 function warnDefaultRootForWrite(io: CliIo, global: { root: string; usedDefaultRoot: boolean }): void {
   if (global.usedDefaultRoot && global.root === "fum@") {
-    io.stderr.write("Warning: using default vDNS root identity fum@. Set --root or VNS_ROOT_IDENTITY to override.\n");
+    io.stderr.write("Warning: using default vDNS root identity fum@. Set --root or VDNS_ROOT_IDENTITY to override.\n");
   }
 }
 

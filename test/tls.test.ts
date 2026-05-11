@@ -12,19 +12,19 @@ const execFileAsync = promisify(execFile);
 
 describe("vDNS TLS helpers", () => {
   it("validates configured TLD hostnames", () => {
-    expect(normalizeVdnsTlsHost("VERUS.VRSC", "vrsc")).toBe("verus.vrsc");
-    expect(normalizeVdnsTlsHost("chainvue.vrsc", "vrsc")).toBe("chainvue.vrsc");
-    expect(normalizeVdnsTlsHost("sub.chainvue.vrsc", "vrsc")).toBe("sub.chainvue.vrsc");
+    expect(normalizeVdnsTlsHost("VERUS.VDNS", "vdns")).toBe("verus.vdns");
+    expect(normalizeVdnsTlsHost("chainvue.vdns", "vdns")).toBe("chainvue.vdns");
+    expect(normalizeVdnsTlsHost("sub.chainvue.vdns", "vdns")).toBe("sub.chainvue.vdns");
 
-    for (const host of ["", "vrsc", "bad host.vrsc", "verus.vrsc:443", "verus.vrsc/path", "127.0.0.1", "localhost", "google.com", "verus.vrsc.evil.com"]) {
-      expect(normalizeVdnsTlsHost(host, "vrsc")).toBeInstanceOf(Error);
+    for (const host of ["", "vdns", "bad host.vdns", "verus.vdns:443", "verus.vdns/path", "127.0.0.1", "localhost", "google.com", "verus.vdns.evil.com"]) {
+      expect(normalizeVdnsTlsHost(host, "vdns")).toBeInstanceOf(Error);
     }
   });
 
   it("matches normalized SNI to Host", () => {
-    expect(vdnsTlsHostMatches("verus.vrsc", "VERUS.VRSC", "vrsc")).toBe(true);
-    expect(vdnsTlsHostMatches("verus.vrsc", "chainvue.vrsc", "vrsc")).toBe(false);
-    expect(vdnsTlsHostMatches("verus.vrsc", undefined, "vrsc")).toBe(false);
+    expect(vdnsTlsHostMatches("verus.vdns", "VERUS.VDNS", "vdns")).toBe(true);
+    expect(vdnsTlsHostMatches("verus.vdns", "chainvue.vdns", "vdns")).toBe(false);
+    expect(vdnsTlsHostMatches("verus.vdns", undefined, "vdns")).toBe(false);
   });
 
   it("derives paths from VDNS_STATE_DIR", () => {
@@ -39,13 +39,13 @@ describe("vDNS TLS helpers", () => {
     try {
       const paths = deriveTlsPaths({ VDNS_STATE_DIR: stateDir });
       await initCa({ paths, hostname: "test-host" });
-      const generated = await generateHostCert("verus.vrsc", { paths, tld: "vrsc" });
+      const generated = await generateHostCert("verus.vdns", { paths, tld: "vdns" });
 
       expect((await stat(paths.caKey)).mode & 0o777).toBe(0o600);
       expect((await stat(generated.key)).mode & 0o777).toBe(0o600);
 
       const { stdout } = await execFileAsync("openssl", ["x509", "-in", generated.cert, "-noout", "-ext", "subjectAltName"]);
-      expect(stdout).toContain("DNS:verus.vrsc");
+      expect(stdout).toContain("DNS:verus.vdns");
     } finally {
       await rm(stateDir, { recursive: true, force: true });
     }

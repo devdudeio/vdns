@@ -14,30 +14,30 @@ REPO_ROOT="$(vdns_repo_root)"
 cd "${REPO_ROOT}"
 vdns_load_env "${REPO_ROOT}" >/dev/null || true
 
-VNS_TLD="${VNS_TLD:-vrsc}"
-VNS_DNS_PORT="${VNS_DNS_PORT:-1053}"
-VNS_RESOLVER_URL="$(vdns_resolver_url)"
-VNS_REDIRECT_PORT="${VNS_REDIRECT_PORT:-8081}"
+VDNS_TLD="${VDNS_TLD:-vdns}"
+VDNS_DNS_PORT="${VDNS_DNS_PORT:-1053}"
+VDNS_RESOLVER_URL="$(vdns_resolver_url)"
+VDNS_GATEWAY_PORT="${VDNS_GATEWAY_PORT:-8081}"
 VDNS_HTTPS_ENABLED="${VDNS_HTTPS_ENABLED:-false}"
 VDNS_HTTPS_PORT="${VDNS_HTTPS_PORT:-443}"
 VDNS_TLS_CA_DIR="${VDNS_TLS_CA_DIR:-${VDNS_STATE_DIR}/ca}"
-RESOLVER_FILE="/etc/resolver/${VNS_TLD}"
+RESOLVER_FILE="/etc/resolver/${VDNS_TLD}"
 PID_DIR="${VDNS_PID_DIR}"
 
 echo "vDNS macOS status"
 vdns_safe_config
 
 vdns_section "HTTP Resolver"
-if vdns_timeout 5 curl -fsS "${VNS_RESOLVER_URL}/debug/config"; then
+if vdns_timeout 5 curl -fsS "${VDNS_RESOLVER_URL}/debug/config"; then
   echo
 else
-  echo "Resolver not reachable at ${VNS_RESOLVER_URL}"
+  echo "Resolver not reachable at ${VDNS_RESOLVER_URL}"
 fi
 
 vdns_section "CoreDNS Listeners"
 if command -v lsof >/dev/null 2>&1; then
-  vdns_lsof_port UDP "${VNS_DNS_PORT}"
-  vdns_lsof_port TCP "${VNS_DNS_PORT}"
+  vdns_lsof_port UDP "${VDNS_DNS_PORT}"
+  vdns_lsof_port TCP "${VDNS_DNS_PORT}"
 else
   echo "lsof is not available"
 fi
@@ -53,7 +53,7 @@ fi
 echo
 echo "scutil section:"
 vdns_timeout 5 scutil --dns |
-  awk -v domain="${VNS_TLD}" '/domain[[:space:]]+:[[:space:]]+/ && $NF == domain { show=1; count=0 } show { print; count++ } show && count >= 12 { show=0 }'
+  awk -v domain="${VDNS_TLD}" '/domain[[:space:]]+:[[:space:]]+/ && $NF == domain { show=1; count=0 } show { print; count++ } show && count >= 12 { show=0 }'
 
 vdns_section "Redirect Listeners"
 if [[ -f "${PID_DIR}/redirect.pid" ]]; then
@@ -75,7 +75,7 @@ if command -v lsof >/dev/null 2>&1; then
   echo
   echo "visible TCP listeners:"
   vdns_lsof_port_privileged_if_needed TCP 80
-  vdns_lsof_port TCP "${VNS_REDIRECT_PORT}"
+  vdns_lsof_port TCP "${VDNS_GATEWAY_PORT}"
 else
   echo "lsof is not available"
 fi
@@ -100,14 +100,14 @@ else
 fi
 
 vdns_section "Resolution Checks"
-echo "$ dig @127.0.0.1 -p ${VNS_DNS_PORT} google.${VNS_TLD} A +short"
-vdns_timeout 5 dig +time=2 +tries=1 @127.0.0.1 -p "${VNS_DNS_PORT}" "google.${VNS_TLD}" A +short
-echo "$ dscacheutil -q host -a name google.${VNS_TLD}"
-vdns_timeout 8 dscacheutil -q host -a name "google.${VNS_TLD}"
-echo "$ dscacheutil -q host -a name chainvue.${VNS_TLD}"
-vdns_timeout 8 dscacheutil -q host -a name "chainvue.${VNS_TLD}"
+echo "$ dig @127.0.0.1 -p ${VDNS_DNS_PORT} google.${VDNS_TLD} A +short"
+vdns_timeout 5 dig +time=2 +tries=1 @127.0.0.1 -p "${VDNS_DNS_PORT}" "google.${VDNS_TLD}" A +short
+echo "$ dscacheutil -q host -a name google.${VDNS_TLD}"
+vdns_timeout 8 dscacheutil -q host -a name "google.${VDNS_TLD}"
+echo "$ dscacheutil -q host -a name chainvue.${VDNS_TLD}"
+vdns_timeout 8 dscacheutil -q host -a name "chainvue.${VDNS_TLD}"
 
 vdns_section "Gateway PROXY Check"
-echo "$ curl -I --max-time 10 http://chainvue.${VNS_TLD}"
-vdns_timeout 12 curl -I --max-time 10 "http://chainvue.${VNS_TLD}" 2>&1 |
+echo "$ curl -I --max-time 10 http://chainvue.${VDNS_TLD}"
+vdns_timeout 12 curl -I --max-time 10 "http://chainvue.${VDNS_TLD}" 2>&1 |
   awk 'BEGIN { IGNORECASE=1 } /^HTTP\// || /^x-vdns-/ { print }'

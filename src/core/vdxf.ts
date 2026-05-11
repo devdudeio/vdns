@@ -1,48 +1,48 @@
-import type { VnsRecordType } from "./types.js";
+import type { VdnsRecordType } from "./types.js";
 
-export type VnsVdxfKeyNames = {
+export type VdnsVdxfKeyNames = {
   record: string;
-  labels: Record<VnsRecordType, string>;
+  labels: Record<VdnsRecordType, string>;
 };
 
-export type VnsVdxfIds = {
+export type VdnsVdxfIds = {
   record: string;
-  labels: Record<VnsRecordType, string>;
+  labels: Record<VdnsRecordType, string>;
 };
 
-export const VNS_RECORD_TYPE_LABELS: Record<VnsRecordType, string> = {
-  A: "vns.dns.a",
-  AAAA: "vns.dns.aaaa",
-  CNAME: "vns.dns.cname",
-  TXT: "vns.dns.txt",
-  REDIRECT: "vns.web.redirect",
-  PROXY: "vns.web.proxy",
-  SITE: "vns.web.site",
-  TLSA: "vns.tls.fingerprint"
+export const VDNS_RECORD_TYPE_LABELS: Record<VdnsRecordType, string> = {
+  A: "vdns.dns.a",
+  AAAA: "vdns.dns.aaaa",
+  CNAME: "vdns.dns.cname",
+  TXT: "vdns.dns.txt",
+  REDIRECT: "vdns.web.redirect",
+  PROXY: "vdns.web.proxy",
+  SITE: "vdns.web.site",
+  TLSA: "vdns.tls.fingerprint"
 };
 
 type VdxfRpcLike = {
   getVdxfId(key: string): Promise<string>;
 };
 
-export function buildVnsVdxfKeyNames(rootIdentity: string, tld: string): VnsVdxfKeyNames {
+export function buildVdnsVdxfKeyNames(rootIdentity: string, tld: string): VdnsVdxfKeyNames {
   const namespace = `${rootIdentity.replace(/@$/, "")}.${tld}`.toLowerCase();
   return {
-    record: `${namespace}::vns.record`,
+    record: `${namespace}::vdns.record`,
     labels: {
-      A: `${namespace}::${VNS_RECORD_TYPE_LABELS.A}`,
-      AAAA: `${namespace}::${VNS_RECORD_TYPE_LABELS.AAAA}`,
-      CNAME: `${namespace}::${VNS_RECORD_TYPE_LABELS.CNAME}`,
-      TXT: `${namespace}::${VNS_RECORD_TYPE_LABELS.TXT}`,
-      REDIRECT: `${namespace}::${VNS_RECORD_TYPE_LABELS.REDIRECT}`,
-      PROXY: `${namespace}::${VNS_RECORD_TYPE_LABELS.PROXY}`,
-      SITE: `${namespace}::${VNS_RECORD_TYPE_LABELS.SITE}`,
-      TLSA: `${namespace}::${VNS_RECORD_TYPE_LABELS.TLSA}`
+      A: `${namespace}::${VDNS_RECORD_TYPE_LABELS.A}`,
+      AAAA: `${namespace}::${VDNS_RECORD_TYPE_LABELS.AAAA}`,
+      CNAME: `${namespace}::${VDNS_RECORD_TYPE_LABELS.CNAME}`,
+      TXT: `${namespace}::${VDNS_RECORD_TYPE_LABELS.TXT}`,
+      REDIRECT: `${namespace}::${VDNS_RECORD_TYPE_LABELS.REDIRECT}`,
+      PROXY: `${namespace}::${VDNS_RECORD_TYPE_LABELS.PROXY}`,
+      SITE: `${namespace}::${VDNS_RECORD_TYPE_LABELS.SITE}`,
+      TLSA: `${namespace}::${VDNS_RECORD_TYPE_LABELS.TLSA}`
     }
   };
 }
 
-export async function resolveVnsVdxfIds(rpcClient: VdxfRpcLike, keyNames: VnsVdxfKeyNames): Promise<VnsVdxfIds> {
+export async function resolveVdnsVdxfIds(rpcClient: VdxfRpcLike, keyNames: VdnsVdxfKeyNames): Promise<VdnsVdxfIds> {
   const [record, a, aaaa, cname, txt, redirect, proxy, site, tlsa] = await Promise.all([
     rpcClient.getVdxfId(keyNames.record),
     rpcClient.getVdxfId(keyNames.labels.A),

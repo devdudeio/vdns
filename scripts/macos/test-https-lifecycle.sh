@@ -7,7 +7,7 @@ if [[ "${1:-}" == "--open" ]]; then
 fi
 
 VDNS_BIN="${VDNS_BIN:-vdns}"
-TLD="${VNS_TLD:-vrsc}"
+TLD="${VDNS_TLD:-vdns}"
 A_DOMAIN="${VDNS_DOCTOR_A_DOMAIN:-verus.${TLD}}"
 REDIRECT_DOMAIN="${VDNS_DOCTOR_REDIRECT_DOMAIN:-chainvue.${TLD}}"
 PROXY_DOMAIN="${VDNS_DOCTOR_PROXY_DOMAIN:-verus.${TLD}}"

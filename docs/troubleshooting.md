@@ -11,22 +11,22 @@ vdns logs
 Use `vdns doctor --strict` when validating the demo records before a release or public demo.
 Use `vdns doctor --https` when validating experimental local HTTPS.
 
-## `dig google.vrsc` Is Empty On macOS
+## `dig google.vdns` Is Empty On macOS
 
 `dig` does not always use macOS `/etc/resolver` split-DNS routing unless you point it at the vDNS CoreDNS listener.
 
 Check direct CoreDNS:
 
 ```sh
-dig @127.0.0.1 -p 1053 google.vrsc A +short
+dig @127.0.0.1 -p 1053 google.vdns A +short
 ```
 
 Check system resolver behavior:
 
 ```sh
-dscacheutil -q host -a name google.vrsc
-scutil --dns | grep -A5 vrsc
-cat /etc/resolver/vrsc
+dscacheutil -q host -a name google.vdns
+scutil --dns | grep -A5 vdns
+cat /etc/resolver/vdns
 ```
 
 Fixes:
@@ -38,14 +38,14 @@ sudo killall -HUP mDNSResponder
 vdns logs coredns
 ```
 
-## `http://chainvue.vrsc` Hangs
+## `http://chainvue.vdns` Hangs
 
 Check DNS and the local web gateway separately:
 
 ```sh
-dscacheutil -q host -a name chainvue.vrsc
-curl -i --max-time 10 http://chainvue.vrsc
-curl "http://127.0.0.1:8081/debug/resolve?host=chainvue.vrsc"
+dscacheutil -q host -a name chainvue.vdns
+curl -i --max-time 10 http://chainvue.vdns
+curl "http://127.0.0.1:8081/debug/resolve?host=chainvue.vdns"
 vdns logs gateway
 ```
 
@@ -82,25 +82,25 @@ vdns doctor
 If `"mode":"mock"` appears, remove shell overrides and update `~/.vdns/.env.local`:
 
 ```sh
-unset VNS_MODE
-grep VNS_MODE ~/.vdns/.env.local
+unset VDNS_MODE
+grep VDNS_MODE ~/.vdns/.env.local
 vdns restart
 ```
 
 For real Verus records, use:
 
 ```dotenv
-VNS_MODE=rpc
+VDNS_MODE=rpc
 VERUS_RPC_URL=http://127.0.0.1:18843
 ```
 
-## `verus.vrsc` PROXY Failures
+## `verus.vdns` PROXY Failures
 
 Check:
 
 ```sh
-curl -I --max-time 20 http://verus.vrsc
-curl "http://127.0.0.1:8081/debug/resolve?host=verus.vrsc"
+curl -I --max-time 20 http://verus.vdns
+curl "http://127.0.0.1:8081/debug/resolve?host=verus.vdns"
 vdns logs gateway
 vdns doctor --strict
 ```
@@ -122,7 +122,7 @@ vdns logs gateway --tail
 
 PROXY targets that resolve to localhost, private, or internal literal addresses are blocked by default.
 
-## `https://verus.vrsc` Shows A Browser Warning
+## `https://verus.vdns` Shows A Browser Warning
 
 Check local HTTPS status:
 
@@ -140,7 +140,7 @@ grep VDNS_HTTPS_ENABLED ~/.vdns/.env.local
 vdns restart
 ```
 
-If `curl -k https://verus.vrsc` works but `curl https://verus.vrsc` fails, the HTTPS gateway is responding but the local CA is not trusted by the client.
+If `curl -k https://verus.vdns` works but `curl https://verus.vdns` fails, the HTTPS gateway is responding but the local CA is not trusted by the client.
 
 ## Port 443 Conflicts
 

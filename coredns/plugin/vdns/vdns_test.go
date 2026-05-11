@@ -1,4 +1,4 @@
-package vns
+package vdns
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 )
 
 func TestParseConfig(t *testing.T) {
-	controller := caddy.NewTestController("dns", `vns {
+	controller := caddy.NewTestController("dns", `vdns {
 		resolver_url http://127.0.0.1:8080
 		timeout 5s
 	}`)
@@ -34,7 +34,7 @@ func TestParseConfig(t *testing.T) {
 }
 
 func TestParseConfigRequiresResolverURL(t *testing.T) {
-	controller := caddy.NewTestController("dns", `vns`)
+	controller := caddy.NewTestController("dns", `vdns`)
 
 	if _, err := parseConfig(controller); err == nil {
 		t.Fatal("expected resolver_url validation error")
@@ -42,7 +42,7 @@ func TestParseConfigRequiresResolverURL(t *testing.T) {
 }
 
 func TestNormalizeQName(t *testing.T) {
-	if got := normalizeQName("Google.VRSC."); got != "google.vrsc" {
+	if got := normalizeQName("Google.VDNS."); got != "google.vdns" {
 		t.Fatalf("unexpected qname normalization: %q", got)
 	}
 }
@@ -50,41 +50,41 @@ func TestNormalizeQName(t *testing.T) {
 func TestRecordConversions(t *testing.T) {
 	tests := []struct {
 		name   string
-		record VNSRecord
+		record VDNSRecord
 		qtype  uint16
 		want   string
 	}{
 		{
 			name:   "A",
-			record: VNSRecord{Type: "A", Value: "142.250.181.238", TTL: 300},
+			record: VDNSRecord{Type: "A", Value: "142.250.181.238", TTL: 300},
 			qtype:  dns.TypeA,
-			want:   "google.vrsc.\t300\tIN\tA\t142.250.181.238",
+			want:   "google.vdns.\t300\tIN\tA\t142.250.181.238",
 		},
 		{
 			name:   "AAAA",
-			record: VNSRecord{Type: "AAAA", Value: "2001:db8::1", TTL: 300},
+			record: VDNSRecord{Type: "AAAA", Value: "2001:db8::1", TTL: 300},
 			qtype:  dns.TypeAAAA,
-			want:   "google.vrsc.\t300\tIN\tAAAA\t2001:db8::1",
+			want:   "google.vdns.\t300\tIN\tAAAA\t2001:db8::1",
 		},
 		{
 			name:   "CNAME",
-			record: VNSRecord{Type: "CNAME", Value: "target.example.com", TTL: 300},
+			record: VDNSRecord{Type: "CNAME", Value: "target.example.com", TTL: 300},
 			qtype:  dns.TypeCNAME,
-			want:   "www.google.vrsc.\t300\tIN\tCNAME\ttarget.example.com.",
+			want:   "www.google.vdns.\t300\tIN\tCNAME\ttarget.example.com.",
 		},
 		{
 			name:   "TXT",
-			record: VNSRecord{Type: "TXT", Value: "hello=vns", TTL: 300},
+			record: VDNSRecord{Type: "TXT", Value: "hello=vdns", TTL: 300},
 			qtype:  dns.TypeTXT,
-			want:   "google.vrsc.\t300\tIN\tTXT\t\"hello=vns\"",
+			want:   "google.vdns.\t300\tIN\tTXT\t\"hello=vdns\"",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			qname := "google.vrsc."
+			qname := "google.vdns."
 			if tt.name == "CNAME" {
-				qname = "www.google.vrsc."
+				qname = "www.google.vdns."
 			}
 			rr := recordToRR(qname, tt.record)
 			if rr == nil {
@@ -108,10 +108,10 @@ func TestServeDNSSupportedQTypes(t *testing.T) {
 		response string
 		wantType uint16
 	}{
-		{"A", "google.vrsc.", dns.TypeA, recordResponse(`{"version":1,"name":"@","ttl":300,"type":"A","value":"142.250.181.238"}`), dns.TypeA},
-		{"AAAA", "google.vrsc.", dns.TypeAAAA, recordResponse(`{"version":1,"name":"@","ttl":300,"type":"AAAA","value":"2001:db8::1"}`), dns.TypeAAAA},
-		{"CNAME", "www.google.vrsc.", dns.TypeCNAME, recordResponse(`{"version":1,"name":"www","ttl":300,"type":"CNAME","value":"target.example.com"}`), dns.TypeCNAME},
-		{"TXT", "google.vrsc.", dns.TypeTXT, recordResponse(`{"version":1,"name":"@","ttl":300,"type":"TXT","value":"hello=vns"}`), dns.TypeTXT},
+		{"A", "google.vdns.", dns.TypeA, recordResponse(`{"version":1,"name":"@","ttl":300,"type":"A","value":"142.250.181.238"}`), dns.TypeA},
+		{"AAAA", "google.vdns.", dns.TypeAAAA, recordResponse(`{"version":1,"name":"@","ttl":300,"type":"AAAA","value":"2001:db8::1"}`), dns.TypeAAAA},
+		{"CNAME", "www.google.vdns.", dns.TypeCNAME, recordResponse(`{"version":1,"name":"www","ttl":300,"type":"CNAME","value":"target.example.com"}`), dns.TypeCNAME},
+		{"TXT", "google.vdns.", dns.TypeTXT, recordResponse(`{"version":1,"name":"@","ttl":300,"type":"TXT","value":"hello=vdns"}`), dns.TypeTXT},
 	}
 
 	for _, tt := range tests {
@@ -144,11 +144,11 @@ func TestServeDNSSupportedQTypes(t *testing.T) {
 
 func TestServeDNSNoRecordsReturnsNoErrorNoAnswers(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, `{"identity":"google.fum@","domain":"google.vrsc","host":"@","records":[],"warnings":[]}`)
+		fmt.Fprint(w, `{"identity":"google.fum@","domain":"google.vdns","host":"@","records":[],"warnings":[]}`)
 	}))
 	defer server.Close()
 
-	recorder := serveDNS(t, server.URL, "google.vrsc.", dns.TypeA)
+	recorder := serveDNS(t, server.URL, "google.vdns.", dns.TypeA)
 	if recorder.Msg.Rcode != dns.RcodeSuccess {
 		t.Fatalf("unexpected rcode %d", recorder.Msg.Rcode)
 	}
@@ -163,7 +163,7 @@ func TestServeDNSHTTP404ReturnsNXDOMAIN(t *testing.T) {
 	}))
 	defer server.Close()
 
-	recorder := serveDNS(t, server.URL, "missing.vrsc.", dns.TypeA)
+	recorder := serveDNS(t, server.URL, "missing.vdns.", dns.TypeA)
 	if recorder.Msg.Rcode != dns.RcodeNameError {
 		t.Fatalf("unexpected rcode %d", recorder.Msg.Rcode)
 	}
@@ -175,19 +175,19 @@ func TestServeDNSHTTP500ReturnsSERVFAIL(t *testing.T) {
 	}))
 	defer server.Close()
 
-	recorder := serveDNS(t, server.URL, "google.vrsc.", dns.TypeA)
+	recorder := serveDNS(t, server.URL, "google.vdns.", dns.TypeA)
 	if recorder.Msg.Rcode != dns.RcodeServerFailure {
 		t.Fatalf("unexpected rcode %d", recorder.Msg.Rcode)
 	}
 }
 
 func TestServeDNSUnreachableReturnsSERVFAIL(t *testing.T) {
-	v := VNS{
-		Zones:  []string{"vrsc."},
+	v := VDNS{
+		Zones:  []string{"vdns."},
 		Client: NewClient("http://127.0.0.1:1", 10*time.Millisecond),
 	}
 	req := new(dns.Msg)
-	req.SetQuestion("google.vrsc.", dns.TypeA)
+	req.SetQuestion("google.vdns.", dns.TypeA)
 	recorder := dnstest.NewRecorder(&test.ResponseWriter{})
 
 	_, _ = v.ServeDNS(context.Background(), recorder, req)
@@ -197,15 +197,15 @@ func TestServeDNSUnreachableReturnsSERVFAIL(t *testing.T) {
 }
 
 func TestUnsupportedQTypeReturnsNoData(t *testing.T) {
-	v := VNS{
-		Zones: []string{"vrsc."},
+	v := VDNS{
+		Zones: []string{"vdns."},
 		Client: resolverClientFunc(func(ctx context.Context, domain string, qtype string) (*ResolveResult, error) {
 			t.Fatal("resolver should not be called for unsupported qtype")
 			return nil, nil
 		}),
 	}
 	req := new(dns.Msg)
-	req.SetQuestion("google.vrsc.", dns.TypeMX)
+	req.SetQuestion("google.vdns.", dns.TypeMX)
 	recorder := dnstest.NewRecorder(&test.ResponseWriter{})
 
 	_, _ = v.ServeDNS(context.Background(), recorder, req)
@@ -219,8 +219,8 @@ func TestUnsupportedQTypeReturnsNoData(t *testing.T) {
 
 func serveDNS(t *testing.T, resolverURL string, qname string, qtype uint16) *dnstest.Recorder {
 	t.Helper()
-	v := VNS{
-		Zones:  []string{"vrsc."},
+	v := VDNS{
+		Zones:  []string{"vdns."},
 		Client: NewClient(resolverURL, time.Second),
 	}
 	req := new(dns.Msg)
@@ -231,7 +231,7 @@ func serveDNS(t *testing.T, resolverURL string, qname string, qtype uint16) *dns
 }
 
 func recordResponse(record string) string {
-	return `{"identity":"google.fum@","domain":"google.vrsc","host":"@","records":[` + record + `],"warnings":[]}`
+	return `{"identity":"google.fum@","domain":"google.vdns","host":"@","records":[` + record + `],"warnings":[]}`
 }
 
 type resolverClientFunc func(context.Context, string, string) (*ResolveResult, error)

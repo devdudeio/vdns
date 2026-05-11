@@ -1,7 +1,7 @@
 {
-  "identity": "myname.VNS@",
+  "identity": "myname.VDNS@",
   "contentmultimap": {
-    "VNS.vrsc::record": [
+    "VDNS.vdns::record": [
       {
         "version": 1,
         "type": "A",
@@ -27,7 +27,7 @@
         "version": 1,
         "type": "TXT",
         "name": "@",
-        "value": "vns=verus",
+        "value": "vdns=verus",
         "ttl": 300
       },
       {

@@ -34,8 +34,8 @@ describe("packaging scripts", () => {
     const roots = ["bin", "scripts", "packaging"];
     const files = (await Promise.all(roots.map((root) => collectFiles(path.join(repoRoot, root))))).flat();
     const forbidden = [
-      ["/Users/robertlech", "Documents", "vns"].join("/"),
-      ["/Users/robertlech", "Developer", "vns"].join("/")
+      ["/Users/robertlech", "Documents", "vdns"].join("/"),
+      ["/Users/robertlech", "Developer", "vdns"].join("/")
     ];
 
     for (const file of files) {

@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { parse } from "dotenv";
+import { applyVdnsEnvCompatibility } from "../envCompat.js";
 import type { DoctorContext } from "./types.js";
 
 export async function loadDoctorContext(argv: string[], processEnv: NodeJS.ProcessEnv = process.env): Promise<DoctorContext> {
@@ -13,7 +14,7 @@ export async function loadDoctorContext(argv: string[], processEnv: NodeJS.Proce
   const logDir = processEnv.VDNS_LOG_DIR ?? path.join(stateDir, "logs");
   const pidDir = processEnv.VDNS_PID_DIR ?? path.join(stateDir, "pids");
   const fileEnv = await readEnvFile(envFile);
-  const env = { ...fileEnv, ...processEnv };
+  const env = applyVdnsEnvCompatibility({ ...fileEnv, ...processEnv });
   const version = await readVersion(home);
 
   return { strict, requireHttps, home, installMode, stateDir, envFile, logDir, pidDir, version, env };

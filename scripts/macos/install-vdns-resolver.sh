@@ -11,30 +11,30 @@ if [[ "$(id -u)" -ne 0 ]]; then
   exit 1
 fi
 
-VNS_TLD="${VNS_TLD:-vrsc}"
-VNS_DNS_PORT="${VNS_DNS_PORT:-1053}"
+VDNS_TLD="${VDNS_TLD:-vdns}"
+VDNS_DNS_PORT="${VDNS_DNS_PORT:-1053}"
 RESOLVER_DIR="/etc/resolver"
-RESOLVER_FILE="${RESOLVER_DIR}/${VNS_TLD}"
+RESOLVER_FILE="${RESOLVER_DIR}/${VDNS_TLD}"
 TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 GENERATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-case "${VNS_TLD}" in
+case "${VDNS_TLD}" in
   ""|*/*)
-    echo "VNS_TLD must be a non-empty resolver name without slashes." >&2
+    echo "VDNS_TLD must be a non-empty resolver name without slashes." >&2
     exit 1
     ;;
 esac
 
-case "${VNS_DNS_PORT}" in
+case "${VDNS_DNS_PORT}" in
   ''|*[!0-9]*)
-    echo "VNS_DNS_PORT must be a numeric port." >&2
+    echo "VDNS_DNS_PORT must be a numeric port." >&2
     exit 1
     ;;
 esac
 
 mkdir -p "${RESOLVER_DIR}"
 
-if [[ -e "${RESOLVER_FILE}" ]] && ! grep -Eq "Managed by (VNS|vDNS)" "${RESOLVER_FILE}"; then
+if [[ -e "${RESOLVER_FILE}" ]] && ! grep -Eq "Managed by vDNS" "${RESOLVER_FILE}"; then
   BACKUP_FILE="${RESOLVER_FILE}.backup.${TIMESTAMP}"
   if ! cp -p "${RESOLVER_FILE}" "${BACKUP_FILE}"; then
     echo "Refusing to overwrite unmanaged resolver file because backup failed: ${RESOLVER_FILE}" >&2
@@ -46,20 +46,20 @@ fi
 {
   echo "# Managed by vDNS"
   echo "# Generated at ${GENERATED_AT}"
-  echo "domain ${VNS_TLD}"
+  echo "domain ${VDNS_TLD}"
   echo "nameserver 127.0.0.1"
-  echo "port ${VNS_DNS_PORT}"
+  echo "port ${VDNS_DNS_PORT}"
 } > "${RESOLVER_FILE}"
 
 chmod 0644 "${RESOLVER_FILE}"
 
 echo "Installed macOS split-DNS resolver:"
-echo "  domain: ${VNS_TLD}"
+echo "  domain: ${VDNS_TLD}"
 echo "  file: ${RESOLVER_FILE}"
 echo "  nameserver: 127.0.0.1"
-echo "  port: ${VNS_DNS_PORT}"
+echo "  port: ${VDNS_DNS_PORT}"
 echo
 echo "Verify with:"
-echo "  scutil --dns | grep -A5 'domain   : ${VNS_TLD}'"
-echo "  dig google.${VNS_TLD} A +short"
+echo "  scutil --dns | grep -A5 'domain   : ${VDNS_TLD}'"
+echo "  dig google.${VDNS_TLD} A +short"
 echo "  dig google.com A +short"

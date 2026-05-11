@@ -6,7 +6,7 @@ describe("validateProxyTargetUrl", () => {
     "https://verus.io/",
     "http://example.com/path"
   ])("accepts valid target %s", (target) => {
-    expect(validateProxyTargetUrl(target, "verus.vrsc")).toBeInstanceOf(URL);
+    expect(validateProxyTargetUrl(target, "verus.vdns")).toBeInstanceOf(URL);
   });
 
   it.each([
@@ -18,7 +18,7 @@ describe("validateProxyTargetUrl", () => {
     "wss://example.com/",
     "gopher://example.com/"
   ])("rejects invalid scheme %s", (target) => {
-    expect(validateProxyTargetUrl(target, "verus.vrsc")).toBeInstanceOf(Error);
+    expect(validateProxyTargetUrl(target, "verus.vdns")).toBeInstanceOf(Error);
   });
 
   it.each([
@@ -36,15 +36,15 @@ describe("validateProxyTargetUrl", () => {
     "http://[fc00::1]/",
     "http://[fe80::1]/"
   ])("rejects local or internal target %s", (target) => {
-    expect(validateProxyTargetUrl(target, "verus.vrsc")).toBeInstanceOf(Error);
+    expect(validateProxyTargetUrl(target, "verus.vdns")).toBeInstanceOf(Error);
   });
 
   it("rejects same-host and subdomain loops", () => {
-    expect(validateProxyTargetUrl("https://verus.vrsc/", "verus.vrsc")).toBeInstanceOf(Error);
-    expect(validateProxyTargetUrl("https://www.verus.vrsc/", "verus.vrsc")).toBeInstanceOf(Error);
+    expect(validateProxyTargetUrl("https://verus.vdns/", "verus.vdns")).toBeInstanceOf(Error);
+    expect(validateProxyTargetUrl("https://www.verus.vdns/", "verus.vdns")).toBeInstanceOf(Error);
   });
 
   it("allows private targets only when explicitly requested", () => {
-    expect(validateProxyTargetUrl("http://127.0.0.1:9000/", "verus.vrsc", { allowPrivateTargets: true })).toBeInstanceOf(URL);
+    expect(validateProxyTargetUrl("http://127.0.0.1:9000/", "verus.vdns", { allowPrivateTargets: true })).toBeInstanceOf(URL);
   });
 });

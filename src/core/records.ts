@@ -1,7 +1,7 @@
 import { isIP } from "node:net";
 import { z } from "zod";
 import { SUPPORTED_RECORD_TYPES } from "./constants.js";
-import type { VnsRecord, VnsRecordType } from "./types.js";
+import type { VdnsRecord, VdnsRecordType } from "./types.js";
 
 const recordNameSchema = z.string().regex(/^(?:@|[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)$/);
 const ttlSchema = z.number().int().min(30).max(86400);
@@ -75,7 +75,7 @@ const tlsaRecordSchema = baseRecordSchema.extend({
   sha256: z.string().regex(/^[a-f0-9]{64}$/)
 });
 
-export const vnsRecordSchema = z.discriminatedUnion("type", [
+export const vdnsRecordSchema = z.discriminatedUnion("type", [
   aRecordSchema,
   aaaaRecordSchema,
   cnameRecordSchema,
@@ -88,18 +88,18 @@ export const vnsRecordSchema = z.discriminatedUnion("type", [
 
 export const recordTypeSchema = z.enum(SUPPORTED_RECORD_TYPES);
 
-export function validateRecord(input: unknown): VnsRecord {
-  return vnsRecordSchema.parse(input);
+export function validateRecord(input: unknown): VdnsRecord {
+  return vdnsRecordSchema.parse(input);
 }
 
-export function isRecordType(input: string): input is VnsRecordType {
+export function isRecordType(input: string): input is VdnsRecordType {
   return recordTypeSchema.safeParse(input).success;
 }
 
 export function filterRecordsForHostAndType(
-  records: VnsRecord[],
+  records: VdnsRecord[],
   host: string,
-  type?: VnsRecordType
-): VnsRecord[] {
+  type?: VdnsRecordType
+): VdnsRecord[] {
   return records.filter((record) => record.name === host && (!type || record.type === type));
 }

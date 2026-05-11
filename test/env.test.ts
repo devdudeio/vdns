@@ -15,28 +15,28 @@ afterEach(async () => {
 
 describe("loadEnvFiles", () => {
   it("loads .env and lets .env.local override values not supplied by the shell", async () => {
-    tempDir = await mkdtemp(path.join(tmpdir(), "vns-env-"));
-    await writeFile(path.join(tempDir, ".env"), "VNS_MODE=mock\nVNS_TLD=vrsc\n");
-    await writeFile(path.join(tempDir, ".env.local"), "VNS_MODE=rpc\nVERUS_RPC_URL=http://127.0.0.1:18843\n");
+    tempDir = await mkdtemp(path.join(tmpdir(), "vdns-env-"));
+    await writeFile(path.join(tempDir, ".env"), "VDNS_MODE=mock\nVDNS_TLD=vdns\n");
+    await writeFile(path.join(tempDir, ".env.local"), "VDNS_MODE=rpc\nVERUS_RPC_URL=http://127.0.0.1:18843\n");
     const env: NodeJS.ProcessEnv = {};
 
     loadEnvFiles({ cwd: tempDir, env });
 
     expect(env).toMatchObject({
-      VNS_MODE: "rpc",
-      VNS_TLD: "vrsc",
+      VDNS_MODE: "rpc",
+      VDNS_TLD: "vdns",
       VERUS_RPC_URL: "http://127.0.0.1:18843"
     });
   });
 
   it("does not override shell-provided environment variables", async () => {
-    tempDir = await mkdtemp(path.join(tmpdir(), "vns-env-"));
-    await writeFile(path.join(tempDir, ".env"), "VNS_MODE=mock\n");
-    await writeFile(path.join(tempDir, ".env.local"), "VNS_MODE=rpc\n");
-    const env: NodeJS.ProcessEnv = { VNS_MODE: "mock" };
+    tempDir = await mkdtemp(path.join(tmpdir(), "vdns-env-"));
+    await writeFile(path.join(tempDir, ".env"), "VDNS_MODE=mock\n");
+    await writeFile(path.join(tempDir, ".env.local"), "VDNS_MODE=rpc\n");
+    const env: NodeJS.ProcessEnv = { VDNS_MODE: "mock" };
 
     loadEnvFiles({ cwd: tempDir, env });
 
-    expect(env.VNS_MODE).toBe("mock");
+    expect(env.VDNS_MODE).toBe("mock");
   });
 });

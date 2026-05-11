@@ -1,4 +1,4 @@
-package vns
+package vdns
 
 import (
 	"net"
@@ -24,7 +24,7 @@ func supportedType(qtype uint16) (string, bool) {
 	}
 }
 
-func recordsToRRs(qname string, records []VNSRecord) []dns.RR {
+func recordsToRRs(qname string, records []VDNSRecord) []dns.RR {
 	rrs := make([]dns.RR, 0, len(records))
 	for _, record := range records {
 		if rr := recordToRR(qname, record); rr != nil {
@@ -34,7 +34,7 @@ func recordsToRRs(qname string, records []VNSRecord) []dns.RR {
 	return rrs
 }
 
-func recordToRR(qname string, record VNSRecord) dns.RR {
+func recordToRR(qname string, record VDNSRecord) dns.RR {
 	header := dns.RR_Header{
 		Name:   dns.Fqdn(qname),
 		Rrtype: dns.StringToType[record.Type],

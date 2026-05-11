@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ResolveResult, VnsRecordType } from "../core/types.js";
+import type { ResolveResult, VdnsRecordType } from "../core/types.js";
 import { selectProxyRecord, selectRedirectRecord, selectSiteRecord } from "./safety.js";
 import { RedirectResolverError, type ProxyRecord, type RedirectRecord, type RedirectResolveDebug, type SiteRecord } from "./types.js";
 
@@ -59,7 +59,7 @@ export class HttpRedirectResolverClient {
     };
   }
 
-  private async fetchResolveResult(hostname: string, type: VnsRecordType): Promise<ResolveResult | null> {
+  private async fetchResolveResult(hostname: string, type: VdnsRecordType): Promise<ResolveResult | null> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 

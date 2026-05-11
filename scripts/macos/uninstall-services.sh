@@ -25,7 +25,7 @@ vdns_require_darwin
 REPO_ROOT="$(vdns_repo_root)"
 cd "${REPO_ROOT}"
 vdns_load_env "${REPO_ROOT}" >/dev/null || true
-VNS_TLD="${VNS_TLD:-vrsc}"
+VDNS_TLD="${VDNS_TLD:-vdns}"
 
 "${SCRIPT_DIR}/stop-services.sh"
 
@@ -37,10 +37,10 @@ if [[ -f "$(vdns_redirect_plist)" ]]; then
 fi
 
 if [[ "${REMOVE_RESOLVER}" == "1" ]]; then
-  echo "Removing /etc/resolver/${VNS_TLD}; sudo may prompt."
-  sudo VNS_TLD="${VNS_TLD}" "${SCRIPT_DIR}/uninstall-vrsc-resolver.sh"
+  echo "Removing /etc/resolver/${VDNS_TLD}; sudo may prompt."
+  sudo VDNS_TLD="${VDNS_TLD}" "${SCRIPT_DIR}/uninstall-vdns-resolver.sh"
 else
-  echo "Leaving /etc/resolver/${VNS_TLD} installed."
+  echo "Leaving /etc/resolver/${VDNS_TLD} installed."
 fi
 
 if [[ "${PURGE}" == "1" ]]; then

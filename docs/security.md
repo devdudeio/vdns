@@ -8,7 +8,7 @@ vDNS is local-first infrastructure. It is not globally trusted ICANN DNS. Experi
 
 Guardrails:
 
-- generated host certificates are limited to the configured vDNS TLD, default `.vrsc`
+- generated host certificates are limited to the configured vDNS TLD, default `.vdns`
 - `localhost`, IP literals, non-vDNS domains, ports, paths, whitespace, and suffix tricks are rejected
 - CA and certificate cache directories are created with mode `700`
 - CA and host private keys are created with mode `600`
@@ -20,11 +20,11 @@ The CA key is still highly sensitive. Delete trust and local files when you no l
 vdns https uninstall-ca --delete-files
 ```
 
-Local browser TLS trust is separate from VerusID record verification. Trusting the local CA only lets the browser accept `https://*.vrsc` certificates minted on this machine.
+Local browser TLS trust is separate from VerusID record verification. Trusting the local CA only lets the browser accept `https://*.vdns` certificates minted on this machine.
 
 ## PROXY
 
-`PROXY` is experimental and powerful. When enabled, the local web gateway fetches upstream content on behalf of a `.vrsc` hostname.
+`PROXY` is experimental and powerful. When enabled, the local web gateway fetches upstream content on behalf of a `.vdns` hostname.
 
 Default protections:
 

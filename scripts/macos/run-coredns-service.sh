@@ -15,10 +15,10 @@ if ! vdns_load_env "${REPO_ROOT}" >/dev/null; then
 fi
 
 cd "${REPO_ROOT}/coredns"
-if [[ ! -x ./coredns-vns ]]; then
-  echo "Missing CoreDNS binary: ${REPO_ROOT}/coredns/coredns-vns" >&2
+if [[ ! -x ./coredns-vdns ]]; then
+  echo "Missing CoreDNS binary: ${REPO_ROOT}/coredns/coredns-vdns" >&2
   echo "Run: cd coredns && ./build-coredns.sh" >&2
   exit 1
 fi
 
-exec ./coredns-vns -conf Corefile.local-resolver.example
+exec ./coredns-vdns -conf Corefile.local-resolver.example

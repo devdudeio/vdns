@@ -23,7 +23,7 @@ vdns https status
 vdns https verify
 ```
 
-`https://verus.vrsc` should load without `curl -k`. `http://verus.vrsc` should still work, and `http://chainvue.vrsc` should still redirect.
+`https://verus.vdns` should load without `curl -k`. `http://verus.vdns` should still work, and `http://chainvue.vdns` should still redirect.
 
 ## Clean Homebrew Reinstall
 
@@ -43,7 +43,7 @@ The script preserves `~/.vdns/.env.local` by default. Add `--purge` only when in
 
 ## Troubleshooting
 
-If only `curl -k https://verus.vrsc` works, the local CA is not trusted for TLS. Run `vdns https install-ca`, restart the browser, and verify with `vdns https status`.
+If only `curl -k https://verus.vdns` works, the local CA is not trusted for TLS. Run `vdns https install-ca`, restart the browser, and verify with `vdns https status`.
 
 If port `443` is not listening or is owned by another process, `vdns doctor --strict --https` will fail. Stop the conflicting listener or update the service configuration.
 

@@ -3,6 +3,7 @@ import net from "node:net";
 import { rm } from "node:fs/promises";
 import { promisify } from "node:util";
 import { loadEnvFiles } from "./env.js";
+import { applyVdnsEnvCompatibility } from "./envCompat.js";
 import { caStatus, generateHostCert, initCa, listHostCerts, removeHostCert } from "./tls/certs.js";
 import { deriveTlsPaths } from "./tls/paths.js";
 
@@ -25,6 +26,7 @@ Commands:
 
 async function main(): Promise<void> {
   loadEnvFiles();
+  applyVdnsEnvCompatibility(process.env);
   const args = process.argv.slice(2);
   const command = args[0] ?? "--help";
   if (command === "-h" || command === "--help" || command === "help") {
@@ -46,7 +48,7 @@ async function main(): Promise<void> {
     }
     const generated = await generateHostCert(host, {
       force: args.includes("--force"),
-      tld: process.env.VDNS_TLS_TLD ?? process.env.VNS_TLD ?? "vrsc",
+      tld: process.env.VDNS_TLS_TLD ?? process.env.VDNS_TLD ?? "vdns",
       validityDays: Number(process.env.VDNS_TLS_CERT_VALIDITY_DAYS ?? 397)
     });
     process.stdout.write(`Generated certificate for ${generated.hostname}\n`);
@@ -59,7 +61,7 @@ async function main(): Promise<void> {
     if (!host) {
       throw new Error("Usage: vdns https remove-cert <host>");
     }
-    const removed = await removeHostCert(host, process.env.VDNS_TLS_TLD ?? process.env.VNS_TLD ?? "vrsc");
+    const removed = await removeHostCert(host, process.env.VDNS_TLS_TLD ?? process.env.VDNS_TLD ?? "vdns");
     process.stdout.write(removed ? `Removed cached certificate for ${host}\n` : `No cached certificate for ${host}\n`);
     return;
   }
@@ -153,8 +155,8 @@ async function verifyHttps(): Promise<boolean> {
   const checks: Array<{ label: string; ok: boolean; message: string }> = [];
   const status = await caStatus();
   const enabled = (process.env.VDNS_HTTPS_ENABLED ?? "false").toLowerCase() === "true";
-  const proxyDomain = process.env.VDNS_DOCTOR_PROXY_DOMAIN ?? `verus.${process.env.VNS_TLD ?? "vrsc"}`;
-  const redirectDomain = process.env.VDNS_DOCTOR_REDIRECT_DOMAIN ?? `chainvue.${process.env.VNS_TLD ?? "vrsc"}`;
+  const proxyDomain = process.env.VDNS_DOCTOR_PROXY_DOMAIN ?? `verus.${process.env.VDNS_TLD ?? "vdns"}`;
+  const redirectDomain = process.env.VDNS_DOCTOR_REDIRECT_DOMAIN ?? `chainvue.${process.env.VDNS_TLD ?? "vdns"}`;
   const aDomain = process.env.VDNS_DOCTOR_A_DOMAIN ?? proxyDomain;
 
   checks.push({ label: "CA cert", ok: status.caCertExists, message: status.caCertExists ? status.paths.caCert : "missing" });

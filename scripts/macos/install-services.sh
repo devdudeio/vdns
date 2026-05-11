@@ -30,14 +30,14 @@ if [[ ! -f "${VDNS_ENV_FILE}" ]]; then
 fi
 
 vdns_load_env "${REPO_ROOT}" >/dev/null
-VNS_TLD="${VNS_TLD:-vrsc}"
-VNS_DNS_PORT="${VNS_DNS_PORT:-1053}"
+VDNS_TLD="${VDNS_TLD:-vdns}"
+VDNS_DNS_PORT="${VDNS_DNS_PORT:-1053}"
 LOG_DIR="$(vdns_service_log_dir "${REPO_ROOT}")"
 NODE_BIN="$(vdns_find_node || true)"
 
 vdns_require_file "${REPO_ROOT}/dist/index.js" "Missing built resolver entrypoint: dist/index.js. Run: pnpm build"
 vdns_require_file "${REPO_ROOT}/dist/redirect-index.js" "Missing built redirect service entrypoint: dist/redirect-index.js. Run: pnpm build"
-vdns_require_executable "${REPO_ROOT}/coredns/coredns-vns" "Missing CoreDNS binary: coredns/coredns-vns. Run: cd coredns && ./build-coredns.sh"
+vdns_require_executable "${REPO_ROOT}/coredns/coredns-vdns" "Missing CoreDNS binary: coredns/coredns-vdns. Run: cd coredns && ./build-coredns.sh"
 vdns_require_executable "${SCRIPT_DIR}/run-resolver-service.sh" "Missing executable wrapper: scripts/macos/run-resolver-service.sh"
 vdns_require_executable "${SCRIPT_DIR}/run-coredns-service.sh" "Missing executable wrapper: scripts/macos/run-coredns-service.sh"
 vdns_require_executable "${SCRIPT_DIR}/run-redirect-service.sh" "Missing executable wrapper: scripts/macos/run-redirect-service.sh"
@@ -82,21 +82,21 @@ if [[ "${DRY_RUN}" == "1" ]]; then
   echo
   echo "--- ${REDIRECT_PLIST} ---"
   printf '%s\n' "${REDIRECT_CONTENT}"
-  if vdns_resolver_file_is_current "${VNS_TLD}" "${VNS_DNS_PORT}"; then
-    echo "/etc/resolver/${VNS_TLD}: already current"
+  if vdns_resolver_file_is_current "${VDNS_TLD}" "${VDNS_DNS_PORT}"; then
+    echo "/etc/resolver/${VDNS_TLD}: already current"
   else
-    echo "/etc/resolver/${VNS_TLD}: would install via scripts/macos/install-vrsc-resolver.sh"
+    echo "/etc/resolver/${VDNS_TLD}: would install via scripts/macos/install-vdns-resolver.sh"
   fi
   exit 0
 fi
 
 mkdir -p "${LOG_DIR}"
 
-if vdns_resolver_file_is_current "${VNS_TLD}" "${VNS_DNS_PORT}"; then
-  echo "/etc/resolver/${VNS_TLD}: already current"
+if vdns_resolver_file_is_current "${VDNS_TLD}" "${VDNS_DNS_PORT}"; then
+  echo "/etc/resolver/${VDNS_TLD}: already current"
 else
-  echo "Installing /etc/resolver/${VNS_TLD}; sudo may prompt."
-  sudo VNS_TLD="${VNS_TLD}" VNS_DNS_PORT="${VNS_DNS_PORT}" "${SCRIPT_DIR}/install-vrsc-resolver.sh"
+  echo "Installing /etc/resolver/${VDNS_TLD}; sudo may prompt."
+  sudo VDNS_TLD="${VDNS_TLD}" VDNS_DNS_PORT="${VDNS_DNS_PORT}" "${SCRIPT_DIR}/install-vdns-resolver.sh"
 fi
 
 vdns_install_user_plist "${RESOLVER_PLIST}" "${RESOLVER_CONTENT}"

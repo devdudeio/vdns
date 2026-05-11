@@ -1,6 +1,6 @@
 import type { SUPPORTED_RECORD_TYPES } from "./constants.js";
 
-export type VnsRecord =
+export type VdnsRecord =
   | { version: 1; type: "A"; name: string; value: string; ttl: number }
   | { version: 1; type: "AAAA"; name: string; value: string; ttl: number }
   | { version: 1; type: "CNAME"; name: string; value: string; ttl: number }
@@ -10,7 +10,7 @@ export type VnsRecord =
   | { version: 1; type: "SITE"; name: string; entry: string; manifestUri: string; sha256?: string | undefined; ttl: number }
   | { version: 1; type: "TLSA"; name: string; sha256: string; ttl: number };
 
-export type VnsRecordType = (typeof SUPPORTED_RECORD_TYPES)[number];
+export type VdnsRecordType = (typeof SUPPORTED_RECORD_TYPES)[number];
 
 export type IdentityPayload = {
   identity: string;
@@ -21,7 +21,7 @@ export type ResolveResult = {
   identity: string;
   domain?: string;
   host?: string;
-  records: VnsRecord[];
+  records: VdnsRecord[];
   warnings: string[];
 };
 

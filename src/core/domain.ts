@@ -1,14 +1,14 @@
-import type { VnsConfig } from "../config.js";
+import type { VdnsConfig } from "../config.js";
 
 const labelPattern = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
-export type ParsedVnsDomain = {
+export type ParsedVdnsDomain = {
   domain: string;
   identity: string;
   host: string;
 };
 
-export function parseVnsDomain(domain: string, config: VnsConfig): ParsedVnsDomain {
+export function parseVdnsDomain(domain: string, config: VdnsConfig): ParsedVdnsDomain {
   const normalized = domain.trim().replace(/\.$/, "").toLowerCase();
   if (normalized.length === 0) {
     throw new Error("Domain is required");

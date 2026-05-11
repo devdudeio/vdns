@@ -1,21 +1,21 @@
 import { describe, expect, it, vi } from "vitest";
-import type { VnsConfig } from "../src/config.js";
+import type { VdnsConfig } from "../src/config.js";
 import { VERUS_DATA_DESCRIPTOR_KEY } from "../src/core/constants.js";
 import { encodeJsonObjectData } from "../src/core/objectDataCodec.js";
-import { VnsResolver } from "../src/core/resolver.js";
+import { VdnsResolver } from "../src/core/resolver.js";
 import type { IdentityPayload, VerusRpcLike } from "../src/core/types.js";
 import { MockVerusRpcClient } from "../src/rpc/mockVerusRpcClient.js";
 
-const baseConfig: VnsConfig = {
-  rootIdentity: "VNS@",
-  tld: "vrsc",
+const baseConfig: VdnsConfig = {
+  rootIdentity: "VDNS@",
+  tld: "vdns",
   defaultTtl: 300,
   mode: "mock",
   port: 8080,
   verusRpcTimeoutMs: 10000
 };
 
-const fumRpcConfig: VnsConfig = {
+const fumRpcConfig: VdnsConfig = {
   ...baseConfig,
   rootIdentity: "fum@",
   mode: "rpc",
@@ -61,34 +61,34 @@ function makeRealStyleRpcClient(): VerusRpcLike & { getVdxfId: ReturnType<typeof
     getIdentity: vi.fn(async (requestedIdentity: string) => requestedIdentity === "google.fum@" ? identity : null),
     getVdxfId: vi.fn(async (key: string) => {
       const entries = {
-        "fum.vrsc::vns.record": realVdxfIds.record,
-        "fum.vrsc::vns.dns.a": realVdxfIds.labels.A,
-        "fum.vrsc::vns.dns.aaaa": realVdxfIds.labels.AAAA,
-        "fum.vrsc::vns.dns.cname": realVdxfIds.labels.CNAME,
-        "fum.vrsc::vns.dns.txt": realVdxfIds.labels.TXT,
-        "fum.vrsc::vns.web.redirect": realVdxfIds.labels.REDIRECT,
-        "fum.vrsc::vns.web.proxy": realVdxfIds.labels.PROXY,
-        "fum.vrsc::vns.web.site": realVdxfIds.labels.SITE,
-        "fum.vrsc::vns.tls.fingerprint": realVdxfIds.labels.TLSA
+        "fum.vdns::vdns.record": realVdxfIds.record,
+        "fum.vdns::vdns.dns.a": realVdxfIds.labels.A,
+        "fum.vdns::vdns.dns.aaaa": realVdxfIds.labels.AAAA,
+        "fum.vdns::vdns.dns.cname": realVdxfIds.labels.CNAME,
+        "fum.vdns::vdns.dns.txt": realVdxfIds.labels.TXT,
+        "fum.vdns::vdns.web.redirect": realVdxfIds.labels.REDIRECT,
+        "fum.vdns::vdns.web.proxy": realVdxfIds.labels.PROXY,
+        "fum.vdns::vdns.web.site": realVdxfIds.labels.SITE,
+        "fum.vdns::vdns.tls.fingerprint": realVdxfIds.labels.TLSA
       };
       return entries[key as keyof typeof entries] ?? key;
     })
   };
 }
 
-describe("VnsResolver", () => {
+describe("VdnsResolver", () => {
   it("resolves an identity from mock fixtures", async () => {
-    const resolver = new VnsResolver(baseConfig, new MockVerusRpcClient());
-    const result = await resolver.resolveIdentity("myname.VNS@", "A");
-    expect(result.identity).toBe("myname.VNS@");
+    const resolver = new VdnsResolver(baseConfig, new MockVerusRpcClient());
+    const result = await resolver.resolveIdentity("myname.VDNS@", "A");
+    expect(result.identity).toBe("myname.VDNS@");
     expect(result.records).toEqual([{ version: 1, type: "A", name: "@", value: "203.0.113.42", ttl: 300 }]);
   });
 
   it("resolves a domain and filters by host and type", async () => {
-    const resolver = new VnsResolver(baseConfig, new MockVerusRpcClient());
-    const result = await resolver.resolveDomain("www.myname.vrsc", "CNAME");
-    expect(result.identity).toBe("myname.VNS@");
-    expect(result.domain).toBe("www.myname.vrsc");
+    const resolver = new VdnsResolver(baseConfig, new MockVerusRpcClient());
+    const result = await resolver.resolveDomain("www.myname.vdns", "CNAME");
+    expect(result.identity).toBe("myname.VDNS@");
+    expect(result.domain).toBe("www.myname.vdns");
     expect(result.host).toBe("www");
     expect(result.records).toEqual([
       { version: 1, type: "CNAME", name: "www", value: "example.pages.dev", ttl: 300 }
@@ -96,26 +96,26 @@ describe("VnsResolver", () => {
   });
 
   it("uses a custom root identity", async () => {
-    const resolver = new VnsResolver(
+    const resolver = new VdnsResolver(
       { ...baseConfig, rootIdentity: "VERUSNAMESERVICE@" },
       new MockVerusRpcClient()
     );
-    const result = await resolver.resolveDomain("myname.vrsc");
+    const result = await resolver.resolveDomain("myname.vdns");
     expect(result.identity).toBe("myname.VERUSNAMESERVICE@");
     expect(result.records).toEqual([{ version: 1, type: "A", name: "@", value: "198.51.100.25", ttl: 300 }]);
   });
 
   it("throws for missing identities", async () => {
-    const resolver = new VnsResolver(baseConfig, new MockVerusRpcClient());
-    await expect(resolver.resolveIdentity("missing.VNS@")).rejects.toThrow("Identity not found: missing.VNS@");
+    const resolver = new VdnsResolver(baseConfig, new MockVerusRpcClient());
+    await expect(resolver.resolveIdentity("missing.VDNS@")).rejects.toThrow("Identity not found: missing.VDNS@");
   });
 
   it("resolves a fum@ domain from real DataDescriptor-wrapped contentmultimap in RPC mode", async () => {
     const rpcClient = makeRealStyleRpcClient();
-    const resolver = new VnsResolver(fumRpcConfig, rpcClient);
+    const resolver = new VdnsResolver(fumRpcConfig, rpcClient);
 
-    await expect(resolver.resolveDomain("google.vrsc")).resolves.toEqual({
-      domain: "google.vrsc",
+    await expect(resolver.resolveDomain("google.vdns")).resolves.toEqual({
+      domain: "google.vdns",
       identity: "google.fum@",
       host: "@",
       records: [{ version: 1, type: "A", name: "@", value: "142.250.181.238", ttl: 300 }],
@@ -125,10 +125,10 @@ describe("VnsResolver", () => {
 
   it("caches resolved VDXF IDs for an RPC resolver", async () => {
     const rpcClient = makeRealStyleRpcClient();
-    const resolver = new VnsResolver({ ...fumRpcConfig, verusRpcUrl: "http://rpc-cache.local" }, rpcClient);
+    const resolver = new VdnsResolver({ ...fumRpcConfig, verusRpcUrl: "http://rpc-cache.local" }, rpcClient);
 
     await resolver.getDebugVdxfKeys();
-    await resolver.resolveDomain("google.vrsc");
+    await resolver.resolveDomain("google.vdns");
 
     expect(rpcClient.getVdxfId).toHaveBeenCalledTimes(9);
   });

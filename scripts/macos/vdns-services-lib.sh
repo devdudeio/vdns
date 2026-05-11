@@ -43,7 +43,7 @@ This checkout is under a macOS privacy-protected folder:
 
 launchd background jobs cannot reliably execute scripts from Desktop, Documents,
 Downloads, or iCloud Drive folders without extra Full Disk Access grants. Move
-the repo to a developer folder such as ~/Developer/vns, then reinstall services.
+the repo to a developer folder such as ~/Developer/vdns, then reinstall services.
 
 To bypass this guard anyway, set VDNS_ALLOW_TCC_PROTECTED_REPO=1.
 MESSAGE

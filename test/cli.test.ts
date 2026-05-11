@@ -80,7 +80,7 @@ async function run(args: string[], client = makeClient(), env: NodeJS.ProcessEnv
   const rpcClientFactory = vi.fn(() => client);
   process.exitCode = undefined;
 
-  await runCli(["node", "vns", ...args], { env, io, rpcClientFactory });
+  await runCli(["node", "vdns", ...args], { env, io, rpcClientFactory });
 
   return {
     client,
@@ -91,16 +91,16 @@ async function run(args: string[], client = makeClient(), env: NodeJS.ProcessEnv
   };
 }
 
-describe("vns CLI", () => {
+describe("vdns CLI", () => {
   beforeEach(() => {
     process.exitCode = undefined;
   });
 
   it("prints VDXF keys with command-local root and tld options without RPC", async () => {
-    const result = await run(["vdxf", "keys", "--root", "dude@", "--tld", "vrsc"], makeClient(), {});
+    const result = await run(["vdxf", "keys", "--root", "dude@", "--tld", "vdns"], makeClient(), {});
     const payload = JSON.parse(result.stdout);
 
-    expect(payload.keyNames.record).toBe("dude.vrsc::vns.record");
+    expect(payload.keyNames.record).toBe("dude.vdns::vdns.record");
     expect(payload.vdxfIds).toBeUndefined();
     expect(result.rpcClientFactory).not.toHaveBeenCalled();
     expect(result.exitCode).toBeUndefined();
@@ -138,7 +138,7 @@ describe("vns CLI", () => {
     ], client);
     const payload = parseJsonOutputs(result.stdout)[0];
 
-    expect(Object.keys(payload.contentmultimap)).toContain("id:fum.vrsc::vns.record");
+    expect(Object.keys(payload.contentmultimap)).toContain("id:fum.vdns::vdns.record");
     expect(result.stderr).toContain("Warning: using default vDNS root identity fum@");
     expect(result.exitCode).toBeUndefined();
   });
@@ -193,9 +193,9 @@ describe("vns CLI", () => {
     expect(result.stdout).toContain("Target identity: dude@");
     expect(result.stdout).toContain("Update identity name: dude@");
     expect(payload.contentmultimap.unrelated).toEqual(["keep"]);
-    const descriptor = payload.contentmultimap["id:dude.vrsc::vns.record"][0].i4GC1YGEVD21afWudGoFJVdnfjJ5XWnCQv;
+    const descriptor = payload.contentmultimap["id:dude.vdns::vdns.record"][0].i4GC1YGEVD21afWudGoFJVdnfjJ5XWnCQv;
     expect(descriptor).toMatchObject({
-      label: "id:dude.vrsc::vns.dns.a",
+      label: "id:dude.vdns::vdns.dns.a",
       mimetype: "application/json"
     });
     expect(typeof descriptor.objectdata).toBe("string");
@@ -223,9 +223,9 @@ describe("vns CLI", () => {
       "--yes"
     ], client);
     const payload = parseJsonOutputs(result.stdout)[0];
-    const descriptor = payload.contentmultimap["id:dude.vrsc::vns.record"][0].i4GC1YGEVD21afWudGoFJVdnfjJ5XWnCQv;
+    const descriptor = payload.contentmultimap["id:dude.vdns::vdns.record"][0].i4GC1YGEVD21afWudGoFJVdnfjJ5XWnCQv;
 
-    expect(descriptor.label).toBe("id:dude.vrsc::vns.web.proxy");
+    expect(descriptor.label).toBe("id:dude.vdns::vdns.web.proxy");
     expect(decodeJsonObjectData(descriptor.objectdata).value).toEqual({
       version: 1,
       type: "PROXY",
@@ -254,9 +254,9 @@ describe("vns CLI", () => {
       "--yes"
     ], client);
     const payload = parseJsonOutputs(result.stdout)[0];
-    const descriptor = payload.contentmultimap["id:dude.vrsc::vns.record"][0].i4GC1YGEVD21afWudGoFJVdnfjJ5XWnCQv;
+    const descriptor = payload.contentmultimap["id:dude.vdns::vdns.record"][0].i4GC1YGEVD21afWudGoFJVdnfjJ5XWnCQv;
 
-    expect(descriptor.label).toBe("id:dude.vrsc::vns.web.site");
+    expect(descriptor.label).toBe("id:dude.vdns::vdns.web.site");
     expect(decodeJsonObjectData(descriptor.objectdata).value).toEqual({
       version: 1,
       type: "SITE",
@@ -305,7 +305,7 @@ describe("vns CLI", () => {
     const client = makeClient({
       identity: "dude@",
       contentmultimap: {
-        "id:dude.vrsc::vns.record": [
+        "id:dude.vdns::vdns.record": [
           { version: 1, type: "TXT", name: "@", value: "remove", ttl: 300 },
           { version: 1, type: "TXT", name: "keep", value: "stay", ttl: 300 }
         ]
@@ -326,12 +326,12 @@ describe("vns CLI", () => {
 
     expect(client.updateIdentity).toHaveBeenCalledWith(jsonOutputs[0]);
     expect(client.getRawTransaction).toHaveBeenCalledWith("tx", true);
-    expect(jsonOutputs[0].contentmultimap["id:dude.vrsc::vns.record"]).toEqual([
+    expect(jsonOutputs[0].contentmultimap["id:dude.vdns::vdns.record"]).toEqual([
       { version: 1, type: "TXT", name: "keep", value: "stay", ttl: 300 }
     ]);
     expect(jsonOutputs[1]).toMatchObject({
       identity: "dude@",
-      vnsRecordKey: "id:dude.vrsc::vns.record"
+      vdnsRecordKey: "id:dude.vdns::vdns.record"
     });
     expect(result.stdout).toContain("Update transaction: tx");
     expect(result.stdout).toContain("Waiting for update transaction tx to reach 1 confirmation(s)");
@@ -385,7 +385,7 @@ describe("vns CLI", () => {
     expect(result.stdout).toContain("Identity address: i7Mki7dLpVxdanKubmZJksuJBLtUqY4MyS");
     expect(verifyOutput).toMatchObject({
       identity: "chainvue.fum@",
-      vnsRecordKey: "id:fum.vrsc::vns.record"
+      vdnsRecordKey: "id:fum.vdns::vdns.record"
     });
     expect(verifyOutput.identity).not.toBe("chainvue@");
     expect(result.exitCode).toBeUndefined();
@@ -395,7 +395,7 @@ describe("vns CLI", () => {
     const client = makeClient({
       identity: "chainvue@",
       contentmultimap: {
-        "id:fum.vrsc::vns.record": [
+        "id:fum.vdns::vdns.record": [
           { version: 1, type: "REDIRECT", name: "@", url: "http://chainvue.io/", status: 302, ttl: 300 },
           { version: 1, type: "TXT", name: "keep", value: "stay", ttl: 300 }
         ]
@@ -407,7 +407,7 @@ describe("vns CLI", () => {
           name: "chainvue",
           parent: "i4KtZ8jeMipNJfAdmfxkzQZKmaGpjvhYKe",
           contentmultimap: {
-            "id:fum.vrsc::vns.record": [
+            "id:fum.vdns::vdns.record": [
               { version: 1, type: "REDIRECT", name: "@", url: "http://chainvue.io/", status: 302, ttl: 300 },
               { version: 1, type: "TXT", name: "keep", value: "stay", ttl: 300 }
             ]
@@ -438,7 +438,7 @@ describe("vns CLI", () => {
       name: "chainvue",
       parent: "i4KtZ8jeMipNJfAdmfxkzQZKmaGpjvhYKe",
       contentmultimap: {
-        "id:fum.vrsc::vns.record": [{ version: 1, type: "TXT", name: "keep", value: "stay", ttl: 300 }]
+        "id:fum.vdns::vdns.record": [{ version: 1, type: "TXT", name: "keep", value: "stay", ttl: 300 }]
       }
     });
     expect(result.stdout).toContain("Target identity: chainvue.fum@");
@@ -471,7 +471,7 @@ describe("vns CLI", () => {
       "--root",
       "fum@",
       "--tld",
-      "vrsc",
+      "vdns",
       "--yes",
       "--verify",
       "--confirmations",
@@ -603,12 +603,12 @@ describe("vns CLI", () => {
     const client = makeClient({
       identity: "chainvue@",
       contentmultimap: {
-        "id:fum.vrsc::vns.record": [
+        "id:fum.vdns::vdns.record": [
           { version: 1, type: "REDIRECT", name: "@", url: "http://chainvue.io/", status: 302, ttl: 300 }
         ]
       }
     });
-    const result = await run(["record", "inspect", "chainvue.fum@", "--root", "fum@", "--tld", "vrsc"], client);
+    const result = await run(["record", "inspect", "chainvue.fum@", "--root", "fum@", "--tld", "vdns"], client);
     const payload = JSON.parse(result.stdout);
 
     expect(client.getIdentity).toHaveBeenCalledWith("chainvue.fum@");
@@ -621,12 +621,12 @@ describe("vns CLI", () => {
     const client = makeClient({
       identity: "google@",
       contentmultimap: {
-        "id:fum.vrsc::vns.record": [
+        "id:fum.vdns::vdns.record": [
           { version: 1, type: "A", name: "@", value: "142.250.181.238", ttl: 300 }
         ]
       }
     });
-    const result = await run(["record", "inspect", "google.fum@", "--root", "fum@", "--tld", "vrsc"], client);
+    const result = await run(["record", "inspect", "google.fum@", "--root", "fum@", "--tld", "vdns"], client);
     const payload = JSON.parse(result.stdout);
 
     expect(client.getIdentity).toHaveBeenCalledWith("google.fum@");
@@ -639,10 +639,10 @@ describe("vns CLI", () => {
     const client = makeClient({
       identity: "dude@",
       contentmultimap: {
-        "id:dude.vrsc::vns.record": [{
+        "id:dude.vdns::vdns.record": [{
           i4GC1YGEVD21afWudGoFJVdnfjJ5XWnCQv: {
             version: 1,
-            label: "id:dude.vrsc::vns.web.redirect",
+            label: "id:dude.vdns::vdns.web.redirect",
             mimetype: "application/json",
             objectdata: "7b2276657273696f6e223a312c2274797065223a225245444952454354222c226e616d65223a2240222c2275726c223a22687474703a2f2f636861696e7675652e696f2f222c22737461747573223a3330322c2274746c223a3330307d"
           }

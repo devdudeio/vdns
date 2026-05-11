@@ -1,4 +1,4 @@
-package vns
+package vdns
 
 import (
 	"fmt"
@@ -10,18 +10,18 @@ import (
 )
 
 func init() {
-	plugin.Register("vns", setup)
+	plugin.Register("vdns", setup)
 }
 
 func setup(c *caddy.Controller) error {
 	cfg, err := parseConfig(c)
 	if err != nil {
-		return plugin.Error("vns", err)
+		return plugin.Error("vdns", err)
 	}
 
 	serverConfig := dnsserver.GetConfig(c)
 	serverConfig.AddPlugin(func(next plugin.Handler) plugin.Handler {
-		return VNS{
+		return VDNS{
 			Next:   next,
 			Zones:  []string{serverConfig.Zone},
 			Client: NewClient(cfg.ResolverURL, cfg.Timeout),
@@ -62,7 +62,7 @@ func parseConfig(c *caddy.Controller) (Config, error) {
 					return cfg, c.ArgErr()
 				}
 			default:
-				return cfg, c.Errf("unknown vns option %q", c.Val())
+				return cfg, c.Errf("unknown vdns option %q", c.Val())
 			}
 		}
 	}

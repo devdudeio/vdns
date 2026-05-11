@@ -1,4 +1,4 @@
-package vns
+package vdns
 
 import (
 	"context"
@@ -19,11 +19,11 @@ type ResolveResult struct {
 	Identity string      `json:"identity"`
 	Domain   string      `json:"domain"`
 	Host     string      `json:"host"`
-	Records  []VNSRecord `json:"records"`
+	Records  []VDNSRecord `json:"records"`
 	Warnings []string    `json:"warnings"`
 }
 
-type VNSRecord struct {
+type VDNSRecord struct {
 	Version int    `json:"version"`
 	Name    string `json:"name"`
 	TTL     uint32 `json:"ttl"`
@@ -36,7 +36,7 @@ type HTTPStatusError struct {
 }
 
 func (e HTTPStatusError) Error() string {
-	return fmt.Sprintf("vns resolver returned HTTP %d", e.StatusCode)
+	return fmt.Sprintf("vdns resolver returned HTTP %d", e.StatusCode)
 }
 
 func NewClient(resolverURL string, timeout time.Duration) *Client {

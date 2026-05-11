@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-BINARY="${COREDNS_BIN:-./coredns-vns}"
+BINARY="${COREDNS_BIN:-./coredns-vdns}"
 COREFILE="${COREFILE:-Corefile.local-resolver.example}"
 
 if [[ ! -x "${BINARY}" ]]; then
@@ -12,9 +12,9 @@ if [[ ! -x "${BINARY}" ]]; then
   exit 1
 fi
 
-echo "Starting VNS CoreDNS in local-resolver mode"
+echo "Starting vDNS CoreDNS in local-resolver mode"
 echo "binary: ${BINARY}"
 echo "corefile: ${COREFILE}"
-echo "handles: .vrsc via VNS, all other domains via upstream forwarders on port 1053"
+echo "handles: .vdns via VDNS, all other domains via upstream forwarders on port 1053"
 
 exec "${BINARY}" -conf "${COREFILE}"

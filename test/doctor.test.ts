@@ -53,9 +53,9 @@ describe("doctor internals", () => {
     const envFile = path.join(tmp, ".env.local");
     await mkdir(path.join(tmp, "logs"));
     await writeFile(envFile, [
-      "VNS_MODE=rpc",
-      "VNS_ROOT_IDENTITY=fum@",
-      "VNS_TLD=vrsc",
+      "VDNS_MODE=rpc",
+      "VDNS_ROOT_IDENTITY=fum@",
+      "VDNS_TLD=vdns",
       "VERUS_RPC_URL=http://127.0.0.1:18843",
       "VERUS_RPC_USER=user",
       "VERUS_RPC_PASSWORD=secret"
@@ -74,27 +74,27 @@ describe("doctor internals", () => {
       version: "test",
       env: {
         HOME: tmp,
-        VNS_MODE: "rpc",
-        VNS_ROOT_IDENTITY: "fum@",
-        VNS_TLD: "vrsc",
+        VDNS_MODE: "rpc",
+        VDNS_ROOT_IDENTITY: "fum@",
+        VDNS_TLD: "vdns",
         VERUS_RPC_URL: "http://127.0.0.1:18843",
         VERUS_RPC_USER: "user",
         VERUS_RPC_PASSWORD: "secret",
-        VNS_RESOLVER_URL: "http://127.0.0.1:8080"
+        VDNS_RESOLVER_URL: "http://127.0.0.1:8080"
       }
     };
     const fetchImpl = async (input: string | URL | Request) => {
       const url = String(input);
       if (url.endsWith("/debug/config")) {
-        return jsonResponse({ mode: "mock", rootIdentity: "fum@", tld: "vrsc", rpcUrlConfigured: true, rpcAuthConfigured: true });
+        return jsonResponse({ mode: "mock", rootIdentity: "fum@", tld: "vdns", rpcUrlConfigured: true, rpcAuthConfigured: true });
       }
       if (url.includes("/resolve-domain/")) {
         return jsonResponse({ records: [] });
       }
-      if (url === "http://chainvue.vrsc") {
+      if (url === "http://chainvue.vdns") {
         return new Response(null, { status: 404 });
       }
-      if (url === "http://verus.vrsc") {
+      if (url === "http://verus.vdns") {
         return new Response(null, { status: 404 });
       }
       if (url === "http://127.0.0.1:18843") {
@@ -133,11 +133,11 @@ describe("doctor internals", () => {
         version: "test",
         env: {
           HOME: tmp,
-          VNS_MODE: "rpc",
-          VNS_ROOT_IDENTITY: "fum@",
-          VNS_TLD: "vrsc",
+          VDNS_MODE: "rpc",
+          VDNS_ROOT_IDENTITY: "fum@",
+          VDNS_TLD: "vdns",
           VERUS_RPC_URL: "http://127.0.0.1:18843",
-          VNS_RESOLVER_URL: "http://127.0.0.1:8080",
+          VDNS_RESOLVER_URL: "http://127.0.0.1:8080",
           VDNS_HTTPS_ENABLED: "false"
         }
       };

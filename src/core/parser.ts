@@ -1,15 +1,15 @@
-import { VNS_VDXF_KEYS } from "./constants.js";
-import { extractVnsRecords } from "./contentmultimap.js";
-import type { IdentityPayload, VnsRecord } from "./types.js";
-import type { VnsVdxfIds } from "./vdxf.js";
+import { LEGACY_VNS_VDXF_KEYS, VDNS_VDXF_KEYS } from "./constants.js";
+import { extractVdnsRecords } from "./contentmultimap.js";
+import type { IdentityPayload, VdnsRecord } from "./types.js";
+import type { VdnsVdxfIds } from "./vdxf.js";
 
 export type ParsedIdentityRecords = {
-  records: VnsRecord[];
+  records: VdnsRecord[];
   warnings: string[];
 };
 
 export type ParseIdentityRecordsOptions = {
-  vnsVdxfIds?: VnsVdxfIds;
+  vdnsVdxfIds?: VdnsVdxfIds;
   symbolicFallback?: boolean;
 };
 
@@ -17,10 +17,10 @@ export function parseIdentityRecords(
   identityPayload: IdentityPayload,
   options: ParseIdentityRecordsOptions = {}
 ): ParsedIdentityRecords {
-  return extractVnsRecords(
+  return extractVdnsRecords(
     identityPayload,
-    options.vnsVdxfIds?.record ?? VNS_VDXF_KEYS.RECORD,
-    options.vnsVdxfIds?.labels,
+    [options.vdnsVdxfIds?.record ?? VDNS_VDXF_KEYS.RECORD, LEGACY_VNS_VDXF_KEYS.RECORD],
+    options.vdnsVdxfIds?.labels,
     { symbolicFallback: options.symbolicFallback ?? true }
   );
 }

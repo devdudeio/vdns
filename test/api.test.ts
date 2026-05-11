@@ -1,17 +1,17 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { FastifyInstance } from "fastify";
-import type { VnsConfig } from "../src/config.js";
+import type { VdnsConfig } from "../src/config.js";
 import { buildServer } from "../src/api/server.js";
 import { VERUS_DATA_DESCRIPTOR_KEY } from "../src/core/constants.js";
 import { encodeJsonObjectData } from "../src/core/objectDataCodec.js";
-import { VnsResolver } from "../src/core/resolver.js";
+import { VdnsResolver } from "../src/core/resolver.js";
 import type { IdentityPayload, VerusRpcLike } from "../src/core/types.js";
 import { MockVerusRpcClient } from "../src/rpc/mockVerusRpcClient.js";
 import { VerusRpcError } from "../src/rpc/verusRpcClient.js";
 
-const config: VnsConfig = {
-  rootIdentity: "VNS@",
-  tld: "vrsc",
+const config: VdnsConfig = {
+  rootIdentity: "VDNS@",
+  tld: "vdns",
   defaultTtl: 300,
   mode: "mock",
   port: 8080,
@@ -20,8 +20,8 @@ const config: VnsConfig = {
 
 let app: FastifyInstance | undefined;
 
-async function makeApp(customConfig: VnsConfig = config): Promise<FastifyInstance> {
-  app = await buildServer(new VnsResolver(customConfig, new MockVerusRpcClient()));
+async function makeApp(customConfig: VdnsConfig = config): Promise<FastifyInstance> {
+  app = await buildServer(new VdnsResolver(customConfig, new MockVerusRpcClient()));
   return app;
 }
 
@@ -42,10 +42,10 @@ describe("api", () => {
 
   it("resolves an identity", async () => {
     const server = await makeApp();
-    const response = await server.inject({ method: "GET", url: "/resolve/myname.VNS@?type=A" });
+    const response = await server.inject({ method: "GET", url: "/resolve/myname.VDNS@?type=A" });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
-      identity: "myname.VNS@",
+      identity: "myname.VDNS@",
       records: [{ version: 1, type: "A", name: "@", value: "203.0.113.42", ttl: 300 }],
       warnings: []
     });
@@ -53,11 +53,11 @@ describe("api", () => {
 
   it("resolves a domain", async () => {
     const server = await makeApp();
-    const response = await server.inject({ method: "GET", url: "/resolve-domain/www.myname.vrsc?type=CNAME" });
+    const response = await server.inject({ method: "GET", url: "/resolve-domain/www.myname.vdns?type=CNAME" });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({
-      identity: "myname.VNS@",
-      domain: "www.myname.vrsc",
+      identity: "myname.VDNS@",
+      domain: "www.myname.vdns",
       host: "www",
       records: [{ version: 1, type: "CNAME", name: "www", value: "example.pages.dev", ttl: 300 }],
       warnings: []
@@ -66,15 +66,15 @@ describe("api", () => {
 
   it("resolves a custom root identity", async () => {
     const server = await makeApp({ ...config, rootIdentity: "VERUSNAMESERVICE@" });
-    const response = await server.inject({ method: "GET", url: "/resolve-domain/myname.vrsc" });
+    const response = await server.inject({ method: "GET", url: "/resolve-domain/myname.vdns" });
     expect(response.statusCode).toBe(200);
     expect(response.json().identity).toBe("myname.VERUSNAMESERVICE@");
   });
 
   it("rejects invalid domains and types", async () => {
     const server = await makeApp();
-    const badDomain = await server.inject({ method: "GET", url: "/resolve-domain/a.b.myname.vrsc" });
-    const badType = await server.inject({ method: "GET", url: "/resolve-domain/myname.vrsc?type=MX" });
+    const badDomain = await server.inject({ method: "GET", url: "/resolve-domain/a.b.myname.vdns" });
+    const badType = await server.inject({ method: "GET", url: "/resolve-domain/myname.vdns?type=MX" });
     expect(badDomain.statusCode).toBe(400);
     expect(badType.statusCode).toBe(400);
   });
@@ -91,8 +91,8 @@ describe("api", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
       mode: "rpc",
-      rootIdentity: "VNS@",
-      tld: "vrsc",
+      rootIdentity: "VDNS@",
+      tld: "vdns",
       defaultTtl: 300,
       port: 8080,
       rpcUrlConfigured: true,
@@ -106,9 +106,9 @@ describe("api", () => {
 
   it("returns raw identity fixtures in mock mode", async () => {
     const server = await makeApp();
-    const response = await server.inject({ method: "GET", url: "/debug/raw-identity/myname.VNS@" });
+    const response = await server.inject({ method: "GET", url: "/debug/raw-identity/myname.VDNS@" });
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toMatchObject({ identity: "myname.VNS@" });
+    expect(response.json()).toMatchObject({ identity: "myname.VDNS@" });
   });
 
   it("returns mock RPC health", async () => {
@@ -118,22 +118,22 @@ describe("api", () => {
     expect(response.json()).toEqual({ mode: "mock", status: "ok" });
   });
 
-  it("returns VNS VDXF key names in mock mode", async () => {
+  it("returns vDNS VDXF key names in mock mode", async () => {
     const server = await makeApp({ ...config, rootIdentity: "fum@" });
     const response = await server.inject({ method: "GET", url: "/debug/vdxf-keys" });
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
       rootIdentity: "fum@",
-      tld: "vrsc",
+      tld: "vdns",
       keys: {
         record: {
-          name: "fum.vrsc::vns.record",
-          vdxfid: "fum.vrsc::vns.record"
+          name: "fum.vdns::vdns.record",
+          vdxfid: "fum.vdns::vdns.record"
         },
         dnsA: {
-          name: "fum.vrsc::vns.dns.a",
-          vdxfid: "fum.vrsc::vns.dns.a"
+          name: "fum.vdns::vdns.dns.a",
+          vdxfid: "fum.vdns::vdns.dns.a"
         }
       }
     });
@@ -141,16 +141,16 @@ describe("api", () => {
 
   it("returns 404 for missing identities", async () => {
     const server = await makeApp();
-    const resolve = await server.inject({ method: "GET", url: "/resolve/missing.VNS@" });
-    const domain = await server.inject({ method: "GET", url: "/resolve-domain/missing.vrsc" });
+    const resolve = await server.inject({ method: "GET", url: "/resolve/missing.VDNS@" });
+    const domain = await server.inject({ method: "GET", url: "/resolve-domain/missing.vdns" });
     expect(resolve.statusCode).toBe(404);
     expect(domain.statusCode).toBe(404);
     expect(domain.json()).toMatchObject({
-      message: "Identity not found: missing.VNS@",
+      message: "Identity not found: missing.VDNS@",
       details: {
         mode: "mock",
-        rootIdentity: "VNS@",
-        tld: "vrsc"
+        rootIdentity: "VDNS@",
+        tld: "vdns"
       }
     });
   });
@@ -162,11 +162,11 @@ describe("api", () => {
       rootIdentity: "fum@",
       verusRpcUrl: "http://rpc.local"
     });
-    const response = await server.inject({ method: "GET", url: "/resolve-domain/google.vrsc" });
+    const response = await server.inject({ method: "GET", url: "/resolve-domain/google.vdns" });
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({
-      domain: "google.vrsc",
+      domain: "google.vdns",
       identity: "google.fum@",
       host: "@",
       records: [{ version: 1, type: "A", name: "@", value: "142.250.181.238", ttl: 300 }],
@@ -180,7 +180,7 @@ describe("api", () => {
         throw new VerusRpcError("rpc", "Verus RPC getidentity error -32601", undefined, -32601);
       }
     });
-    const response = await server.inject({ method: "GET", url: "/resolve/myname.VNS@" });
+    const response = await server.inject({ method: "GET", url: "/resolve/myname.VDNS@" });
     expect(response.statusCode).toBe(502);
     expect(response.json().message).toBe("Verus RPC upstream error");
   });
@@ -191,7 +191,7 @@ describe("api", () => {
         throw new VerusRpcError("timeout", "Verus RPC getidentity timed out after 1ms");
       }
     });
-    const response = await server.inject({ method: "GET", url: "/resolve/myname.VNS@" });
+    const response = await server.inject({ method: "GET", url: "/resolve/myname.VDNS@" });
     expect(response.statusCode).toBe(504);
     expect(response.json().message).toBe("Verus RPC request timed out");
   });
@@ -199,9 +199,9 @@ describe("api", () => {
 
 async function makeAppWithRpcClient(
   rpcClient: VerusRpcLike,
-  customConfig: VnsConfig = { ...config, mode: "rpc" }
+  customConfig: VdnsConfig = { ...config, mode: "rpc" }
 ): Promise<FastifyInstance> {
-  app = await buildServer(new VnsResolver(customConfig, rpcClient));
+  app = await buildServer(new VdnsResolver(customConfig, rpcClient));
   return app;
 }
 
@@ -234,15 +234,15 @@ function makeRealStyleRpcClient(): VerusRpcLike {
     },
     async getVdxfId(key: string): Promise<string> {
       const ids: Record<string, string> = {
-        "fum.vrsc::vns.record": recordId,
-        "fum.vrsc::vns.dns.a": dnsAId,
-        "fum.vrsc::vns.dns.aaaa": "id:aaaa",
-        "fum.vrsc::vns.dns.cname": "id:cname",
-        "fum.vrsc::vns.dns.txt": "id:txt",
-        "fum.vrsc::vns.web.redirect": "id:redirect",
-        "fum.vrsc::vns.web.proxy": "id:proxy",
-        "fum.vrsc::vns.web.site": "id:site",
-        "fum.vrsc::vns.tls.fingerprint": "id:tlsa"
+        "fum.vdns::vdns.record": recordId,
+        "fum.vdns::vdns.dns.a": dnsAId,
+        "fum.vdns::vdns.dns.aaaa": "id:aaaa",
+        "fum.vdns::vdns.dns.cname": "id:cname",
+        "fum.vdns::vdns.dns.txt": "id:txt",
+        "fum.vdns::vdns.web.redirect": "id:redirect",
+        "fum.vdns::vdns.web.proxy": "id:proxy",
+        "fum.vdns::vdns.web.site": "id:site",
+        "fum.vdns::vdns.tls.fingerprint": "id:tlsa"
       };
       return ids[key] ?? key;
     }
