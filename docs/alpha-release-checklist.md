@@ -20,12 +20,9 @@ Homebrew smoke test:
 brew update
 brew tap devdudeio/vdns
 brew install vdns
-vdns setup
-vdns install
-vdns start
+vdns bootstrap
 vdns doctor
-vdns demo
+vdns doctor --strict --https
 vdns uninstall
 brew uninstall vdns
 ```
-

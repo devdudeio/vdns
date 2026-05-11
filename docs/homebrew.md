@@ -7,29 +7,30 @@ vDNS is packaged for Homebrew through a custom tap, not Homebrew Core.
 ```sh
 brew tap devdudeio/vdns
 brew install vdns
-vdns setup
-vdns install
-vdns start
+vdns bootstrap
 vdns doctor
-vdns demo
+vdns doctor --strict --https
 ```
 
-`brew install` only installs files. It does not use `sudo`, install launchd services, write `/etc/resolver`, bind port `80`, or start anything. Service installation is explicit through `vdns install`.
+`brew install` only installs files. It does not use `sudo`, install launchd services, write `/etc/resolver`, bind ports `80`/`443`, trust the local HTTPS CA, or start anything. The guided setup path is `vdns bootstrap`.
 
-`vdns install` installs launchd plists and `/etc/resolver/<tld>`. It may prompt for `sudo` because the web gateway runs on local port `80` and split-DNS resolver files live under `/etc/resolver`.
+`vdns bootstrap` creates config, optionally captures write RPC credentials, initializes and trusts the local HTTPS CA, installs launchd services, starts them, and runs verification. It may prompt for `sudo` because CA trust writes the macOS System keychain, the web gateway binds privileged ports, and split-DNS resolver files live under `/etc/resolver`.
 
 ## Setup
 
 ```sh
-vdns setup \
-  --root fum@ \
-  --tld vrsc \
-  --rpc-url http://127.0.0.1:18843 \
-  --rpc-user user \
-  --rpc-password pass
+vdns bootstrap
 ```
 
-Homebrew config is written to `~/.vdns/.env.local` with mode `600`. Edit that file to change Verus RPC settings, the root identity, TLD, DNS port, gateway port, or PROXY settings.
+Homebrew config is written to `~/.vdns/.env.local` with mode `600`. Edit that file to change Verus RPC settings, the root identity, TLD, DNS port, gateway ports, HTTPS settings, or PROXY settings.
+
+Advanced or repair setup remains available:
+
+```sh
+vdns setup --force --root fum@ --tld vrsc --rpc-url https://api.verustest.net/
+vdns install
+vdns start
+```
 
 ## Service Flow
 
@@ -117,11 +118,13 @@ Override these with `VDNS_HOME`, `VDNS_STATE_DIR`, or `VDNS_ENV_FILE` when neede
 vdns --version
 vdns help
 vdns paths
+vdns bootstrap
 vdns setup
 vdns install
 vdns start
 vdns status
 vdns doctor
+vdns https verify
 vdns demo
 vdns logs
 vdns stop
@@ -151,10 +154,9 @@ vdns uninstall
    brew install vdns
    vdns --version
    vdns paths
-   vdns setup
-   vdns install
-   vdns start
-   vdns demo
+   vdns bootstrap
+   vdns status
+   vdns doctor --strict --https
    ```
 
 ## Alpha Limitations
@@ -162,7 +164,6 @@ vdns uninstall
 - macOS only.
 - Not submitted to Homebrew Core.
 - No signed `.pkg` installer.
-- No TLS/local CA support.
 - No Windows/Linux service installers.
-- `vdns install` may prompt for `sudo` because it installs `/etc/resolver/<tld>` and a port-80 LaunchDaemon.
+- `vdns bootstrap` may prompt for `sudo` because it installs CA trust, `/etc/resolver/<tld>`, and privileged launchd services.
 - PROXY remains best-effort for complex browser sites.

@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -109,6 +109,104 @@ describe("vdns wrapper", () => {
       expect(contents).toContain("VERUS_WRITE_RPC_URL=http://192.168.0.106:18843");
       expect(contents).toContain("VERUS_WRITE_RPC_PASSWORD=dummy");
       expect((await stat(envFile)).mode & 0o777).toBe(0o600);
+    } finally {
+      await rm(stateDir, { recursive: true, force: true });
+    }
+  });
+
+  it("prints bootstrap help", async () => {
+    const { stdout } = await runVdns(["bootstrap", "--help"]);
+    expect(stdout).toContain("Usage: vdns bootstrap");
+    expect(stdout).toContain("--yes");
+    expect(stdout).toContain("--no-install");
+  });
+
+  it("bootstraps non-interactively with public read RPC", async () => {
+    const stateDir = await mkdtemp(path.join(os.tmpdir(), "vdns-wrapper-bootstrap-"));
+    const envFile = path.join(stateDir, ".env.local");
+    try {
+      const { stdout } = await runVdns([
+        "bootstrap",
+        "--yes",
+        "--no-install",
+        "--no-start",
+        "--no-verify"
+      ], { VDNS_STATE_DIR: stateDir, VDNS_ENV_FILE: envFile });
+
+      expect(stdout).toContain(`Config: ${envFile}`);
+      expect(stdout).toContain("Read RPC: https://api.verustest.net/");
+      const contents = await readFile(envFile, "utf8");
+      expect(contents).toContain("VERUS_RPC_URL=https://api.verustest.net/");
+      expect(contents).toContain("VDNS_HTTPS_ENABLED=true");
+      expect((await stat(envFile)).mode & 0o777).toBe(0o600);
+    } finally {
+      await rm(stateDir, { recursive: true, force: true });
+    }
+  });
+
+  it("bootstraps write RPC flags without printing the password", async () => {
+    const stateDir = await mkdtemp(path.join(os.tmpdir(), "vdns-wrapper-bootstrap-write-"));
+    const envFile = path.join(stateDir, ".env.local");
+    try {
+      const { stdout } = await runVdns([
+        "bootstrap",
+        "--yes",
+        "--no-https",
+        "--no-install",
+        "--no-start",
+        "--no-verify",
+        "--write-rpc-url", "http://127.0.0.1:18843",
+        "--write-rpc-user", "writer",
+        "--write-rpc-password", "super-secret"
+      ], { VDNS_STATE_DIR: stateDir, VDNS_ENV_FILE: envFile });
+
+      expect(stdout).toContain("Write RPC configured: true");
+      expect(stdout).not.toContain("super-secret");
+      const contents = await readFile(envFile, "utf8");
+      expect(contents).toContain("VERUS_WRITE_RPC_URL=http://127.0.0.1:18843");
+      expect(contents).toContain("VERUS_WRITE_RPC_USER=writer");
+      expect(contents).toContain("VERUS_WRITE_RPC_PASSWORD=super-secret");
+    } finally {
+      await rm(stateDir, { recursive: true, force: true });
+    }
+  });
+
+  it("bootstrap preserves existing env values unless forced", async () => {
+    const stateDir = await mkdtemp(path.join(os.tmpdir(), "vdns-wrapper-bootstrap-preserve-"));
+    const envFile = path.join(stateDir, ".env.local");
+    try {
+      await writeFile(envFile, "VERUS_RPC_URL=http://existing.example\nVDNS_HTTPS_ENABLED=false\n", { mode: 0o600 });
+      await runVdns([
+        "bootstrap",
+        "--yes",
+        "--no-https",
+        "--no-install",
+        "--no-start",
+        "--no-verify",
+        "--rpc-url", "https://api.verustest.net/"
+      ], { VDNS_STATE_DIR: stateDir, VDNS_ENV_FILE: envFile });
+
+      const preserved = await readFile(envFile, "utf8");
+      expect(preserved).toContain("VERUS_RPC_URL=http://existing.example");
+      expect(preserved).toContain("VDNS_HTTPS_ENABLED=false");
+      expect(preserved).toContain("VNS_ROOT_IDENTITY=fum@");
+      expect((preserved.match(/^VERUS_RPC_URL=/gm) ?? []).length).toBe(1);
+
+      await runVdns([
+        "bootstrap",
+        "--yes",
+        "--force",
+        "--no-https",
+        "--no-install",
+        "--no-start",
+        "--no-verify",
+        "--rpc-url", "https://api.verustest.net/"
+      ], { VDNS_STATE_DIR: stateDir, VDNS_ENV_FILE: envFile });
+
+      const forced = await readFile(envFile, "utf8");
+      expect(forced).toContain("VERUS_RPC_URL=https://api.verustest.net/");
+      expect(forced).not.toContain("http://existing.example");
+      expect((forced.match(/^VERUS_RPC_URL=/gm) ?? []).length).toBe(1);
     } finally {
       await rm(stateDir, { recursive: true, force: true });
     }

@@ -37,6 +37,7 @@ Usage:
   vdns <command> [args]
 
 Commands:
+  bootstrap         Guided one-command setup for a local vDNS stack
   setup             Create or update the vDNS env file
   install           Install macOS launchd services and /etc/resolver entry
   uninstall         Uninstall macOS launchd services
@@ -73,6 +74,104 @@ VDNS_ENV_FILE=${VDNS_ENV_FILE}
 VDNS_LOG_DIR=${VDNS_LOG_DIR}
 VDNS_PID_DIR=${VDNS_PID_DIR}
 PATHS
+}
+
+env_file_get() {
+  local key="$1"
+  [[ -f "${VDNS_ENV_FILE}" ]] || return 1
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    case "${line}" in
+      "${key}="*) printf '%s\n' "${line#*=}"; return 0 ;;
+    esac
+  done < "${VDNS_ENV_FILE}"
+  return 1
+}
+
+env_file_has_key() {
+  local key="$1"
+  [[ -f "${VDNS_ENV_FILE}" ]] || return 1
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    case "${line}" in
+      "${key}="*) return 0 ;;
+    esac
+  done < "${VDNS_ENV_FILE}"
+  return 1
+}
+
+env_template() {
+  local root_identity="$1" tld="$2" rpc_url="$3" write_rpc_url="$4" write_rpc_user="$5" write_rpc_password="$6" https_enabled="$7" redirect_domain="$8"
+  cat <<ENV
+VNS_MODE=rpc
+VNS_ROOT_IDENTITY=${root_identity}
+VNS_TLD=${tld}
+VNS_DEFAULT_TTL=300
+PORT=8080
+
+VERUS_RPC_URL=${rpc_url}
+VERUS_RPC_USER=
+VERUS_RPC_PASSWORD=
+VERUS_RPC_TIMEOUT_MS=10000
+
+VERUS_WRITE_RPC_URL=${write_rpc_url}
+VERUS_WRITE_RPC_USER=${write_rpc_user}
+VERUS_WRITE_RPC_PASSWORD=${write_rpc_password}
+VERUS_WRITE_RPC_TIMEOUT_MS=10000
+
+VNS_RESOLVER_URL=http://127.0.0.1:8080
+VNS_DNS_PORT=1053
+VNS_REDIRECT_HOST=127.0.0.1
+VNS_REDIRECT_PORT=8081
+VNS_REDIRECT_DEFAULT_STATUS=302
+VNS_REDIRECT_TIMEOUT_MS=5000
+VDNS_PROXY_ENABLED=true
+VDNS_PROXY_TIMEOUT_MS=10000
+VDNS_PROXY_MAX_BODY_BYTES=10485760
+VDNS_PROXY_MAX_REDIRECTS=3
+VDNS_PROXY_ALLOW_PRIVATE_TARGETS=false
+VDNS_HTTPS_ENABLED=${https_enabled}
+VDNS_HTTPS_HOST=127.0.0.1
+VDNS_HTTPS_PORT=443
+VDNS_TLS_TLD=${tld}
+VDNS_TLS_CERT_VALIDITY_DAYS=397
+VDNS_FORCE_HTTPS=false
+VDNS_SITE_CACHE_ENABLED=true
+VDNS_SITE_MAX_FILE_BYTES=10485760
+VDNS_SITE_MAX_TOTAL_MANIFEST_BYTES=1048576
+VDNS_SITE_ALLOW_FILE_URI=false
+ENV
+  if [[ -n "${redirect_domain}" ]]; then
+    echo "VDNS_DOCTOR_REDIRECT_DOMAIN=${redirect_domain}"
+  fi
+}
+
+write_env_template() {
+  local force="$1" root_identity="$2" tld="$3" rpc_url="$4" write_rpc_url="$5" write_rpc_user="$6" write_rpc_password="$7" https_enabled="$8" redirect_domain="$9"
+  mkdir -p "$(dirname "${VDNS_ENV_FILE}")" "${VDNS_LOG_DIR}" "${VDNS_PID_DIR}"
+  umask 077
+  if [[ "${force}" == "1" || ! -f "${VDNS_ENV_FILE}" ]]; then
+    env_template "${root_identity}" "${tld}" "${rpc_url}" "${write_rpc_url}" "${write_rpc_user}" "${write_rpc_password}" "${https_enabled}" "${redirect_domain}" > "${VDNS_ENV_FILE}"
+    chmod 600 "${VDNS_ENV_FILE}"
+    echo "Created ${VDNS_ENV_FILE}"
+    return 0
+  fi
+
+  local appended=0 key value
+  while IFS='=' read -r key value; do
+    [[ -n "${key}" ]] || continue
+    if ! env_file_has_key "${key}"; then
+      if [[ "${appended}" == "0" ]]; then
+        printf '\n# Added by vdns bootstrap\n' >> "${VDNS_ENV_FILE}"
+      fi
+      printf '%s=%s\n' "${key}" "${value}" >> "${VDNS_ENV_FILE}"
+      appended=1
+    fi
+  done < <(env_template "${root_identity}" "${tld}" "${rpc_url}" "${write_rpc_url}" "${write_rpc_user}" "${write_rpc_password}" "${https_enabled}" "${redirect_domain}" | sed '/^$/d; /^#/d')
+  chmod 600 "${VDNS_ENV_FILE}"
+  if [[ "${appended}" == "1" ]]; then
+    echo "Updated ${VDNS_ENV_FILE}"
+  else
+    echo "Env file already complete: ${VDNS_ENV_FILE}"
+  fi
 }
 
 require_macos() {
@@ -150,49 +249,7 @@ SETUP
   fi
 
   rpc_url="${rpc_url:-https://api.verustest.net/}"
-  mkdir -p "$(dirname "${VDNS_ENV_FILE}")" "${VDNS_LOG_DIR}" "${VDNS_PID_DIR}"
-  umask 077
-  cat > "${VDNS_ENV_FILE}" <<ENV
-VNS_MODE=rpc
-VNS_ROOT_IDENTITY=${root_identity}
-VNS_TLD=${tld}
-VNS_DEFAULT_TTL=300
-PORT=8080
-
-VERUS_RPC_URL=${rpc_url}
-VERUS_RPC_USER=
-VERUS_RPC_PASSWORD=
-VERUS_RPC_TIMEOUT_MS=10000
-
-VERUS_WRITE_RPC_URL=${write_rpc_url}
-VERUS_WRITE_RPC_USER=${write_rpc_user}
-VERUS_WRITE_RPC_PASSWORD=${write_rpc_password}
-VERUS_WRITE_RPC_TIMEOUT_MS=10000
-
-VNS_RESOLVER_URL=http://127.0.0.1:8080
-VNS_DNS_PORT=1053
-VNS_REDIRECT_HOST=127.0.0.1
-VNS_REDIRECT_PORT=8081
-VNS_REDIRECT_DEFAULT_STATUS=302
-VNS_REDIRECT_TIMEOUT_MS=5000
-VDNS_PROXY_ENABLED=true
-VDNS_PROXY_TIMEOUT_MS=10000
-VDNS_PROXY_MAX_BODY_BYTES=10485760
-VDNS_PROXY_MAX_REDIRECTS=3
-VDNS_PROXY_ALLOW_PRIVATE_TARGETS=false
-VDNS_HTTPS_ENABLED=false
-VDNS_HTTPS_HOST=127.0.0.1
-VDNS_HTTPS_PORT=443
-VDNS_TLS_TLD=${tld}
-VDNS_TLS_CERT_VALIDITY_DAYS=397
-VDNS_FORCE_HTTPS=false
-VDNS_SITE_CACHE_ENABLED=true
-VDNS_SITE_MAX_FILE_BYTES=10485760
-VDNS_SITE_MAX_TOTAL_MANIFEST_BYTES=1048576
-VDNS_SITE_ALLOW_FILE_URI=false
-ENV
-  chmod 600 "${VDNS_ENV_FILE}"
-  echo "Created ${VDNS_ENV_FILE}"
+  write_env_template 1 "${root_identity}" "${tld}" "${rpc_url}" "${write_rpc_url}" "${write_rpc_user}" "${write_rpc_password}" "false" ""
   echo "Next steps:"
   echo "  vdns install"
   echo "  vdns start"
@@ -200,10 +257,175 @@ ENV
   echo "  vdns demo"
 }
 
+bootstrap_help() {
+  cat <<BOOTSTRAP
+Usage: vdns bootstrap [options]
+
+Guided setup for a local vDNS stack. By default this writes config, enables HTTPS,
+initializes and trusts the local CA, installs services, starts services, and verifies the stack.
+
+Options:
+  --yes                         Accept defaults and do not prompt
+  --force                       Rewrite ${VDNS_ENV_FILE}
+  --root <identity>             Root identity (default: fum@)
+  --tld <tld>                   Local resolver TLD (default: vrsc)
+  --rpc-url <url>               Read/DNS RPC URL (default: https://api.verustest.net/)
+  --write-rpc-url <url>         Write RPC URL for record publishing
+  --write-rpc-user <user>       Write RPC username
+  --write-rpc-password <pass>   Write RPC password
+  --redirect-domain <domain>    Set VDNS_DOCTOR_REDIRECT_DOMAIN
+  --no-https                    Do not initialize/trust HTTPS CA and write HTTPS disabled
+  --no-install                  Skip CA trust and service install steps
+  --no-start                    Skip service start
+  --no-verify                   Skip HTTPS verify and doctor checks
+  -h, --help                    Show this help
+BOOTSTRAP
+}
+
+bootstrap_run_step() {
+  local label="$1" manual="$2"
+  shift 2
+  echo
+  echo "${label}"
+  if "$@"; then
+    return 0
+  fi
+  local status=$?
+  echo "Bootstrap failed during: ${label}" >&2
+  echo "Manual command: ${manual}" >&2
+  return "${status}"
+}
+
+bootstrap_ca_trusted() {
+  local entry="${VDNS_HOME}/dist/https-cli.js"
+  [[ -f "${entry}" ]] || return 1
+  local output
+  if ! output="$(node "${entry}" status 2>/dev/null)"; then
+    return 1
+  fi
+  [[ "${output}" == *"macOS CA trusted: true"* ]]
+}
+
+run_bootstrap() {
+  local yes=0 force=0 root_identity="fum@" tld="vrsc" rpc_url="https://api.verustest.net/"
+  local write_rpc_url="" write_rpc_user="" write_rpc_password="" redirect_domain=""
+  local no_https=0 no_install=0 no_start=0 no_verify=0
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --yes) yes=1; shift ;;
+      --force) force=1; shift ;;
+      --root) root_identity="${2:?missing --root value}"; shift 2 ;;
+      --tld) tld="${2:?missing --tld value}"; shift 2 ;;
+      --rpc-url) rpc_url="${2:?missing --rpc-url value}"; shift 2 ;;
+      --write-rpc-url) write_rpc_url="${2:?missing --write-rpc-url value}"; shift 2 ;;
+      --write-rpc-user) write_rpc_user="${2:?missing --write-rpc-user value}"; shift 2 ;;
+      --write-rpc-password) write_rpc_password="${2:?missing --write-rpc-password value}"; shift 2 ;;
+      --redirect-domain) redirect_domain="${2:?missing --redirect-domain value}"; shift 2 ;;
+      --no-https) no_https=1; shift ;;
+      --no-install) no_install=1; shift ;;
+      --no-start) no_start=1; shift ;;
+      --no-verify) no_verify=1; shift ;;
+      -h|--help) bootstrap_help; return 0 ;;
+      *) echo "Unknown bootstrap option: $1" >&2; return 1 ;;
+    esac
+  done
+
+  if [[ "${yes}" != "1" && -t 0 && -z "${write_rpc_url}" && -z "${write_rpc_user}" && -z "${write_rpc_password}" ]]; then
+    local configure_write input
+    read -r -p "Configure write RPC for record publishing now? [y/N] " configure_write
+    case "${configure_write}" in
+      y|Y|yes|YES)
+        read -r -p "Verus write RPC URL []: " write_rpc_url
+        if [[ -n "${write_rpc_url}" ]]; then
+          read -r -p "Verus write RPC user []: " write_rpc_user
+          read -r -s -p "Verus write RPC password []: " write_rpc_password
+          echo
+        fi
+        ;;
+      *) input="" ;;
+    esac
+  fi
+
+  local https_enabled="true"
+  [[ "${no_https}" == "1" ]] && https_enabled="false"
+  write_env_template "${force}" "${root_identity}" "${tld}" "${rpc_url}" "${write_rpc_url}" "${write_rpc_user}" "${write_rpc_password}" "${https_enabled}" "${redirect_domain}"
+
+  if [[ "${no_https}" != "1" ]]; then
+    local ca_cert="${VDNS_STATE_DIR}/ca/vdns-local-root-ca.pem"
+    local ca_key="${VDNS_STATE_DIR}/ca/vdns-local-root-ca-key.pem"
+    if [[ -f "${ca_cert}" && -f "${ca_key}" ]]; then
+      echo "Reusing existing vDNS local root CA."
+    else
+      bootstrap_run_step "Initializing vDNS local HTTPS CA" "vdns https init-ca" "${REAL_SELF}" https init-ca
+    fi
+
+    if [[ "${no_install}" != "1" ]]; then
+      echo
+      echo "CA trust writes the vDNS local root CA to the macOS System keychain."
+      if bootstrap_ca_trusted; then
+        echo "vDNS local root CA is already trusted."
+      else
+        bootstrap_run_step "Installing vDNS local root CA trust" "sudo vdns https install-ca" sudo \
+          VDNS_HOME="${VDNS_HOME}" \
+          VDNS_INSTALL_MODE="${VDNS_INSTALL_MODE}" \
+          VDNS_STATE_DIR="${VDNS_STATE_DIR}" \
+          VDNS_ENV_FILE="${VDNS_ENV_FILE}" \
+          VDNS_LOG_DIR="${VDNS_LOG_DIR}" \
+          VDNS_PID_DIR="${VDNS_PID_DIR}" \
+          "${REAL_SELF}" https install-ca
+      fi
+    fi
+  fi
+
+  if [[ "${no_install}" != "1" ]]; then
+    echo
+    echo "Service install writes /etc/resolver/${tld} and vDNS launchd service files, including a root LaunchDaemon."
+    bootstrap_run_step "Installing vDNS services" "vdns install" "${REAL_SELF}" install
+  fi
+
+  if [[ "${no_start}" != "1" ]]; then
+    echo
+    echo "Service start bootstraps launchd jobs, including the root LaunchDaemon for ports 80/443."
+    bootstrap_run_step "Starting vDNS services" "vdns start" "${REAL_SELF}" start
+  fi
+
+  if [[ "${no_verify}" != "1" ]]; then
+    if [[ "${no_https}" != "1" ]]; then
+      bootstrap_run_step "Verifying vDNS HTTPS lifecycle" "vdns https verify" "${REAL_SELF}" https verify
+      bootstrap_run_step "Running strict vDNS doctor with HTTPS checks" "vdns doctor --strict --https" "${REAL_SELF}" doctor --strict --https
+    else
+      bootstrap_run_step "Running strict vDNS doctor" "vdns doctor --strict" "${REAL_SELF}" doctor --strict
+    fi
+  fi
+
+  local effective_rpc effective_https effective_write_url effective_write_user effective_write_password write_configured="false"
+  effective_rpc="$(env_file_get VERUS_RPC_URL || true)"
+  effective_https="$(env_file_get VDNS_HTTPS_ENABLED || true)"
+  effective_write_url="$(env_file_get VERUS_WRITE_RPC_URL || true)"
+  effective_write_user="$(env_file_get VERUS_WRITE_RPC_USER || true)"
+  effective_write_password="$(env_file_get VERUS_WRITE_RPC_PASSWORD || true)"
+  if [[ -n "${effective_write_url}" && ( -n "${effective_write_user}" || -n "${effective_write_password}" ) ]]; then
+    write_configured="true"
+  fi
+
+  echo
+  echo "Bootstrap complete."
+  echo "Config: ${VDNS_ENV_FILE}"
+  echo "Read RPC: ${effective_rpc:-${rpc_url}}"
+  echo "Write RPC configured: ${write_configured}"
+  echo "HTTPS enabled: ${effective_https:-${https_enabled}}"
+  echo "Status commands:"
+  echo "  vdns status"
+  echo "  vdns https verify"
+  echo "  vdns doctor --strict --https"
+}
+
 case "${1:-help}" in
   --version|version) echo "${VERSION}" ;;
   -h|--help|help) usage ;;
   paths) print_paths ;;
+  bootstrap) shift; run_bootstrap "$@" ;;
   setup) shift; write_setup_env "$@" ;;
   install) shift; run_script install-services.sh "$@" ;;
   uninstall) shift; run_script uninstall-services.sh "$@" ;;

@@ -27,14 +27,12 @@ Current alpha support includes:
 ```sh
 brew tap devdudeio/vdns
 brew install vdns
-vdns setup
-vdns install
-vdns start
+vdns bootstrap
 vdns doctor
-vdns demo
+vdns doctor --strict --https
 ```
 
-`brew install` installs files only. It does not install launchd services, write `/etc/resolver`, bind port 80, or start background processes. Those steps are explicit through `vdns install` and `vdns start`.
+`brew install` installs files only. It does not install launchd services, write `/etc/resolver`, bind privileged ports, trust the local HTTPS CA, or start background processes. Those steps are handled by `vdns bootstrap`.
 
 Homebrew configuration lives at `~/.vdns/.env.local`; logs live at `~/.vdns/logs`.
 
@@ -170,14 +168,12 @@ vDNS can be installed from a custom Homebrew tap once a release artifact has bee
 ```sh
 brew tap devdudeio/vdns
 brew install vdns
-vdns setup
-vdns install
-vdns start
+vdns bootstrap
 vdns status
-vdns demo
+vdns doctor --strict --https
 ```
 
-`brew install` only installs files. It does not install launchd services, write `/etc/resolver`, or start background processes. See [docs/homebrew.md](docs/homebrew.md) for release and tap maintenance details.
+`brew install` only installs files. `vdns bootstrap` performs the guided local setup, including config, HTTPS CA setup, service installation, service start, and verification. See [docs/homebrew.md](docs/homebrew.md) for release and tap maintenance details.
 
 ## Demo
 

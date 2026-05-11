@@ -1,8 +1,8 @@
 class Vdns < Formula
   desc "VerusID-native DNS-compatible local resolver and web gateway"
   homepage "https://github.com/devdudeio/vdns"
-  url "https://github.com/devdudeio/vdns/releases/download/v0.1.6/vdns-0.1.6.tar.gz"
-  sha256 "405cedc00ffb6ac2fea075fc3541bc45a3ce857c41535cd5729dd5df6a94b8a3"
+  url "https://github.com/devdudeio/vdns/releases/download/v0.1.7/vdns-0.1.7.tar.gz"
+  sha256 "13c1d471e1548f7b526fe09a259d45bf2014a16a20bde71a870a535c5e2e8c32"
   license "MIT"
 
   depends_on "node"
@@ -17,22 +17,12 @@ class Vdns < Formula
     <<~EOS
       vDNS is installed but no services were started.
 
-      Configure RPC credentials:
-        vdns setup
-
-      Install and start the macOS launchd services explicitly:
-        vdns install
-        vdns start
+      Run the guided local setup:
+        vdns bootstrap
 
       Check the stack:
         vdns status
-        vdns demo
-
-      Optional local HTTPS for https://*.vrsc requires a per-device CA:
-        vdns https init-ca
-        vdns https install-ca
-        set VDNS_HTTPS_ENABLED=true in ~/.vdns/.env.local
-        vdns restart
+        vdns doctor --strict --https
 
       Logs and runtime state default to:
         ~/.vdns
