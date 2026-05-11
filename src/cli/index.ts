@@ -80,6 +80,10 @@ export function createCliProgram(options: CliOptions = {}): Command {
     .option("--rpc-user <user>", "Verus JSON-RPC username")
     .option("--rpc-password <password>", "Verus JSON-RPC password")
     .option("--rpc-timeout-ms <ms>", "Verus JSON-RPC timeout in milliseconds", parsePositiveInt)
+    .option("--write-rpc-url <url>", "Verus write JSON-RPC endpoint URL")
+    .option("--write-rpc-user <user>", "Verus write JSON-RPC username")
+    .option("--write-rpc-password <password>", "Verus write JSON-RPC password")
+    .option("--write-rpc-timeout-ms <ms>", "Verus write JSON-RPC timeout in milliseconds", parsePositiveInt)
     .option("--root <identity>", "VNS root identity")
     .option("--tld <tld>", "VNS top-level domain")
     .configureOutput({
@@ -173,7 +177,7 @@ export function createCliProgram(options: CliOptions = {}): Command {
       const command = record.commands.find((candidate) => candidate.name() === "set");
       const global = readGlobalOptions(program, env, command);
       warnDefaultRootForWrite(io, global);
-      const client = rpcClientFactory(requireRpcOptions(program, env, command));
+      const client = rpcClientFactory(requireWriteRpcOptions(program, env, command));
       const targetIdentity = normalizeIdentityNameForUpdate(identityName);
       const recordToWrite = buildRecord(typeInput, name, value, commandOptions.ttl, commandOptions.status, {
         entry: commandOptions.entry,
@@ -366,6 +370,10 @@ function addSharedOptions(command: Command): Command {
     .option("--rpc-user <user>", "Verus JSON-RPC username")
     .option("--rpc-password <password>", "Verus JSON-RPC password")
     .option("--rpc-timeout-ms <ms>", "Verus JSON-RPC timeout in milliseconds", parsePositiveInt)
+    .option("--write-rpc-url <url>", "Verus write JSON-RPC endpoint URL")
+    .option("--write-rpc-user <user>", "Verus write JSON-RPC username")
+    .option("--write-rpc-password <password>", "Verus write JSON-RPC password")
+    .option("--write-rpc-timeout-ms <ms>", "Verus write JSON-RPC timeout in milliseconds", parsePositiveInt)
     .option("--root <identity>", "VNS root identity")
     .option("--tld <tld>", "VNS top-level domain");
 }
@@ -381,6 +389,10 @@ function readGlobalOptions(program: Command, env: NodeJS.ProcessEnv, command?: C
     rpcUser?: string;
     rpcPassword?: string;
     rpcTimeoutMs?: number;
+    writeRpcUrl?: string;
+    writeRpcUser?: string;
+    writeRpcPassword?: string;
+    writeRpcTimeoutMs?: number;
     root?: string;
     tld?: string;
   }>();
@@ -389,6 +401,10 @@ function readGlobalOptions(program: Command, env: NodeJS.ProcessEnv, command?: C
     rpcUser?: string;
     rpcPassword?: string;
     rpcTimeoutMs?: number;
+    writeRpcUrl?: string;
+    writeRpcUser?: string;
+    writeRpcPassword?: string;
+    writeRpcTimeoutMs?: number;
     root?: string;
     tld?: string;
   }>() ?? {};
@@ -404,6 +420,35 @@ function readGlobalOptions(program: Command, env: NodeJS.ProcessEnv, command?: C
       timeoutMs: commandOptions.rpcTimeoutMs ?? programOptions.rpcTimeoutMs ?? envInt(env.VERUS_RPC_TIMEOUT_MS)
     },
     usedDefaultRoot: !commandOptions.root && !programOptions.root && !env.VNS_ROOT_IDENTITY
+  };
+}
+
+function readWriteRpcOptions(program: Command, env: NodeJS.ProcessEnv, command?: Command): RpcOptions {
+  const programOptions = program.opts<{
+    writeRpcUrl?: string;
+    writeRpcUser?: string;
+    writeRpcPassword?: string;
+    writeRpcTimeoutMs?: number;
+    rpcUrl?: string;
+    rpcUser?: string;
+    rpcPassword?: string;
+    rpcTimeoutMs?: number;
+  }>();
+  const commandOptions = command?.opts<{
+    writeRpcUrl?: string;
+    writeRpcUser?: string;
+    writeRpcPassword?: string;
+    writeRpcTimeoutMs?: number;
+    rpcUrl?: string;
+    rpcUser?: string;
+    rpcPassword?: string;
+    rpcTimeoutMs?: number;
+  }>() ?? {};
+  return {
+    url: commandOptions.writeRpcUrl ?? programOptions.writeRpcUrl ?? env.VERUS_WRITE_RPC_URL ?? commandOptions.rpcUrl ?? programOptions.rpcUrl ?? env.VERUS_RPC_URL,
+    user: commandOptions.writeRpcUser ?? programOptions.writeRpcUser ?? env.VERUS_WRITE_RPC_USER ?? commandOptions.rpcUser ?? programOptions.rpcUser ?? env.VERUS_RPC_USER,
+    password: commandOptions.writeRpcPassword ?? programOptions.writeRpcPassword ?? env.VERUS_WRITE_RPC_PASSWORD ?? commandOptions.rpcPassword ?? programOptions.rpcPassword ?? env.VERUS_RPC_PASSWORD,
+    timeoutMs: commandOptions.writeRpcTimeoutMs ?? programOptions.writeRpcTimeoutMs ?? envInt(env.VERUS_WRITE_RPC_TIMEOUT_MS) ?? commandOptions.rpcTimeoutMs ?? programOptions.rpcTimeoutMs ?? envInt(env.VERUS_RPC_TIMEOUT_MS)
   };
 }
 
@@ -424,6 +469,14 @@ function requireRpcOptions(program: Command, env: NodeJS.ProcessEnv, command?: C
     throw new CliExitError("VERUS_RPC_URL or --rpc-url is required for this command", 1);
   }
   return global.rpc;
+}
+
+function requireWriteRpcOptions(program: Command, env: NodeJS.ProcessEnv, command?: Command): RpcOptions {
+  const rpc = readWriteRpcOptions(program, env, command);
+  if (!rpc.url) {
+    throw new CliExitError("VERUS_WRITE_RPC_URL or --write-rpc-url is required for write commands", 1);
+  }
+  return rpc;
 }
 
 async function fetchIdentityOrExit(client: RpcClient, identityName: string): Promise<IdentityPayload> {

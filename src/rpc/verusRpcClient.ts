@@ -1,4 +1,5 @@
 import type { IdentityPayload, VerusRpcLike } from "../core/types.js";
+import { DEFAULT_VERUS_READ_RPC_URL } from "../config.js";
 
 type JsonRpcResponse = {
   result?: unknown;
@@ -43,7 +44,7 @@ export class VerusRpcClient implements VerusRpcLike {
   private readonly fetchImpl: FetchLike;
 
   constructor(options: VerusRpcClientOptions = {}) {
-    const url = options.url ?? process.env.VERUS_RPC_URL;
+    const url = options.url ?? process.env.VERUS_RPC_URL ?? DEFAULT_VERUS_READ_RPC_URL;
     if (!url) {
       throw new Error("VERUS_RPC_URL is required in rpc mode");
     }

@@ -143,6 +143,33 @@ describe("vns CLI", () => {
     expect(result.exitCode).toBeUndefined();
   });
 
+  it("uses VERUS_WRITE_RPC_URL for write commands", async () => {
+    const client = makeClient({ identity: "dude@", contentmultimap: {} });
+    const result = await run([
+      "record",
+      "set",
+      "dude@",
+      "TXT",
+      "@",
+      "hello",
+      "--root",
+      "dude@",
+      "--yes"
+    ], client, {
+      VERUS_RPC_URL: "https://api.verustest.net/",
+      VERUS_WRITE_RPC_URL: "http://127.0.0.1:18843",
+      VERUS_WRITE_RPC_USER: "writer",
+      VERUS_WRITE_RPC_PASSWORD: "secret"
+    });
+
+    expect(result.rpcClientFactory).toHaveBeenCalledWith(expect.objectContaining({
+      url: "http://127.0.0.1:18843",
+      user: "writer",
+      password: "secret"
+    }));
+    expect(result.exitCode).toBeUndefined();
+  });
+
   it("sets records with --yes by fetching first, merging, previewing, and updating", async () => {
     const client = makeClient({
       identity: "dude@",

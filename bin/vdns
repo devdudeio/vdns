@@ -100,20 +100,24 @@ cli_entrypoint() {
 }
 
 write_setup_env() {
-  local force=0 root_identity="fum@" tld="vrsc" rpc_url="" rpc_user="" rpc_password=""
+  local force=0 root_identity="fum@" tld="vrsc" rpc_url="" write_rpc_url="" write_rpc_user="" write_rpc_password=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --force) force=1; shift ;;
       --root) root_identity="${2:?missing --root value}"; shift 2 ;;
       --tld) tld="${2:?missing --tld value}"; shift 2 ;;
       --rpc-url) rpc_url="${2:?missing --rpc-url value}"; shift 2 ;;
-      --rpc-user) rpc_user="${2:?missing --rpc-user value}"; shift 2 ;;
-      --rpc-password) rpc_password="${2:?missing --rpc-password value}"; shift 2 ;;
+      --write-rpc-url) write_rpc_url="${2:?missing --write-rpc-url value}"; shift 2 ;;
+      --write-rpc-user|--rpc-user) write_rpc_user="${2:?missing $1 value}"; shift 2 ;;
+      --write-rpc-password|--rpc-password) write_rpc_password="${2:?missing $1 value}"; shift 2 ;;
       -h|--help)
         cat <<SETUP
-Usage: vdns setup [--force] [--root fum@] [--tld vrsc] [--rpc-url URL] [--rpc-user USER] [--rpc-password PASS]
+Usage: vdns setup [--force] [--root fum@] [--tld vrsc] [--rpc-url URL] [--write-rpc-url URL] [--write-rpc-user USER] [--write-rpc-password PASS]
 
 Creates ${VDNS_ENV_FILE} with mode 600. Existing files are preserved unless --force is used.
+
+VERUS_RPC_URL is the read/DNS RPC and defaults to https://api.verustest.net/.
+VERUS_WRITE_RPC_* is optional and used by record write commands.
 SETUP
         return 0
         ;;
@@ -130,19 +134,22 @@ SETUP
   if [[ -t 0 ]]; then
     local input
     if [[ -z "${rpc_url}" ]]; then
-      read -r -p "Verus RPC URL [http://127.0.0.1:18843]: " input
-      rpc_url="${input:-http://127.0.0.1:18843}"
+      read -r -p "Verus read/DNS RPC URL [https://api.verustest.net/]: " input
+      rpc_url="${input:-https://api.verustest.net/}"
     fi
-    if [[ -z "${rpc_user}" ]]; then
-      read -r -p "Verus RPC user []: " rpc_user
+    if [[ -z "${write_rpc_url}" ]]; then
+      read -r -p "Verus write RPC URL for record updates []: " write_rpc_url
     fi
-    if [[ -z "${rpc_password}" ]]; then
-      read -r -s -p "Verus RPC password []: " rpc_password
+    if [[ -n "${write_rpc_url}" && -z "${write_rpc_user}" ]]; then
+      read -r -p "Verus write RPC user []: " write_rpc_user
+    fi
+    if [[ -n "${write_rpc_url}" && -z "${write_rpc_password}" ]]; then
+      read -r -s -p "Verus write RPC password []: " write_rpc_password
       echo
     fi
   fi
 
-  rpc_url="${rpc_url:-http://127.0.0.1:18843}"
+  rpc_url="${rpc_url:-https://api.verustest.net/}"
   mkdir -p "$(dirname "${VDNS_ENV_FILE}")" "${VDNS_LOG_DIR}" "${VDNS_PID_DIR}"
   umask 077
   cat > "${VDNS_ENV_FILE}" <<ENV
@@ -153,9 +160,14 @@ VNS_DEFAULT_TTL=300
 PORT=8080
 
 VERUS_RPC_URL=${rpc_url}
-VERUS_RPC_USER=${rpc_user}
-VERUS_RPC_PASSWORD=${rpc_password}
+VERUS_RPC_USER=
+VERUS_RPC_PASSWORD=
 VERUS_RPC_TIMEOUT_MS=10000
+
+VERUS_WRITE_RPC_URL=${write_rpc_url}
+VERUS_WRITE_RPC_USER=${write_rpc_user}
+VERUS_WRITE_RPC_PASSWORD=${write_rpc_password}
+VERUS_WRITE_RPC_TIMEOUT_MS=10000
 
 VNS_RESOLVER_URL=http://127.0.0.1:8080
 VNS_DNS_PORT=1053

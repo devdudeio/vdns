@@ -116,10 +116,14 @@ More alpha docs:
 | `VNS_TLD` | `vrsc` | TLD handled by this resolver |
 | `VNS_DEFAULT_TTL` | `300` | Default cache TTL in seconds |
 | `PORT` | `8080` | HTTP API port |
-| `VERUS_RPC_URL` | unset | Required only in `rpc` mode |
-| `VERUS_RPC_USER` | unset | Optional RPC username |
-| `VERUS_RPC_PASSWORD` | unset | Optional RPC password |
+| `VERUS_RPC_URL` | `https://api.verustest.net/` | Read/DNS RPC endpoint |
+| `VERUS_RPC_USER` | unset | Optional read RPC username |
+| `VERUS_RPC_PASSWORD` | unset | Optional read RPC password |
 | `VERUS_RPC_TIMEOUT_MS` | `10000` | RPC request timeout in milliseconds |
+| `VERUS_WRITE_RPC_URL` | unset | Optional fullnode RPC for record writes |
+| `VERUS_WRITE_RPC_USER` | unset | Optional write RPC username |
+| `VERUS_WRITE_RPC_PASSWORD` | unset | Optional write RPC password |
+| `VERUS_WRITE_RPC_TIMEOUT_MS` | `10000` | Write RPC timeout in milliseconds |
 
 Local redirect service configuration:
 
@@ -425,16 +429,18 @@ The public endpoint is an example only. Do not put credentials in URLs you share
 
 ## Running HTTP Resolver In RPC Mode
 
-Create `.env.local` for a local Verus RPC node:
+Create `.env.local`. Runtime DNS can use the default public read RPC; record writes need your own fullnode RPC:
 
 ```dotenv
 VNS_MODE=rpc
 VNS_ROOT_IDENTITY=fum@
 VNS_TLD=vrsc
-VERUS_RPC_URL=http://192.168.0.106:18843
-VERUS_RPC_USER=user972661718
-VERUS_RPC_PASSWORD=your_password
+VERUS_RPC_URL=https://api.verustest.net/
+VERUS_WRITE_RPC_URL=http://192.168.0.106:18843
+VERUS_WRITE_RPC_USER=user972661718
+VERUS_WRITE_RPC_PASSWORD=your_password
 VERUS_RPC_TIMEOUT_MS=10000
+VERUS_WRITE_RPC_TIMEOUT_MS=10000
 ```
 
 Start the dev server:

@@ -2,10 +2,16 @@ import { describe, expect, it } from "vitest";
 import { loadConfigFromEnv } from "../src/config.js";
 
 describe("loadConfigFromEnv", () => {
-  it("defaults to rpc mode and requires VERUS_RPC_URL", () => {
-    expect(() => loadConfigFromEnv({})).toThrow(
-      "VERUS_RPC_URL is required when VNS_MODE=rpc. Use VNS_MODE=mock only for fixture/mock development."
-    );
+  it("defaults to rpc mode and public read RPC", () => {
+    expect(loadConfigFromEnv({})).toEqual({
+      rootIdentity: "fum@",
+      tld: "vrsc",
+      defaultTtl: 300,
+      mode: "rpc",
+      port: 8080,
+      verusRpcUrl: "https://api.verustest.net/",
+      verusRpcTimeoutMs: 10000
+    });
   });
 
   it("loads mock mode without an RPC URL when explicitly requested", () => {

@@ -2,6 +2,7 @@ import { access, readFile, stat } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 import { VerusRpcClient } from "../rpc/verusRpcClient.js";
+import { DEFAULT_VERUS_READ_RPC_URL } from "../config.js";
 import { caStatus } from "../tls/certs.js";
 import { deriveTlsPaths } from "../tls/paths.js";
 import { applyStrict, type CheckResult, type DoctorContext } from "./types.js";
@@ -214,7 +215,7 @@ export async function checkConfig(ctx: DoctorContext): Promise<CheckResult[]> {
     fix: (mode & 0o077) === 0 ? undefined : `chmod 600 ${ctx.envFile}`
   });
 
-  const required = ["VNS_MODE", "VNS_ROOT_IDENTITY", "VNS_TLD", "VERUS_RPC_URL"];
+  const required = ["VNS_MODE", "VNS_ROOT_IDENTITY", "VNS_TLD"];
   for (const key of required) {
     results.push({
       section: "Config",
@@ -228,18 +229,22 @@ export async function checkConfig(ctx: DoctorContext): Promise<CheckResult[]> {
   results.push({
     section: "Config",
     status: "PASS",
-    label: "RPC auth",
-    message: `rpcAuthConfigured=${Boolean(ctx.env.VERUS_RPC_USER || ctx.env.VERUS_RPC_PASSWORD)}`
+    label: "Read RPC",
+    message: safeConfigValue("VERUS_RPC_URL", ctx.env.VERUS_RPC_URL ?? DEFAULT_VERUS_READ_RPC_URL)
+  });
+  results.push({
+    section: "Config",
+    status: ctx.env.VERUS_WRITE_RPC_URL ? "PASS" : "WARN",
+    label: "Write RPC",
+    message: ctx.env.VERUS_WRITE_RPC_URL ? safeConfigValue("VERUS_WRITE_RPC_URL", ctx.env.VERUS_WRITE_RPC_URL) : "not configured; record writes require VERUS_WRITE_RPC_URL or --write-rpc-url",
+    fix: ctx.env.VERUS_WRITE_RPC_URL ? undefined : "Set VERUS_WRITE_RPC_URL, VERUS_WRITE_RPC_USER, and VERUS_WRITE_RPC_PASSWORD for updateidentity."
   });
   return results;
 }
 
 async function checkRpc(ctx: DoctorContext, fetchImpl: FetchLike): Promise<CheckResult[]> {
-  if (!ctx.env.VERUS_RPC_URL) {
-    return [{ section: "Verus RPC", status: "FAIL", label: "RPC client", message: "VERUS_RPC_URL is missing", fix: "vdns setup" }];
-  }
   const client = new VerusRpcClient({
-    url: ctx.env.VERUS_RPC_URL,
+    url: ctx.env.VERUS_RPC_URL ?? DEFAULT_VERUS_READ_RPC_URL,
     user: ctx.env.VERUS_RPC_USER,
     password: ctx.env.VERUS_RPC_PASSWORD,
     timeoutMs: Number(ctx.env.VERUS_RPC_TIMEOUT_MS ?? 3000),
@@ -580,7 +585,7 @@ function safeConfigValue(key: string, value: string | undefined): string {
   if (!value) {
     return "";
   }
-  if (key === "VERUS_RPC_URL") {
+  if (key === "VERUS_RPC_URL" || key === "VERUS_WRITE_RPC_URL") {
     try {
       return `host=${new URL(value).host}`;
     } catch {

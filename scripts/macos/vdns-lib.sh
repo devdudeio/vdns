@@ -99,16 +99,10 @@ vdns_safe_config() {
   echo "VDNS_PROXY_MAX_BODY_BYTES=${VDNS_PROXY_MAX_BODY_BYTES:-10485760}"
   echo "VDNS_PROXY_MAX_REDIRECTS=${VDNS_PROXY_MAX_REDIRECTS:-3}"
   echo "VDNS_PROXY_ALLOW_PRIVATE_TARGETS=${VDNS_PROXY_ALLOW_PRIVATE_TARGETS:-false}"
-  if [[ -n "${VERUS_RPC_URL:-}" ]]; then
-    echo "VERUS_RPC_URL_CONFIGURED=true"
-  else
-    echo "VERUS_RPC_URL_CONFIGURED=false"
-  fi
-  if [[ -n "${VERUS_RPC_USER:-}" || -n "${VERUS_RPC_PASSWORD:-}" ]]; then
-    echo "VERUS_RPC_AUTH_CONFIGURED=true"
-  else
-    echo "VERUS_RPC_AUTH_CONFIGURED=false"
-  fi
+  echo "VERUS_RPC_URL=${VERUS_RPC_URL:-https://api.verustest.net/}"
+  echo "VERUS_RPC_AUTH_CONFIGURED=$([[ -n "${VERUS_RPC_USER:-}" || -n "${VERUS_RPC_PASSWORD:-}" ]] && echo true || echo false)"
+  echo "VERUS_WRITE_RPC_URL_CONFIGURED=$([[ -n "${VERUS_WRITE_RPC_URL:-}" ]] && echo true || echo false)"
+  echo "VERUS_WRITE_RPC_AUTH_CONFIGURED=$([[ -n "${VERUS_WRITE_RPC_USER:-}" || -n "${VERUS_WRITE_RPC_PASSWORD:-}" ]] && echo true || echo false)"
 }
 
 vdns_pid_matches() {

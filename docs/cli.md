@@ -21,16 +21,20 @@ Command-line flags override environment variables.
 
 | Flag | Env var | Required |
 | --- | --- | --- |
-| `--rpc-url` | `VERUS_RPC_URL` | required for RPC commands |
-| `--rpc-user` | `VERUS_RPC_USER` | optional |
-| `--rpc-password` | `VERUS_RPC_PASSWORD` | optional |
+| `--rpc-url` | `VERUS_RPC_URL` | read/DNS RPC, defaults to `https://api.verustest.net/` for services |
+| `--rpc-user` | `VERUS_RPC_USER` | optional read RPC username |
+| `--rpc-password` | `VERUS_RPC_PASSWORD` | optional read RPC password |
 | `--rpc-timeout-ms` | `VERUS_RPC_TIMEOUT_MS` | optional, defaults to `10000` |
+| `--write-rpc-url` | `VERUS_WRITE_RPC_URL` | write RPC for `record set`, `record remove`, and `site publish` |
+| `--write-rpc-user` | `VERUS_WRITE_RPC_USER` | optional write RPC username |
+| `--write-rpc-password` | `VERUS_WRITE_RPC_PASSWORD` | optional write RPC password |
+| `--write-rpc-timeout-ms` | `VERUS_WRITE_RPC_TIMEOUT_MS` | optional write RPC timeout |
 | `--root` | `VNS_ROOT_IDENTITY` | optional, defaults to `fum@` |
 | `--tld` | `VNS_TLD` | optional, defaults to `vrsc` |
 
 No-auth RPC endpoints are supported by omitting user and password.
 
-The HTTP server entrypoint loads `.env` and `.env.local`; shell variables still take precedence. The CLI reads environment variables from the process environment, so export RPC values before running CLI commands or pass the corresponding flags.
+The HTTP server entrypoint loads `.env` and `.env.local`; shell variables still take precedence. Runtime DNS uses the read RPC. Write commands prefer `VERUS_WRITE_RPC_*` and fall back to `VERUS_RPC_*` for compatibility.
 
 ## VDXF Keys
 

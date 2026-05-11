@@ -94,8 +94,9 @@ describe("vdns wrapper", () => {
         "--root", "fum@",
         "--tld", "vrsc",
         "--rpc-url", "http://192.168.0.106:18843",
-        "--rpc-user", "user972661718",
-        "--rpc-password", "dummy",
+        "--write-rpc-url", "http://192.168.0.106:18843",
+        "--write-rpc-user", "user972661718",
+        "--write-rpc-password", "dummy",
         "--force"
       ], { VDNS_STATE_DIR: stateDir, VDNS_ENV_FILE: envFile });
 
@@ -105,7 +106,8 @@ describe("vdns wrapper", () => {
       expect(contents).toContain("VNS_ROOT_IDENTITY=fum@");
       expect(contents).toContain("VNS_TLD=vrsc");
       expect(contents).toContain("VERUS_RPC_URL=http://192.168.0.106:18843");
-      expect(contents).toContain("VERUS_RPC_PASSWORD=dummy");
+      expect(contents).toContain("VERUS_WRITE_RPC_URL=http://192.168.0.106:18843");
+      expect(contents).toContain("VERUS_WRITE_RPC_PASSWORD=dummy");
       expect((await stat(envFile)).mode & 0o777).toBe(0o600);
     } finally {
       await rm(stateDir, { recursive: true, force: true });
