@@ -4,7 +4,7 @@ import { loadConfigFromEnv } from "../src/config.js";
 describe("loadConfigFromEnv", () => {
   it("defaults to rpc mode and public read RPC", () => {
     expect(loadConfigFromEnv({})).toEqual({
-      rootIdentity: "fum@",
+      rootIdentity: "vdns@",
       tld: "vdns",
       defaultTtl: 300,
       mode: "rpc",
@@ -16,7 +16,7 @@ describe("loadConfigFromEnv", () => {
 
   it("loads mock mode without an RPC URL when explicitly requested", () => {
     expect(loadConfigFromEnv({ VDNS_MODE: "mock" })).toEqual({
-      rootIdentity: "fum@",
+      rootIdentity: "vdns@",
       tld: "vdns",
       defaultTtl: 300,
       mode: "mock",
@@ -27,7 +27,7 @@ describe("loadConfigFromEnv", () => {
 
   it("loads default rpc mode with an RPC URL", () => {
     expect(loadConfigFromEnv({ VERUS_RPC_URL: "http://127.0.0.1:18843" })).toEqual({
-      rootIdentity: "fum@",
+      rootIdentity: "vdns@",
       tld: "vdns",
       defaultTtl: 300,
       mode: "rpc",

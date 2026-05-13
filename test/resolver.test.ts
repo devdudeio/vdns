@@ -17,7 +17,7 @@ const baseConfig: VdnsConfig = {
 
 const fumRpcConfig: VdnsConfig = {
   ...baseConfig,
-  rootIdentity: "fum@",
+  rootIdentity: "vdns@",
   mode: "rpc",
   verusRpcUrl: "http://rpc.local"
 };
@@ -38,7 +38,7 @@ const realVdxfIds = {
 
 function makeRealStyleRpcClient(): VerusRpcLike & { getVdxfId: ReturnType<typeof vi.fn<[string], Promise<string>>> } {
   const identity: IdentityPayload = {
-    identity: "google.fum@",
+    identity: "google.vdns@",
     contentmultimap: {
       [realVdxfIds.record]: [{
         [VERUS_DATA_DESCRIPTOR_KEY]: {
@@ -58,18 +58,18 @@ function makeRealStyleRpcClient(): VerusRpcLike & { getVdxfId: ReturnType<typeof
   };
 
   return {
-    getIdentity: vi.fn(async (requestedIdentity: string) => requestedIdentity === "google.fum@" ? identity : null),
+    getIdentity: vi.fn(async (requestedIdentity: string) => requestedIdentity === "google.vdns@" ? identity : null),
     getVdxfId: vi.fn(async (key: string) => {
       const entries = {
-        "fum.vdns::vdns.record": realVdxfIds.record,
-        "fum.vdns::vdns.dns.a": realVdxfIds.labels.A,
-        "fum.vdns::vdns.dns.aaaa": realVdxfIds.labels.AAAA,
-        "fum.vdns::vdns.dns.cname": realVdxfIds.labels.CNAME,
-        "fum.vdns::vdns.dns.txt": realVdxfIds.labels.TXT,
-        "fum.vdns::vdns.web.redirect": realVdxfIds.labels.REDIRECT,
-        "fum.vdns::vdns.web.proxy": realVdxfIds.labels.PROXY,
-        "fum.vdns::vdns.web.site": realVdxfIds.labels.SITE,
-        "fum.vdns::vdns.tls.fingerprint": realVdxfIds.labels.TLSA
+        "vdns.vdns::vdns.record": realVdxfIds.record,
+        "vdns.vdns::vdns.dns.a": realVdxfIds.labels.A,
+        "vdns.vdns::vdns.dns.aaaa": realVdxfIds.labels.AAAA,
+        "vdns.vdns::vdns.dns.cname": realVdxfIds.labels.CNAME,
+        "vdns.vdns::vdns.dns.txt": realVdxfIds.labels.TXT,
+        "vdns.vdns::vdns.web.redirect": realVdxfIds.labels.REDIRECT,
+        "vdns.vdns::vdns.web.proxy": realVdxfIds.labels.PROXY,
+        "vdns.vdns::vdns.web.site": realVdxfIds.labels.SITE,
+        "vdns.vdns::vdns.tls.fingerprint": realVdxfIds.labels.TLSA
       };
       return entries[key as keyof typeof entries] ?? key;
     })
@@ -110,13 +110,13 @@ describe("VdnsResolver", () => {
     await expect(resolver.resolveIdentity("missing.VDNS@")).rejects.toThrow("Identity not found: missing.VDNS@");
   });
 
-  it("resolves a fum@ domain from real DataDescriptor-wrapped contentmultimap in RPC mode", async () => {
+  it("resolves a vdns@ domain from real DataDescriptor-wrapped contentmultimap in RPC mode", async () => {
     const rpcClient = makeRealStyleRpcClient();
     const resolver = new VdnsResolver(fumRpcConfig, rpcClient);
 
     await expect(resolver.resolveDomain("google.vdns")).resolves.toEqual({
       domain: "google.vdns",
-      identity: "google.fum@",
+      identity: "google.vdns@",
       host: "@",
       records: [{ version: 1, type: "A", name: "@", value: "142.250.181.238", ttl: 300 }],
       warnings: []

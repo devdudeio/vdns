@@ -12,15 +12,15 @@ const config = (rootIdentity: string): VdnsConfig => ({
 });
 
 describe("parseVdnsDomain", () => {
-  it("maps default fum root domains", () => {
-    expect(parseVdnsDomain("myname.vdns", config("fum@"))).toEqual({
+  it("maps default vdns root domains", () => {
+    expect(parseVdnsDomain("myname.vdns", config("vdns@"))).toEqual({
       domain: "myname.vdns",
-      identity: "myname.fum@",
+      identity: "myname.vdns@",
       host: "@"
     });
-    expect(parseVdnsDomain("www.myname.vdns", config("fum@"))).toEqual({
+    expect(parseVdnsDomain("www.myname.vdns", config("vdns@"))).toEqual({
       domain: "www.myname.vdns",
-      identity: "myname.fum@",
+      identity: "myname.vdns@",
       host: "www"
     });
   });
@@ -42,9 +42,9 @@ describe("parseVdnsDomain", () => {
   });
 
   it("normalizes case and trailing dot", () => {
-    expect(parseVdnsDomain("WWW.MYNAME.VDNS.", config("fum@"))).toEqual({
+    expect(parseVdnsDomain("WWW.MYNAME.VDNS.", config("vdns@"))).toEqual({
       domain: "www.myname.vdns",
-      identity: "myname.fum@",
+      identity: "myname.vdns@",
       host: "www"
     });
   });
@@ -52,7 +52,7 @@ describe("parseVdnsDomain", () => {
   it.each(["a.b.myname.vdns", "myname.com", "vdns", ".vdns", "myname.vdns.example.com", "bad_name.vdns"])(
     "rejects invalid domain %s",
     (domain) => {
-      expect(() => parseVdnsDomain(domain, config("fum@"))).toThrow();
+      expect(() => parseVdnsDomain(domain, config("vdns@"))).toThrow();
     }
   );
 });

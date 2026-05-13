@@ -264,12 +264,12 @@ async function checkRpc(ctx: DoctorContext, fetchImpl: FetchLike): Promise<Check
     results.push(rpcFailure("getblockchaininfo", error));
   }
   try {
-    const identity = await client.getRawIdentity(ctx.env.VDNS_ROOT_IDENTITY ?? "fum@");
+    const identity = await client.getRawIdentity(ctx.env.VDNS_ROOT_IDENTITY ?? "vdns@");
     results.push({
       section: "Verus RPC",
       status: identity ? "PASS" : "FAIL",
       label: "getidentity",
-      message: identity ? `found ${ctx.env.VDNS_ROOT_IDENTITY ?? "fum@"}` : `missing ${ctx.env.VDNS_ROOT_IDENTITY ?? "fum@"}`,
+      message: identity ? `found ${ctx.env.VDNS_ROOT_IDENTITY ?? "vdns@"}` : `missing ${ctx.env.VDNS_ROOT_IDENTITY ?? "vdns@"}`,
       fix: identity ? undefined : "Check VDNS_ROOT_IDENTITY and Verus node sync state."
     });
   } catch (error) {

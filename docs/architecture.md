@@ -72,10 +72,10 @@ browser -> 127.0.0.1:80 web gateway -> REDIRECT or PROXY
 
 The root identity and TLD are runtime configuration:
 
-- `VDNS_ROOT_IDENTITY`, default `fum@`
+- `VDNS_ROOT_IDENTITY`, default `vdns@`
 - `VDNS_TLD`, default `vdns`
 
-For example, `myname.vdns` resolves to `myname.fum@` by default, but with `VDNS_ROOT_IDENTITY=VERUSNAMESERVICE@` it resolves to `myname.VERUSNAMESERVICE@`.
+For example, `myname.vdns` resolves to `myname.vdns@` by default, but with `VDNS_ROOT_IDENTITY=VERUSNAMESERVICE@` it resolves to `myname.VERUSNAMESERVICE@`.
 
 ## Mock Vs RPC Mode
 
@@ -87,11 +87,11 @@ For a read-only public Verus testnet endpoint:
 VDNS_MODE=rpc VERUS_RPC_URL=https://api.verustest.net/ pnpm dev
 ```
 
-For a local fullnode resolving the `fum@` namespace, create `.env.local`:
+For a local fullnode resolving the `vdns@` namespace, create `.env.local`:
 
 ```dotenv
 VDNS_MODE=rpc
-VDNS_ROOT_IDENTITY=fum@
+VDNS_ROOT_IDENTITY=vdns@
 VDNS_TLD=vdns
 VERUS_RPC_URL=http://192.168.0.106:18843
 VERUS_RPC_USER=user972661718
@@ -119,18 +119,18 @@ pnpm dev:mock
 
 The RPC client calls `getidentity`, adapts `result.identity.name` and `result.identity.contentmultimap` into the internal payload shape, and returns `null` for Verus JSON-RPC `-5` missing-identity responses. Upstream HTTP/RPC/network failures map to gateway errors at the API boundary, while timeouts map to `504`.
 
-In RPC mode the resolver derives vDNS VDXF key names from `VDNS_ROOT_IDENTITY` and `VDNS_TLD`, resolves them with `getvdxfid`, and caches the resolved IDs in memory. Those IDs are used to parse real Verus `contentmultimap` entries under keys such as `fum.vdns::vdns.record`. DataDescriptor `objectdata` is hex-encoded JSON and is decoded by the shared parser used by both HTTP resolution and CLI record inspection.
+In RPC mode the resolver derives vDNS VDXF key names from `VDNS_ROOT_IDENTITY` and `VDNS_TLD`, resolves them with `getvdxfid`, and caches the resolved IDs in memory. Those IDs are used to parse real Verus `contentmultimap` entries under keys such as `vdns.vdns::vdns.record`. DataDescriptor `objectdata` is hex-encoded JSON and is decoded by the shared parser used by both HTTP resolution and CLI record inspection.
 
 Useful checks:
 
 ```sh
 curl http://127.0.0.1:8080/debug/config | jq .
 curl http://127.0.0.1:8080/debug/vdxf-keys | jq .
-curl http://127.0.0.1:8080/debug/raw-identity/google.fum@ | jq '.identity.contentmultimap'
+curl http://127.0.0.1:8080/debug/raw-identity/google.vdns@ | jq '.identity.contentmultimap'
 curl http://127.0.0.1:8080/resolve-domain/google.vdns | jq .
 ```
 
-If `/debug/config` shows `"mode": "mock"`, the process was started with `pnpm dev:mock` or `VDNS_MODE=mock` is set in the shell. Check `echo $VDNS_MODE` and run `unset VDNS_MODE` before starting RPC mode. If `/debug/config` shows `"rpcUrlConfigured": false`, `VERUS_RPC_URL` is missing from `.env.local` and the shell environment. With `VDNS_ROOT_IDENTITY=fum@` and `VDNS_TLD=vdns`, `google.vdns` maps to `google.fum@`.
+If `/debug/config` shows `"mode": "mock"`, the process was started with `pnpm dev:mock` or `VDNS_MODE=mock` is set in the shell. Check `echo $VDNS_MODE` and run `unset VDNS_MODE` before starting RPC mode. If `/debug/config` shows `"rpcUrlConfigured": false`, `VERUS_RPC_URL` is missing from `.env.local` and the shell environment. With `VDNS_ROOT_IDENTITY=vdns@` and `VDNS_TLD=vdns`, `google.vdns` maps to `google.vdns@`.
 
 Debug routes share this boundary:
 

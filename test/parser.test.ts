@@ -41,7 +41,7 @@ describe("parseIdentityRecords", () => {
 
   it("parses real Verus DataDescriptor hex objectdata when VDXF IDs are provided", () => {
     const result = parseIdentityRecords({
-      identity: "google.fum@",
+      identity: "google.vdns@",
       contentmultimap: {
         [vdxfIds.record]: [{
           [VERUS_DATA_DESCRIPTOR_KEY]: {
@@ -68,7 +68,7 @@ describe("parseIdentityRecords", () => {
 
   it("parses PROXY records from DataDescriptor hex objectdata", () => {
     const result = parseIdentityRecords({
-      identity: "verus.fum@",
+      identity: "verus.vdns@",
       contentmultimap: {
         [vdxfIds.record]: [{
           [VERUS_DATA_DESCRIPTOR_KEY]: {

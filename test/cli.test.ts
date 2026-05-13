@@ -145,7 +145,7 @@ describe("vdns CLI", () => {
     expect(result.exitCode).toBe(2);
   });
 
-  it("uses fum@ as the default root for write commands", async () => {
+  it("uses vdns@ as the default root for write commands", async () => {
     const client = makeClient({
       identity: "dude@",
       contentmultimap: {}
@@ -161,8 +161,8 @@ describe("vdns CLI", () => {
     ], client);
     const payload = parseJsonOutputs(result.stdout)[0];
 
-    expect(Object.keys(payload.contentmultimap)).toContain("id:fum.vdns::vdns.record");
-    expect(result.stderr).toContain("Warning: using default vDNS root identity fum@");
+    expect(Object.keys(payload.contentmultimap)).toContain("id:vdns.vdns::vdns.record");
+    expect(result.stderr).toContain("Warning: using default vDNS root identity vdns@");
     expect(result.exitCode).toBeUndefined();
   });
 
@@ -380,12 +380,12 @@ describe("vdns CLI", () => {
     const result = await run([
       "record",
       "set",
-      "chainvue.fum@",
+      "chainvue.vdns@",
       "REDIRECT",
       "@",
       "http://chainvue.io/",
       "--root",
-      "fum@",
+      "vdns@",
       "--yes",
       "--verify"
     ], client);
@@ -393,22 +393,22 @@ describe("vdns CLI", () => {
     const payload = jsonOutputs[0];
     const verifyOutput = jsonOutputs[1];
 
-    expect(client.getRawIdentity).toHaveBeenCalledWith("chainvue.fum@");
-    expect(client.getIdentity).toHaveBeenCalledWith("chainvue.fum@");
+    expect(client.getRawIdentity).toHaveBeenCalledWith("chainvue.vdns@");
+    expect(client.getIdentity).toHaveBeenCalledWith("chainvue.vdns@");
     expect(client.getRawTransaction).toHaveBeenCalledWith("tx", true);
     expect(client.updateIdentity).toHaveBeenCalledWith(payload);
     expect(payload).toMatchObject({
       name: "chainvue",
       parent: "i4KtZ8jeMipNJfAdmfxkzQZKmaGpjvhYKe"
     });
-    expect(result.stdout).toContain("Target identity: chainvue.fum@");
+    expect(result.stdout).toContain("Target identity: chainvue.vdns@");
     expect(result.stdout).toContain("Update identity name: chainvue");
-    expect(result.stdout).toContain("Verifying target identity: chainvue.fum@");
+    expect(result.stdout).toContain("Verifying target identity: chainvue.vdns@");
     expect(result.stdout).toContain("Parent: i4KtZ8jeMipNJfAdmfxkzQZKmaGpjvhYKe");
     expect(result.stdout).toContain("Identity address: i7Mki7dLpVxdanKubmZJksuJBLtUqY4MyS");
     expect(verifyOutput).toMatchObject({
-      identity: "chainvue.fum@",
-      vdnsRecordKey: "id:fum.vdns::vdns.record"
+      identity: "chainvue.vdns@",
+      vdnsRecordKey: "id:vdns.vdns::vdns.record"
     });
     expect(verifyOutput.identity).not.toBe("chainvue@");
     expect(result.exitCode).toBeUndefined();
@@ -418,7 +418,7 @@ describe("vdns CLI", () => {
     const client = makeClient({
       identity: "chainvue@",
       contentmultimap: {
-        "id:fum.vdns::vdns.record": [
+        "id:vdns.vdns::vdns.record": [
           { version: 1, type: "REDIRECT", name: "@", url: "http://chainvue.io/", status: 302, ttl: 300 },
           { version: 1, type: "TXT", name: "keep", value: "stay", ttl: 300 }
         ]
@@ -430,7 +430,7 @@ describe("vdns CLI", () => {
           name: "chainvue",
           parent: "i4KtZ8jeMipNJfAdmfxkzQZKmaGpjvhYKe",
           contentmultimap: {
-            "id:fum.vdns::vdns.record": [
+            "id:vdns.vdns::vdns.record": [
               { version: 1, type: "REDIRECT", name: "@", url: "http://chainvue.io/", status: 302, ttl: 300 },
               { version: 1, type: "TXT", name: "keep", value: "stay", ttl: 300 }
             ]
@@ -441,11 +441,11 @@ describe("vdns CLI", () => {
     const result = await run([
       "record",
       "remove",
-      "chainvue.fum@",
+      "chainvue.vdns@",
       "REDIRECT",
       "@",
       "--root",
-      "fum@",
+      "vdns@",
       "--yes",
       "--verify"
     ], client);
@@ -453,20 +453,20 @@ describe("vdns CLI", () => {
     const payload = jsonOutputs[0];
     const verifyOutput = jsonOutputs[1];
 
-    expect(client.getRawIdentity).toHaveBeenCalledWith("chainvue.fum@");
-    expect(client.getIdentity).toHaveBeenCalledWith("chainvue.fum@");
+    expect(client.getRawIdentity).toHaveBeenCalledWith("chainvue.vdns@");
+    expect(client.getIdentity).toHaveBeenCalledWith("chainvue.vdns@");
     expect(client.getRawTransaction).toHaveBeenCalledWith("tx", true);
     expect(client.updateIdentity).toHaveBeenCalledWith(payload);
     expect(payload).toMatchObject({
       name: "chainvue",
       parent: "i4KtZ8jeMipNJfAdmfxkzQZKmaGpjvhYKe",
       contentmultimap: {
-        "id:fum.vdns::vdns.record": [{ version: 1, type: "TXT", name: "keep", value: "stay", ttl: 300 }]
+        "id:vdns.vdns::vdns.record": [{ version: 1, type: "TXT", name: "keep", value: "stay", ttl: 300 }]
       }
     });
-    expect(result.stdout).toContain("Target identity: chainvue.fum@");
-    expect(result.stdout).toContain("Verifying target identity: chainvue.fum@");
-    expect(verifyOutput.identity).toBe("chainvue.fum@");
+    expect(result.stdout).toContain("Target identity: chainvue.vdns@");
+    expect(result.stdout).toContain("Verifying target identity: chainvue.vdns@");
+    expect(verifyOutput.identity).toBe("chainvue.vdns@");
     expect(verifyOutput.identity).not.toBe("chainvue@");
     expect(result.exitCode).toBeUndefined();
   });
@@ -485,14 +485,14 @@ describe("vdns CLI", () => {
     const result = await run([
       "record",
       "set",
-      "google.fum@",
+      "google.vdns@",
       "A",
       "@",
       "142.250.181.238",
       "--ttl",
       "300",
       "--root",
-      "fum@",
+      "vdns@",
       "--tld",
       "vdns",
       "--yes",
@@ -502,11 +502,11 @@ describe("vdns CLI", () => {
     ], client);
 
     expect(client.getRawTransaction).toHaveBeenCalledWith("tx", true);
-    expect(client.getIdentity).toHaveBeenCalledWith("google.fum@");
+    expect(client.getIdentity).toHaveBeenCalledWith("google.vdns@");
     expect(client.getIdentity).not.toHaveBeenCalledWith("google@");
     expect(client.getIdentity).not.toHaveBeenCalledWith("google");
     expect(result.stdout).toContain("Update transaction: tx");
-    expect(result.stdout).toContain("Verifying target identity: google.fum@");
+    expect(result.stdout).toContain("Verifying target identity: google.vdns@");
     expect(result.exitCode).toBeUndefined();
   });
 
@@ -524,19 +524,19 @@ describe("vdns CLI", () => {
     const result = await run([
       "record",
       "set",
-      "google.fum@",
+      "google.vdns@",
       "A",
       "@",
       "142.250.181.238",
       "--root",
-      "fum@",
+      "vdns@",
       "--yes",
       "--verify",
       "--no-wait-confirmation"
     ], client);
 
     expect(client.getRawTransaction).not.toHaveBeenCalled();
-    expect(client.getIdentity).toHaveBeenCalledWith("google.fum@");
+    expect(client.getIdentity).toHaveBeenCalledWith("google.vdns@");
     expect(result.stderr).toContain("verifying immediately without waiting for confirmation");
     expect(result.stderr).toContain("getidentity state may be stale");
     expect(result.exitCode).toBeUndefined();
@@ -557,12 +557,12 @@ describe("vdns CLI", () => {
     const result = await run([
       "record",
       "set",
-      "google.fum@",
+      "google.vdns@",
       "A",
       "@",
       "142.250.181.238",
       "--root",
-      "fum@",
+      "vdns@",
       "--yes",
       "--verify"
     ], client);
@@ -575,24 +575,24 @@ describe("vdns CLI", () => {
 
   it("fetches the parent identity when subidentity raw data lacks parent", async () => {
     const client = makeClient({ identity: "chainvue@", contentmultimap: {} });
-    client.getRawIdentity.mockImplementation(async (identity: string) => identity === "chainvue.fum@"
+    client.getRawIdentity.mockImplementation(async (identity: string) => identity === "chainvue.vdns@"
       ? { result: { identity: { name: "chainvue", contentmultimap: {} } } }
       : { result: { identity: { name: "fum", identityaddress: "i4KtZ8jeMipNJfAdmfxkzQZKmaGpjvhYKe" } } });
     const result = await run([
       "record",
       "set",
-      "chainvue.fum@",
+      "chainvue.vdns@",
       "TXT",
       "@",
       "hello",
       "--root",
-      "fum@",
+      "vdns@",
       "--yes"
     ], client);
     const payload = parseJsonOutputs(result.stdout)[0];
 
-    expect(client.getRawIdentity).toHaveBeenCalledWith("chainvue.fum@");
-    expect(client.getRawIdentity).toHaveBeenCalledWith("fum@");
+    expect(client.getRawIdentity).toHaveBeenCalledWith("chainvue.vdns@");
+    expect(client.getRawIdentity).toHaveBeenCalledWith("vdns@");
     expect(payload).toMatchObject({
       name: "chainvue",
       parent: "i4KtZ8jeMipNJfAdmfxkzQZKmaGpjvhYKe"
@@ -602,58 +602,58 @@ describe("vdns CLI", () => {
 
   it("fails closed when subidentity parent cannot be derived", async () => {
     const client = makeClient({ identity: "chainvue@", contentmultimap: {} });
-    client.getRawIdentity.mockImplementation(async (identity: string) => identity === "chainvue.fum@"
+    client.getRawIdentity.mockImplementation(async (identity: string) => identity === "chainvue.vdns@"
       ? { result: { identity: { name: "chainvue", contentmultimap: {} } } }
       : { result: { identity: { name: "fum" } } });
     const result = await run([
       "record",
       "set",
-      "chainvue.fum@",
+      "chainvue.vdns@",
       "TXT",
       "@",
       "hello",
       "--root",
-      "fum@",
+      "vdns@",
       "--yes"
     ], client);
 
     expect(client.updateIdentity).not.toHaveBeenCalled();
-    expect(result.stderr).toContain("Cannot derive parent i-address for chainvue.fum@");
+    expect(result.stderr).toContain("Cannot derive parent i-address for chainvue.vdns@");
     expect(result.exitCode).toBe(1);
   });
 
-  it("inspect chainvue.fum@ outputs the normalized target identity", async () => {
+  it("inspect chainvue.vdns@ outputs the normalized target identity", async () => {
     const client = makeClient({
       identity: "chainvue@",
       contentmultimap: {
-        "id:fum.vdns::vdns.record": [
+        "id:vdns.vdns::vdns.record": [
           { version: 1, type: "REDIRECT", name: "@", url: "http://chainvue.io/", status: 302, ttl: 300 }
         ]
       }
     });
-    const result = await run(["record", "inspect", "chainvue.fum@", "--root", "fum@", "--tld", "vdns"], client);
+    const result = await run(["record", "inspect", "chainvue.vdns@", "--root", "vdns@", "--tld", "vdns"], client);
     const payload = JSON.parse(result.stdout);
 
-    expect(client.getIdentity).toHaveBeenCalledWith("chainvue.fum@");
-    expect(payload.identity).toBe("chainvue.fum@");
+    expect(client.getIdentity).toHaveBeenCalledWith("chainvue.vdns@");
+    expect(payload.identity).toBe("chainvue.vdns@");
     expect(payload.identity).not.toBe("chainvue@");
     expect(result.exitCode).toBeUndefined();
   });
 
-  it("inspect google.fum@ outputs the normalized target identity", async () => {
+  it("inspect google.vdns@ outputs the normalized target identity", async () => {
     const client = makeClient({
       identity: "google@",
       contentmultimap: {
-        "id:fum.vdns::vdns.record": [
+        "id:vdns.vdns::vdns.record": [
           { version: 1, type: "A", name: "@", value: "142.250.181.238", ttl: 300 }
         ]
       }
     });
-    const result = await run(["record", "inspect", "google.fum@", "--root", "fum@", "--tld", "vdns"], client);
+    const result = await run(["record", "inspect", "google.vdns@", "--root", "vdns@", "--tld", "vdns"], client);
     const payload = JSON.parse(result.stdout);
 
-    expect(client.getIdentity).toHaveBeenCalledWith("google.fum@");
-    expect(payload.identity).toBe("google.fum@");
+    expect(client.getIdentity).toHaveBeenCalledWith("google.vdns@");
+    expect(payload.identity).toBe("google.vdns@");
     expect(payload.identity).not.toBe("google@");
     expect(result.exitCode).toBeUndefined();
   });

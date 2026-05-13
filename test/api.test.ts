@@ -119,21 +119,21 @@ describe("api", () => {
   });
 
   it("returns vDNS VDXF key names in mock mode", async () => {
-    const server = await makeApp({ ...config, rootIdentity: "fum@" });
+    const server = await makeApp({ ...config, rootIdentity: "vdns@" });
     const response = await server.inject({ method: "GET", url: "/debug/vdxf-keys" });
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
-      rootIdentity: "fum@",
+      rootIdentity: "vdns@",
       tld: "vdns",
       keys: {
         record: {
-          name: "fum.vdns::vdns.record",
-          vdxfid: "fum.vdns::vdns.record"
+          name: "vdns.vdns::vdns.record",
+          vdxfid: "vdns.vdns::vdns.record"
         },
         dnsA: {
-          name: "fum.vdns::vdns.dns.a",
-          vdxfid: "fum.vdns::vdns.dns.a"
+          name: "vdns.vdns::vdns.dns.a",
+          vdxfid: "vdns.vdns::vdns.dns.a"
         }
       }
     });
@@ -159,7 +159,7 @@ describe("api", () => {
     const server = await makeAppWithRpcClient(makeRealStyleRpcClient(), {
       ...config,
       mode: "rpc",
-      rootIdentity: "fum@",
+      rootIdentity: "vdns@",
       verusRpcUrl: "http://rpc.local"
     });
     const response = await server.inject({ method: "GET", url: "/resolve-domain/google.vdns" });
@@ -167,7 +167,7 @@ describe("api", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({
       domain: "google.vdns",
-      identity: "google.fum@",
+      identity: "google.vdns@",
       host: "@",
       records: [{ version: 1, type: "A", name: "@", value: "142.250.181.238", ttl: 300 }],
       warnings: []
@@ -209,7 +209,7 @@ function makeRealStyleRpcClient(): VerusRpcLike {
   const recordId = "iFLfRN1bcVckxotkYPuWHVuoihfafbS8F5";
   const dnsAId = "iPYBHLkzfMAnzkdQUSrqh4i7rCCW9tJpvE";
   const identity: IdentityPayload = {
-    identity: "google.fum@",
+    identity: "google.vdns@",
     contentmultimap: {
       [recordId]: [{
         [VERUS_DATA_DESCRIPTOR_KEY]: {
@@ -230,19 +230,19 @@ function makeRealStyleRpcClient(): VerusRpcLike {
 
   return {
     async getIdentity(requestedIdentity: string): Promise<IdentityPayload | null> {
-      return requestedIdentity === "google.fum@" ? identity : null;
+      return requestedIdentity === "google.vdns@" ? identity : null;
     },
     async getVdxfId(key: string): Promise<string> {
       const ids: Record<string, string> = {
-        "fum.vdns::vdns.record": recordId,
-        "fum.vdns::vdns.dns.a": dnsAId,
-        "fum.vdns::vdns.dns.aaaa": "id:aaaa",
-        "fum.vdns::vdns.dns.cname": "id:cname",
-        "fum.vdns::vdns.dns.txt": "id:txt",
-        "fum.vdns::vdns.web.redirect": "id:redirect",
-        "fum.vdns::vdns.web.proxy": "id:proxy",
-        "fum.vdns::vdns.web.site": "id:site",
-        "fum.vdns::vdns.tls.fingerprint": "id:tlsa"
+        "vdns.vdns::vdns.record": recordId,
+        "vdns.vdns::vdns.dns.a": dnsAId,
+        "vdns.vdns::vdns.dns.aaaa": "id:aaaa",
+        "vdns.vdns::vdns.dns.cname": "id:cname",
+        "vdns.vdns::vdns.dns.txt": "id:txt",
+        "vdns.vdns::vdns.web.redirect": "id:redirect",
+        "vdns.vdns::vdns.web.proxy": "id:proxy",
+        "vdns.vdns::vdns.web.site": "id:site",
+        "vdns.vdns::vdns.tls.fingerprint": "id:tlsa"
       };
       return ids[key] ?? key;
     }

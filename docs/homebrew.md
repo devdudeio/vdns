@@ -27,7 +27,7 @@ Homebrew config is written to `~/.vdns/.env.local` with mode `600`. Edit that fi
 Advanced or repair setup remains available:
 
 ```sh
-vdns setup --force --root fum@ --tld vdns --rpc-url https://api.verustest.net/
+vdns setup --force --root vdns@ --tld vdns --rpc-url https://api.verustest.net/
 vdns install
 vdns start
 ```

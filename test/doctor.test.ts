@@ -54,7 +54,7 @@ describe("doctor internals", () => {
     await mkdir(path.join(tmp, "logs"));
     await writeFile(envFile, [
       "VDNS_MODE=rpc",
-      "VDNS_ROOT_IDENTITY=fum@",
+      "VDNS_ROOT_IDENTITY=vdns@",
       "VDNS_TLD=vdns",
       "VERUS_RPC_URL=http://127.0.0.1:18843",
       "VERUS_RPC_USER=user",
@@ -75,7 +75,7 @@ describe("doctor internals", () => {
       env: {
         HOME: tmp,
         VDNS_MODE: "rpc",
-        VDNS_ROOT_IDENTITY: "fum@",
+        VDNS_ROOT_IDENTITY: "vdns@",
         VDNS_TLD: "vdns",
         VERUS_RPC_URL: "http://127.0.0.1:18843",
         VERUS_RPC_USER: "user",
@@ -86,7 +86,7 @@ describe("doctor internals", () => {
     const fetchImpl = async (input: string | URL | Request) => {
       const url = String(input);
       if (url.endsWith("/debug/config")) {
-        return jsonResponse({ mode: "mock", rootIdentity: "fum@", tld: "vdns", rpcUrlConfigured: true, rpcAuthConfigured: true });
+        return jsonResponse({ mode: "mock", rootIdentity: "vdns@", tld: "vdns", rpcUrlConfigured: true, rpcAuthConfigured: true });
       }
       if (url.includes("/resolve-domain/")) {
         return jsonResponse({ records: [] });
@@ -134,7 +134,7 @@ describe("doctor internals", () => {
         env: {
           HOME: tmp,
           VDNS_MODE: "rpc",
-          VDNS_ROOT_IDENTITY: "fum@",
+          VDNS_ROOT_IDENTITY: "vdns@",
           VDNS_TLD: "vdns",
           VERUS_RPC_URL: "http://127.0.0.1:18843",
           VDNS_RESOLVER_URL: "http://127.0.0.1:8080",

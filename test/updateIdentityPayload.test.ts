@@ -33,6 +33,6 @@ describe("buildUpdateIdentityPayload", () => {
       updateIdentityName: "chainvue",
       parent: "i4KtZ8jeMipNJfAdmfxkzQZKmaGpjvhYKe",
       contentmultimap: {}
-    }).name).not.toBe("chainvue.fum@");
+    }).name).not.toBe("chainvue.vdns@");
   });
 });

@@ -414,7 +414,7 @@ function readGlobalOptions(program: Command, env: NodeJS.ProcessEnv, command?: C
     root?: string;
     tld?: string;
   }>() ?? {};
-  const root = commandOptions.root ?? programOptions.root ?? env.VDNS_ROOT_IDENTITY ?? "fum@";
+  const root = commandOptions.root ?? programOptions.root ?? env.VDNS_ROOT_IDENTITY ?? "vdns@";
   const tld = commandOptions.tld ?? programOptions.tld ?? env.VDNS_TLD ?? "vdns";
   return {
     root,
@@ -711,8 +711,8 @@ async function handlePostUpdateVerify(
 }
 
 function warnDefaultRootForWrite(io: CliIo, global: { root: string; usedDefaultRoot: boolean }): void {
-  if (global.usedDefaultRoot && global.root === "fum@") {
-    io.stderr.write("Warning: using default vDNS root identity fum@. Set --root or VDNS_ROOT_IDENTITY to override.\n");
+  if (global.usedDefaultRoot && global.root === "vdns@") {
+    io.stderr.write("Warning: using default vDNS root identity vdns@. Set --root or VDNS_ROOT_IDENTITY to override.\n");
   }
 }
 

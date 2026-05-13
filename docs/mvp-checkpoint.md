@@ -12,11 +12,11 @@ VerusID contentmultimap records
   -> local HTTP redirect service on 127.0.0.1:80
 ```
 
-The checkpoint uses `.vdns` as the local TLD and `fum@` as the default VerusID root namespace. With `VDNS_ROOT_IDENTITY=fum@`, `google.vdns` maps to `google.fum@`, and `chainvue.vdns` maps to `chainvue.fum@`.
+The checkpoint uses `.vdns` as the local TLD and `vdns@` as the default VerusID root namespace. With `VDNS_ROOT_IDENTITY=vdns@`, `google.vdns` maps to `google.vdns@`, and `chainvue.vdns` maps to `chainvue.vdns@`.
 
 ## Verified Records
 
-`google.fum@`:
+`google.vdns@`:
 
 ```text
 A @ -> 142.250.181.238
@@ -28,7 +28,7 @@ Expected local result:
 dscacheutil -q host -a name google.vdns
 ```
 
-`chainvue.fum@`:
+`chainvue.vdns@`:
 
 ```text
 A @ -> 127.0.0.1
@@ -92,9 +92,9 @@ pnpm vdns:down
 The existing `vdns` CLI writes the VerusID records that vDNS resolves:
 
 ```sh
-node dist/cli/index.js record set google.fum@ A @ 142.250.181.238 --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
-node dist/cli/index.js record set chainvue.fum@ A @ 127.0.0.1 --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
-node dist/cli/index.js record set chainvue.fum@ REDIRECT @ http://chainvue.io/ --status 302 --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set google.vdns@ A @ 142.250.181.238 --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set chainvue.vdns@ A @ 127.0.0.1 --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set chainvue.vdns@ REDIRECT @ http://chainvue.io/ --status 302 --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
 ```
 
 Write commands preview the exact `updateidentity` payload and prompt unless `--yes` is supplied.

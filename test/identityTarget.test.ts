@@ -19,9 +19,9 @@ const chainvueRaw = {
 
 describe("identity target helpers", () => {
   it.each([
-    ["chainvue.fum@", "chainvue.fum@"],
-    ["chainvue.fum", "chainvue.fum@"],
-    [" google.fum@ ", "google.fum@"],
+    ["chainvue.vdns@", "chainvue.vdns@"],
+    ["chainvue.vdns", "chainvue.vdns@"],
+    [" google.vdns@ ", "google.vdns@"],
     ["chainvue@", "chainvue@"]
   ])("normalizes %j to %j", (input, expected) => {
     expect(normalizeIdentityNameForUpdate(input)).toBe(expected);
@@ -31,9 +31,9 @@ describe("identity target helpers", () => {
     expect(() => normalizeIdentityNameForUpdate(input)).toThrow();
   });
 
-  it("derives the update target for the real chainvue.fum raw response shape", () => {
-    expect(deriveUpdateIdentityTarget("chainvue.fum@", chainvueRaw)).toMatchObject({
-      targetIdentity: "chainvue.fum@",
+  it("derives the update target for the real chainvue.vdns raw response shape", () => {
+    expect(deriveUpdateIdentityTarget("chainvue.vdns@", chainvueRaw)).toMatchObject({
+      targetIdentity: "chainvue.vdns@",
       updateIdentityName: "chainvue",
       parent: "i4KtZ8jeMipNJfAdmfxkzQZKmaGpjvhYKe",
       identityAddress: "i7Mki7dLpVxdanKubmZJksuJBLtUqY4MyS"
@@ -41,14 +41,14 @@ describe("identity target helpers", () => {
   });
 
   it("falls back to local-name extraction for root and subidentities", () => {
-    expect(deriveUpdateIdentityTarget("chainvue.fum@", { result: { identity: {} } }).updateIdentityName).toBe("chainvue");
+    expect(deriveUpdateIdentityTarget("chainvue.vdns@", { result: { identity: {} } }).updateIdentityName).toBe("chainvue");
     expect(deriveUpdateIdentityTarget("chainvue@", { result: { identity: {} } }).updateIdentityName).toBe("chainvue@");
   });
 
   it("derives parent lookup identities from namespace suffixes", () => {
-    expect(deriveParentLookupIdentity("chainvue.fum@")).toBe("fum@");
-    expect(deriveParentLookupIdentity("a.b.fum@")).toBe("b.fum@");
-    expect(deriveParentLookupIdentity("fum@")).toBeUndefined();
+    expect(deriveParentLookupIdentity("chainvue.vdns@")).toBe("vdns@");
+    expect(deriveParentLookupIdentity("a.b.vdns@")).toBe("b.vdns@");
+    expect(deriveParentLookupIdentity("vdns@")).toBeUndefined();
   });
 
   it("extracts raw identity addresses from RPC response wrappers", () => {

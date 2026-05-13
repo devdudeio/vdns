@@ -4,15 +4,15 @@ vDNS maps a `.vdns` domain to a VerusID sub-identity, then reads DNS and web rec
 
 ## Configurable Namespace
 
-The root identity is configurable with `VDNS_ROOT_IDENTITY` and defaults to `fum@`. The TLD is configurable with `VDNS_TLD` and defaults to `vdns`.
+The root identity is configurable with `VDNS_ROOT_IDENTITY` and defaults to `vdns@`. The TLD is configurable with `VDNS_TLD` and defaults to `vdns`.
 
-Examples with `VDNS_ROOT_IDENTITY=fum@` and `VDNS_TLD=vdns`:
+Examples with `VDNS_ROOT_IDENTITY=vdns@` and `VDNS_TLD=vdns`:
 
 | Domain | Identity | Host |
 | --- | --- | --- |
-| `myname.vdns` | `myname.fum@` | `@` |
-| `www.myname.vdns` | `myname.fum@` | `www` |
-| `api.myname.vdns` | `myname.fum@` | `api` |
+| `myname.vdns` | `myname.vdns@` | `@` |
+| `www.myname.vdns` | `myname.vdns@` | `www` |
+| `api.myname.vdns` | `myname.vdns@` | `api` |
 
 Examples with `VDNS_ROOT_IDENTITY=VERUSNAMESERVICE@`:
 
@@ -79,7 +79,7 @@ Fixtures may use symbolic VDXF placeholder keys. Records are parsed from `conten
 
 ```json
 {
-  "identity": "myname.fum@",
+  "identity": "myname.vdns@",
   "contentmultimap": {
     "VDNS.vdns::record": [
       {
@@ -99,11 +99,11 @@ Real Verus writes use DataDescriptor wrappers under resolved VDXF IDs. The DataD
 ```json
 {
   "contentmultimap": {
-    "id:fum.vdns::vdns.record": [
+    "id:vdns.vdns::vdns.record": [
       {
         "i4GC1YGEVD21afWudGoFJVdnfjJ5XWnCQv": {
           "version": 1,
-          "label": "id:fum.vdns::vdns.web.redirect",
+          "label": "id:vdns.vdns::vdns.web.redirect",
           "mimetype": "application/json",
           "objectdata": "7b2276657273696f6e223a312c2274797065223a225245444952454354222c226e616d65223a2240222c2275726c223a22687474703a2f2f636861696e7675652e696f2f222c22737461747573223a3330322c2274746c223a3330307d"
         }
@@ -119,4 +119,4 @@ Inline raw JSON `objectdata` remains supported for old fixtures and backward com
 echo "<hex>" | xxd -r -p | jq .
 ```
 
-When writing subidentity records, `updateidentity` payloads use the local identity name and parent i-address, not the fully qualified target. For example, writing `chainvue.fum@` submits `name: "chainvue"` and `parent: "<fum i-address>"`; reads and verification still use `chainvue.fum@`.
+When writing subidentity records, `updateidentity` payloads use the local identity name and parent i-address, not the fully qualified target. For example, writing `chainvue.vdns@` submits `name: "chainvue"` and `parent: "<vdns i-address>"`; reads and verification still use `chainvue.vdns@`.

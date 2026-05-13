@@ -91,7 +91,7 @@ describe("vdns wrapper", () => {
     try {
       const { stdout } = await runVdns([
         "setup",
-        "--root", "fum@",
+        "--root", "vdns@",
         "--tld", "vdns",
         "--rpc-url", "http://192.168.0.106:18843",
         "--write-rpc-url", "http://192.168.0.106:18843",
@@ -103,7 +103,7 @@ describe("vdns wrapper", () => {
       expect(stdout).toContain(`Created ${envFile}`);
       expect(stdout).not.toContain("dummy");
       const contents = await readFile(envFile, "utf8");
-      expect(contents).toContain("VDNS_ROOT_IDENTITY=fum@");
+      expect(contents).toContain("VDNS_ROOT_IDENTITY=vdns@");
       expect(contents).toContain("VDNS_TLD=vdns");
       expect(contents).toContain("VERUS_RPC_URL=http://192.168.0.106:18843");
       expect(contents).toContain("VERUS_WRITE_RPC_URL=http://192.168.0.106:18843");
@@ -189,7 +189,7 @@ describe("vdns wrapper", () => {
       const preserved = await readFile(envFile, "utf8");
       expect(preserved).toContain("VERUS_RPC_URL=http://existing.example");
       expect(preserved).toContain("VDNS_HTTPS_ENABLED=false");
-      expect(preserved).toContain("VDNS_ROOT_IDENTITY=fum@");
+      expect(preserved).toContain("VDNS_ROOT_IDENTITY=vdns@");
       expect((preserved.match(/^VERUS_RPC_URL=/gm) ?? []).length).toBe(1);
 
       await runVdns([

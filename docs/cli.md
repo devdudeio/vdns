@@ -29,7 +29,7 @@ Command-line flags override environment variables.
 | `--write-rpc-user` | `VERUS_WRITE_RPC_USER` | optional write RPC username |
 | `--write-rpc-password` | `VERUS_WRITE_RPC_PASSWORD` | optional write RPC password |
 | `--write-rpc-timeout-ms` | `VERUS_WRITE_RPC_TIMEOUT_MS` | optional write RPC timeout |
-| `--root` | `VDNS_ROOT_IDENTITY` | optional, defaults to `fum@` |
+| `--root` | `VDNS_ROOT_IDENTITY` | optional, defaults to `vdns@` |
 | `--tld` | `VDNS_TLD` | optional, defaults to `vdns` |
 
 No-auth RPC endpoints are supported by omitting user and password.
@@ -142,10 +142,10 @@ Use `--verify` to refetch and print vDNS records after the write:
 node dist/cli/index.js record set chainvue.dude@ A www 192.0.2.11 --yes --verify
 ```
 
-By default, `--verify` waits until the returned `updateidentity` transaction has one confirmation, then refetches the original CLI target identity. For example, this verifies `google.fum@`, while the submitted update payload may use `name: "google"` plus the `fum@` parent i-address:
+By default, `--verify` waits until the returned `updateidentity` transaction has one confirmation, then refetches the original CLI target identity. For example, this verifies `google.vdns@`, while the submitted update payload may use `name: "google"` plus the `vdns@` parent i-address:
 
 ```sh
-node dist/cli/index.js record set google.fum@ A @ 142.250.181.238 --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set google.vdns@ A @ 142.250.181.238 --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
 ```
 
 Confirmation wait options:
@@ -159,18 +159,18 @@ Confirmation wait options:
 
 `--no-wait-confirmation` preserves immediate refetch behavior and prints a stale-state warning. Immediate mode can show stale `getidentity` state because `updateidentity` returns a transaction id before the identity update is mined and confirmed.
 
-When neither `--root` nor `VDNS_ROOT_IDENTITY` is set, write commands warn before using the default `fum@`.
+When neither `--root` nor `VDNS_ROOT_IDENTITY` is set, write commands warn before using the default `vdns@`.
 
-For a subidentity such as `chainvue.fum@`, the preview shows both the user-facing target and the payload target:
+For a subidentity such as `chainvue.vdns@`, the preview shows both the user-facing target and the payload target:
 
 ```text
-Target identity: chainvue.fum@
+Target identity: chainvue.vdns@
 Update identity name: chainvue
 Parent: i4KtZ8jeMipNJfAdmfxkzQZKmaGpjvhYKe
 Identity address: i7Mki7dLpVxdanKubmZJksuJBLtUqY4MyS
 ```
 
-The following JSON preview then starts with `name: "chainvue"` and the parent i-address. The full target identity is still used for lookup and `--verify` refetches `chainvue.fum@` after confirmation.
+The following JSON preview then starts with `name: "chainvue"` and the parent i-address. The full target identity is still used for lookup and `--verify` refetches `chainvue.vdns@` after confirmation.
 
 vDNS DataDescriptor `objectdata` values are written as lowercase hex-encoded UTF-8 JSON. Inline raw JSON objectdata is accepted only for older fixtures and backward compatibility. `objectdata: null` indicates incorrectly encoded or unusable stored data and is skipped with a warning. Decode a stored value manually with:
 

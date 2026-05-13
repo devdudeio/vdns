@@ -110,7 +110,7 @@ More alpha docs:
 | Env var | Default | Description |
 | --- | --- | --- |
 | `VDNS_MODE` | `rpc` | `rpc` or explicit `mock` |
-| `VDNS_ROOT_IDENTITY` | `fum@` | Root Verus identity namespace |
+| `VDNS_ROOT_IDENTITY` | `vdns@` | Root Verus identity namespace |
 | `VDNS_TLD` | `vdns` | TLD handled by this resolver |
 | `VDNS_DEFAULT_TTL` | `300` | Default cache TTL in seconds |
 | `PORT` | `8080` | HTTP API port |
@@ -256,24 +256,24 @@ $EDITOR .env.local
 
 At minimum, set `VERUS_RPC_URL` and replace `VERUS_RPC_PASSWORD=replace_me` for your local Verus RPC node. `.env.local` is ignored by git.
 
-The demo assumes these records exist under `VDNS_ROOT_IDENTITY=fum@` and `VDNS_TLD=vdns`:
+The demo assumes these records exist under `VDNS_ROOT_IDENTITY=vdns@` and `VDNS_TLD=vdns`:
 
 ```text
-google.fum@:   A @ -> 142.250.181.238
-chainvue.fum@: A @ -> 127.0.0.1
-chainvue.fum@: REDIRECT @ -> http://chainvue.io/ status 302
-verus.fum@:    A @ -> 127.0.0.1
-verus.fum@:    PROXY @ -> https://verus.io/
+google.vdns@:   A @ -> 142.250.181.238
+chainvue.vdns@: A @ -> 127.0.0.1
+chainvue.vdns@: REDIRECT @ -> http://chainvue.io/ status 302
+verus.vdns@:    A @ -> 127.0.0.1
+verus.vdns@:    PROXY @ -> https://verus.io/
 ```
 
 The `vdns` CLI can prepare those writes:
 
 ```sh
-node dist/cli/index.js record set google.fum@ A @ 142.250.181.238 --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
-node dist/cli/index.js record set chainvue.fum@ A @ 127.0.0.1 --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
-node dist/cli/index.js record set chainvue.fum@ REDIRECT @ http://chainvue.io/ --status 302 --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
-node dist/cli/index.js record set verus.fum@ A @ 127.0.0.1 --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
-node dist/cli/index.js record set verus.fum@ PROXY @ https://verus.io/ --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set google.vdns@ A @ 142.250.181.238 --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set chainvue.vdns@ A @ 127.0.0.1 --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set chainvue.vdns@ REDIRECT @ http://chainvue.io/ --status 302 --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set verus.vdns@ A @ 127.0.0.1 --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set verus.vdns@ PROXY @ https://verus.io/ --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
 ```
 
 Start the local vDNS stack:
@@ -382,7 +382,7 @@ Run the local web gateway in a second terminal:
 VDNS_PROXY_ENABLED=true VDNS_RESOLVER_URL=http://127.0.0.1:8080 VDNS_GATEWAY_PORT=8081 pnpm redirect:dev
 ```
 
-For the local gateway demo, `chainvue.fum@` should contain `A @ -> 127.0.0.1` and `REDIRECT @ -> http://chainvue.io/`; `verus.fum@` should contain `A @ -> 127.0.0.1` and `PROXY @ -> https://verus.io/`. With `VDNS_PROXY_ENABLED=true`, PROXY records are served before REDIRECT fallback. Then test:
+For the local gateway demo, `chainvue.vdns@` should contain `A @ -> 127.0.0.1` and `REDIRECT @ -> http://chainvue.io/`; `verus.vdns@` should contain `A @ -> 127.0.0.1` and `PROXY @ -> https://verus.io/`. With `VDNS_PROXY_ENABLED=true`, PROXY records are served before REDIRECT fallback. Then test:
 
 ```sh
 curl http://127.0.0.1:8081/health
@@ -421,7 +421,7 @@ Run against a read-only public Verus testnet RPC endpoint:
 VDNS_MODE=rpc VERUS_RPC_URL=https://api.verustest.net/ pnpm dev
 ```
 
-The public endpoint is an example only. Do not put credentials in URLs you share. `fum@` may not exist on testnet yet, so `VDNSTEST@` is a better smoke-test identity.
+The public endpoint is an example only. Do not put credentials in URLs you share. `vdns@` is the default testnet root namespace; use another root only when you own that namespace and its child identities.
 
 ## Running HTTP Resolver In RPC Mode
 
@@ -429,7 +429,7 @@ Create `.env.local`. Runtime DNS can use the default public read RPC; record wri
 
 ```dotenv
 VDNS_MODE=rpc
-VDNS_ROOT_IDENTITY=fum@
+VDNS_ROOT_IDENTITY=vdns@
 VDNS_TLD=vdns
 VERUS_RPC_URL=https://api.verustest.net/
 VERUS_WRITE_RPC_URL=http://192.168.0.106:18843
@@ -456,11 +456,11 @@ Check the running mode and VDXF IDs:
 ```sh
 curl http://127.0.0.1:8080/debug/config | jq .
 curl http://127.0.0.1:8080/debug/vdxf-keys | jq .
-curl http://127.0.0.1:8080/debug/raw-identity/google.fum@ | jq '.identity.contentmultimap'
+curl http://127.0.0.1:8080/debug/raw-identity/google.vdns@ | jq '.identity.contentmultimap'
 curl http://127.0.0.1:8080/resolve-domain/google.vdns | jq .
 ```
 
-If `/debug/config` shows `"mode": "mock"`, the server was started with `pnpm dev:mock` or `VDNS_MODE=mock` is set in the shell. Check with `echo $VDNS_MODE` and clear it with `unset VDNS_MODE`. In RPC mode with `VDNS_ROOT_IDENTITY=fum@` and `VDNS_TLD=vdns`, `google.vdns` maps to `google.fum@`. Real Verus records are stored as DataDescriptor entries whose `objectdata` is hex-encoded JSON; the HTTP resolver parses the same shape as `vdns record inspect`.
+If `/debug/config` shows `"mode": "mock"`, the server was started with `pnpm dev:mock` or `VDNS_MODE=mock` is set in the shell. Check with `echo $VDNS_MODE` and clear it with `unset VDNS_MODE`. In RPC mode with `VDNS_ROOT_IDENTITY=vdns@` and `VDNS_TLD=vdns`, `google.vdns` maps to `google.vdns@`. Real Verus records are stored as DataDescriptor entries whose `objectdata` is hex-encoded JSON; the HTTP resolver parses the same shape as `vdns record inspect`.
 
 If `/debug/config` shows `"rpcUrlConfigured": false`, `VERUS_RPC_URL` is missing. Check `.env.local` and shell environment variables.
 
@@ -491,10 +491,10 @@ node dist/cli/index.js identity raw chainvue.dude@
 node dist/cli/index.js record inspect chainvue.dude@ --root dude@ --tld vdns
 node dist/cli/index.js record set chainvue.dude@ A @ 192.0.2.10 --root dude@ --yes --verify
 node dist/cli/index.js record remove chainvue.dude@ A @ --root dude@ --yes --verify
-node dist/cli/index.js record set google.fum@ A @ 142.250.181.238 --ttl 300 --root fum@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set google.vdns@ A @ 142.250.181.238 --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
 ```
 
-Write commands always fetch the current raw identity first, merge into the existing `contentmultimap`, print the exact `updateidentity` payload, and ask `Continue? [y/N]` unless `--yes` is supplied. For subidentities, the submitted payload uses the local identity name plus the parent identity i-address, for example `chainvue.fum@` is submitted as `name: "chainvue"` with `parent: "<fum i-address>"`. Test writes on testnet first and prefer a local fullnode for writes. Never commit RPC credentials or put them in shared shell history.
+Write commands always fetch the current raw identity first, merge into the existing `contentmultimap`, print the exact `updateidentity` payload, and ask `Continue? [y/N]` unless `--yes` is supplied. For subidentities, the submitted payload uses the local identity name plus the parent identity i-address, for example `chainvue.vdns@` is submitted as `name: "chainvue"` with `parent: "<vdns i-address>"`. Test writes on testnet first and prefer a local fullnode for writes. Never commit RPC credentials or put them in shared shell history.
 
 With `--verify`, write commands wait for the returned `updateidentity` transaction to reach one confirmation before refetching records. Tune this with `--confirmations`, `--verify-timeout-ms`, and `--verify-interval-ms`. Use `--no-wait-confirmation` to refetch immediately; this can show stale `getidentity` state because `updateidentity` returns a transaction id before the update is mined and confirmed.
 
@@ -541,7 +541,7 @@ Example response:
 
 ```json
 {
-  "identity": "myname.fum@",
+  "identity": "myname.vdns@",
   "domain": "www.myname.vdns",
   "host": "www",
   "records": [],
@@ -551,11 +551,11 @@ Example response:
 
 ## Domain Mapping
 
-With `VDNS_ROOT_IDENTITY=fum@` and `VDNS_TLD=vdns`:
+With `VDNS_ROOT_IDENTITY=vdns@` and `VDNS_TLD=vdns`:
 
-- `myname.vdns` -> `myname.fum@`, host `@`
-- `www.myname.vdns` -> `myname.fum@`, host `www`
-- `api.myname.vdns` -> `myname.fum@`, host `api`
+- `myname.vdns` -> `myname.vdns@`, host `@`
+- `www.myname.vdns` -> `myname.vdns@`, host `www`
+- `api.myname.vdns` -> `myname.vdns@`, host `api`
 
 With `VDNS_ROOT_IDENTITY=VERUSNAMESERVICE@`:
 
@@ -600,7 +600,7 @@ Manual flow:
 
 ```sh
 VDNS_MODE=rpc \
-VDNS_ROOT_IDENTITY=fum@ \
+VDNS_ROOT_IDENTITY=vdns@ \
 VDNS_TLD=vdns \
 VERUS_RPC_URL=http://192.168.0.106:18843 \
 VERUS_RPC_USER=... \
@@ -713,7 +713,7 @@ Start the vDNS HTTP resolver in RPC mode:
 
 ```sh
 VDNS_MODE=rpc \
-VDNS_ROOT_IDENTITY=fum@ \
+VDNS_ROOT_IDENTITY=vdns@ \
 VDNS_TLD=vdns \
 VERUS_RPC_URL=http://192.168.0.106:18843 \
 VERUS_RPC_USER=... \

@@ -6,7 +6,7 @@ By default it preserves the original redirect-only behavior. Proxying is opt-in 
 
 ## REDIRECT Flow
 
-For `chainvue.vdns`, the identity `chainvue.fum@` can contain:
+For `chainvue.vdns`, the identity `chainvue.vdns@` can contain:
 
 ```text
 REDIRECT @ -> http://chainvue.io/
@@ -17,7 +17,7 @@ The `A` record lets local split-DNS resolve `chainvue.vdns` to `127.0.0.1`. The 
 
 ## PROXY Flow
 
-For `chainvue.vdns`, the identity `chainvue.fum@` can also contain:
+For `chainvue.vdns`, the identity `chainvue.vdns@` can also contain:
 
 ```text
 PROXY @ -> https://chainvue.io/

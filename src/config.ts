@@ -29,7 +29,7 @@ const intFromEnv = (name: string, value: string | undefined, fallback: number): 
 
 export function loadConfigFromEnv(env: NodeJS.ProcessEnv = process.env): VdnsConfig {
   const resolvedEnv = applyVdnsEnvCompatibility({ ...env });
-  const rootIdentity = envValueWithDefault(resolvedEnv, "VDNS_ROOT_IDENTITY", "VNS_ROOT_IDENTITY", "fum@");
+  const rootIdentity = envValueWithDefault(resolvedEnv, "VDNS_ROOT_IDENTITY", "VNS_ROOT_IDENTITY", "vdns@");
   const tld = envValueWithDefault(resolvedEnv, "VDNS_TLD", "VNS_TLD", "vdns");
   const defaultTtl = intFromEnv("VDNS_DEFAULT_TTL", envValue(resolvedEnv, "VDNS_DEFAULT_TTL", "VNS_DEFAULT_TTL"), 300);
   const mode = envValueWithDefault(resolvedEnv, "VDNS_MODE", "VNS_MODE", "rpc");
