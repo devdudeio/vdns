@@ -193,6 +193,74 @@ describe("vdns CLI", () => {
     expect(result.exitCode).toBeUndefined();
   });
 
+  it("uses VERUS_WRITE_RPC_URL for record remove commands", async () => {
+    const client = makeClient({
+      identity: "dude@",
+      contentmultimap: {
+        "id:dude.vdns::vdns.record": [{ version: 1, type: "TXT", name: "@", value: "remove", ttl: 300 }]
+      }
+    });
+    const result = await run([
+      "record",
+      "remove",
+      "dude@",
+      "TXT",
+      "@",
+      "--root",
+      "dude@",
+      "--yes"
+    ], client, {
+      VERUS_RPC_URL: "https://api.verustest.net/",
+      VERUS_WRITE_RPC_URL: "http://127.0.0.1:18843",
+      VERUS_WRITE_RPC_USER: "writer",
+      VERUS_WRITE_RPC_PASSWORD: "secret"
+    });
+
+    expect(result.rpcClientFactory).toHaveBeenCalledWith(expect.objectContaining({
+      url: "http://127.0.0.1:18843",
+      user: "writer",
+      password: "secret"
+    }));
+    expect(result.exitCode).toBeUndefined();
+  });
+
+  it("uses VERUS_WRITE_RPC_URL for site publish commands", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "vdns-site-publish-"));
+    try {
+      await writeFile(path.join(dir, "index.html"), "<main>home</main>");
+      const client = makeClient({ identity: "dude@", contentmultimap: {} });
+      const result = await run([
+        "site",
+        "publish",
+        dir,
+        "dude@",
+        "--manifest-uri",
+        "https://cdn.example/manifest.json",
+        "--base-uri",
+        "https://cdn.example/site/",
+        "--manifest-out",
+        path.join(dir, "manifest.json"),
+        "--root",
+        "dude@",
+        "--yes"
+      ], client, {
+        VERUS_RPC_URL: "https://api.verustest.net/",
+        VERUS_WRITE_RPC_URL: "http://127.0.0.1:18843",
+        VERUS_WRITE_RPC_USER: "writer",
+        VERUS_WRITE_RPC_PASSWORD: "secret"
+      });
+
+      expect(result.rpcClientFactory).toHaveBeenCalledWith(expect.objectContaining({
+        url: "http://127.0.0.1:18843",
+        user: "writer",
+        password: "secret"
+      }));
+      expect(result.exitCode).toBeUndefined();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("sets records with --yes by fetching first, merging, previewing, and updating", async () => {
     const client = makeClient({
       identity: "dude@",

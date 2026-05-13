@@ -228,7 +228,7 @@ export function createCliProgram(options: CliOptions = {}): Command {
       const command = record.commands.find((candidate) => candidate.name() === "remove");
       const global = readGlobalOptions(program, env, command);
       warnDefaultRootForWrite(io, global);
-      const client = rpcClientFactory(requireRpcOptions(program, env, command));
+      const client = rpcClientFactory(requireWriteRpcOptions(program, env, command));
       const targetIdentity = normalizeIdentityNameForUpdate(identityName);
       const type = parseRecordType(typeInput);
       const rawIdentity = await fetchRawIdentityOrExit(client, targetIdentity);
@@ -322,7 +322,7 @@ export function createCliProgram(options: CliOptions = {}): Command {
       const command = site.commands.find((candidate) => candidate.name() === "publish");
       const global = readGlobalOptions(program, env, command);
       warnDefaultRootForWrite(io, global);
-      const client = rpcClientFactory(requireRpcOptions(program, env, command));
+      const client = rpcClientFactory(requireWriteRpcOptions(program, env, command));
       const targetIdentity = normalizeIdentityNameForUpdate(identityName);
       const manifest = await buildSiteManifest(dir, {
         ...(commandOptions.baseUri ? { baseUri: commandOptions.baseUri } : {}),
