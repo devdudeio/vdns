@@ -23,6 +23,7 @@ import { extractTxidFromUpdateIdentityResult, waitForTxConfirmation } from "../c
 import { buildUpdateIdentityPayload, type UpdateIdentityPayload } from "../core/updateIdentityPayload.js";
 import { buildVdnsVdxfKeyNames, resolveVdnsVdxfIds, type VdnsVdxfIds } from "../core/vdxf.js";
 import { buildSiteManifest, inspectSiteManifest, loadSiteManifest, sha256Hex, writeSiteManifest } from "../core/site.js";
+import { loadEnvFiles } from "../env.js";
 import { applyVdnsEnvCompatibility } from "../envCompat.js";
 import { VerusRpcClient } from "../rpc/verusRpcClient.js";
 
@@ -69,7 +70,11 @@ class CliExitError extends Error {
 }
 
 export function createCliProgram(options: CliOptions = {}): Command {
-  const env = applyVdnsEnvCompatibility({ ...(options.env ?? process.env) });
+  const rawEnv = { ...(options.env ?? process.env) };
+  if (!options.env || rawEnv.VDNS_ENV_FILE) {
+    loadEnvFiles({ env: rawEnv });
+  }
+  const env = applyVdnsEnvCompatibility(rawEnv);
   const io = options.io ?? { stdout: process.stdout, stderr: process.stderr, stdin: process.stdin };
   const rpcClientFactory = options.rpcClientFactory ?? ((rpcOptions) => new VerusRpcClient(cleanRpcOptions(rpcOptions)) as RpcClient);
   const program = new Command();

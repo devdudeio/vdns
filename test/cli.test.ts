@@ -114,6 +114,29 @@ describe("vdns CLI", () => {
     expect(result.exitCode).toBe(1);
   });
 
+  it("loads the configured vDNS env file for RPC commands", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "vdns-cli-"));
+    try {
+      const envFile = path.join(tempDir, ".env.local");
+      await writeFile(envFile, [
+        "VERUS_RPC_URL=http://127.0.0.1:18843",
+        "VDNS_ROOT_IDENTITY=dude@",
+        "VDNS_TLD=vdns"
+      ].join("\n"));
+      const result = await run(["identity", "raw", "dude@"], makeClient(), { VDNS_ENV_FILE: envFile });
+
+      expect(result.rpcClientFactory).toHaveBeenCalledWith({
+        url: "http://127.0.0.1:18843",
+        user: undefined,
+        password: undefined,
+        timeoutMs: undefined
+      });
+      expect(result.exitCode).toBeUndefined();
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it("exits 2 for missing raw identities", async () => {
     const client = makeClient(null);
     const result = await run(["identity", "raw", "missing@"], client);
