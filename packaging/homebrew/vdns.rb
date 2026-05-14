@@ -1,8 +1,8 @@
 class Vdns < Formula
   desc "VerusID-native DNS-compatible local resolver and web gateway"
   homepage "https://github.com/devdudeio/vdns"
-  url "https://github.com/devdudeio/vdns/releases/download/v0.2.4/vdns-0.2.4.tar.gz"
-  sha256 "54c8fa37ed8235cfd73699e6b6c8b48c0426458319dbcf16409ee98e1d565cb8"
+  url "https://github.com/devdudeio/vdns/releases/download/v0.2.5/vdns-0.2.5.tar.gz"
+  sha256 "a38009163366e8ad7759d2d3a549e3ed35541ebec264a8bbbb83f623ed06a1c3"
   license "MIT"
 
   depends_on "node"

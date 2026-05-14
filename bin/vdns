@@ -312,7 +312,7 @@ bootstrap_ca_trusted() {
 run_bootstrap() {
   local yes=0 force=0 root_identity="vdns@" tld="vdns" rpc_url="https://api.verustest.net/"
   local write_rpc_url="" write_rpc_user="" write_rpc_password="" redirect_domain=""
-  local no_https=0 no_install=0 no_start=0 no_verify=0
+  local no_https=0 no_install=0 no_start=0 no_verify=0 did_install=0
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -385,9 +385,15 @@ run_bootstrap() {
     echo
     echo "Service install writes /etc/resolver/${tld} and vDNS launchd service files, including a root LaunchDaemon."
     bootstrap_run_step "Installing vDNS services" "vdns install" "${REAL_SELF}" install
+    did_install=1
   fi
 
   if [[ "${no_start}" != "1" ]]; then
+    if [[ "${did_install}" == "1" ]]; then
+      echo
+      echo "Reloading vDNS launchd jobs so updated service files are used."
+      bootstrap_run_step "Stopping existing vDNS services" "vdns stop" "${REAL_SELF}" stop
+    fi
     echo
     echo "Service start bootstraps launchd jobs, including the root LaunchDaemon for ports 80/443."
     bootstrap_run_step "Starting vDNS services" "vdns start" "${REAL_SELF}" start

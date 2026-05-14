@@ -232,8 +232,8 @@ async function isCaTrusted(cert: string): Promise<boolean | "unknown"> {
     return false;
   }
   try {
-    await execFileAsync("security", ["find-certificate", "-Z", "-a", "-c", "vDNS Local Root CA", "/Library/Keychains/System.keychain"]);
-    return true;
+    const { stdout } = await execFileAsync("security", ["find-certificate", "-Z", "-a", "-c", "vDNS Local Root CA", "/Library/Keychains/System.keychain"]);
+    return stdout.toUpperCase().includes(`SHA-1 HASH: ${fingerprint.toUpperCase()}`);
   } catch {
     return false;
   }

@@ -1,6 +1,6 @@
 {
   "name": "vdns",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "VerusID-native local DNS and web gateway",
   "type": "module",
   "private": false,

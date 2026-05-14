@@ -71,7 +71,7 @@ async function checkHttps(ctx: DoctorContext, execFile: ExecFile, fetchImpl: Fet
     fix: `chmod 600 ${paths.caKey}`
   });
 
-  const trusted = process.platform === "darwin" && status.caCertExists ? await checkCaTrusted(execFile) : "unknown";
+  const trusted = process.platform === "darwin" && status.caCertExists ? await checkCaTrusted(execFile, paths.caCert) : "unknown";
   results.push({
     section: "HTTPS",
     status: trusted === true ? "PASS" : "WARN",
@@ -548,13 +548,25 @@ async function commandExists(execFile: ExecFile, command: string): Promise<boole
   return which.status === 0;
 }
 
-async function checkCaTrusted(execFile: ExecFile): Promise<boolean | "unknown"> {
+async function checkCaTrusted(execFile: ExecFile, caCert: string): Promise<boolean | "unknown"> {
   const security = await commandExists(execFile, "security");
   if (!security) {
     return "unknown";
   }
-  const result = await execFile("security", ["find-certificate", "-a", "-c", "vDNS Local Root CA", "/Library/Keychains/System.keychain"], 3000);
-  return result.status === 0 && result.stdout.includes("vDNS Local Root CA");
+  const fingerprint = await caFingerprint(execFile, caCert);
+  if (!fingerprint) {
+    return false;
+  }
+  const result = await execFile("security", ["find-certificate", "-Z", "-a", "-c", "vDNS Local Root CA", "/Library/Keychains/System.keychain"], 3000);
+  return result.status === 0 && result.stdout.toUpperCase().includes(`SHA-1 HASH: ${fingerprint.toUpperCase()}`);
+}
+
+async function caFingerprint(execFile: ExecFile, caCert: string): Promise<string | null> {
+  const result = await execFile("openssl", ["x509", "-in", caCert, "-noout", "-fingerprint", "-sha1"], 3000);
+  if (result.status !== 0) {
+    return null;
+  }
+  return result.stdout.trim().split("=")[1]?.replaceAll(":", "") ?? null;
 }
 
 async function defaultExecFile(file: string, args: string[], timeoutMs = 5000): Promise<ExecResult> {
