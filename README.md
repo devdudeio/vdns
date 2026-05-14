@@ -44,22 +44,22 @@ After setup and service start:
 vdns status
 vdns doctor
 vdns demo
-curl -i --max-time 10 http://chainvue.vdns
+curl -i --max-time 10 http://demo-redirect.vdns
 ```
 
 Expected demo records:
 
 ```text
-google.vdns    -> A 142.250.181.238
-chainvue.vdns  -> REDIRECT http://chainvue.io/
-verus.vdns     -> PROXY https://verus.io/
+demo-proxy.vdns     -> A 127.0.0.1
+demo-proxy.vdns     -> PROXY https://verus.io/
+demo-redirect.vdns  -> REDIRECT https://verus.io/
 ```
 
-On macOS, `dig google.vdns` may not use `/etc/resolver`. Prefer:
+On macOS, `dig demo-proxy.vdns` may not use `/etc/resolver`. Prefer:
 
 ```sh
-dscacheutil -q host -a name google.vdns
-dig @127.0.0.1 -p 1053 google.vdns A +short
+dscacheutil -q host -a name demo-proxy.vdns
+dig @127.0.0.1 -p 1053 demo-proxy.vdns A +short
 ```
 
 ## How It Works
@@ -194,11 +194,11 @@ VerusID records -> HTTP resolver -> CoreDNS -> macOS split-DNS -> local HTTP gat
 It verifies:
 
 - the HTTP resolver is running in RPC mode
-- `google.vdns` resolves to `142.250.181.238`
-- `chainvue.vdns` resolves to `127.0.0.1`
-- the `chainvue.vdns` VerusID record contains `REDIRECT -> http://chainvue.io/`
-- the `verus.vdns` VerusID record contains `PROXY -> https://verus.io/`
-- `curl -I http://verus.vdns` returns `x-vdns-proxy: 1` with target host `verus.io`
+- `demo-proxy.vdns` resolves to `127.0.0.1`
+- `demo-redirect.vdns` resolves to `127.0.0.1`
+- the `demo-redirect.vdns` VerusID record contains `REDIRECT -> https://verus.io/`
+- the `demo-proxy.vdns` VerusID record contains `PROXY -> https://verus.io/`
+- `curl -I http://demo-proxy.vdns` returns `x-vdns-proxy: 1` with target host `verus.io`
 
 Expected final output:
 
@@ -213,10 +213,10 @@ The demo uses these defaults, which can be overridden for another showcase ident
 | --- | --- |
 | `VDNS_DEMO_GOOGLE_HOST` | `google.vdns` |
 | `VDNS_DEMO_GOOGLE_A` | `142.250.181.238` |
-| `VDNS_DEMO_REDIRECT_HOST` | `chainvue.vdns` |
+| `VDNS_DEMO_REDIRECT_HOST` | `demo-redirect.vdns` |
 | `VDNS_DEMO_REDIRECT_A` | `127.0.0.1` |
-| `VDNS_DEMO_REDIRECT_LOCATION` | `http://chainvue.io/` |
-| `VDNS_DEMO_PROXY_HOST` | `verus.vdns` |
+| `VDNS_DEMO_REDIRECT_LOCATION` | `https://verus.io/` |
+| `VDNS_DEMO_PROXY_HOST` | `demo-proxy.vdns` |
 | `VDNS_DEMO_PROXY_TARGET_HOST` | `verus.io` |
 
 If the demo fails, run:
@@ -259,21 +259,19 @@ At minimum, set `VERUS_RPC_URL` and replace `VERUS_RPC_PASSWORD=replace_me` for 
 The demo assumes these records exist under `VDNS_ROOT_IDENTITY=vdns@` and `VDNS_TLD=vdns`:
 
 ```text
-google.vdns@:   A @ -> 142.250.181.238
-chainvue.vdns@: A @ -> 127.0.0.1
-chainvue.vdns@: REDIRECT @ -> http://chainvue.io/ status 302
-verus.vdns@:    A @ -> 127.0.0.1
-verus.vdns@:    PROXY @ -> https://verus.io/
+demo-proxy.vdns@:    A @ -> 127.0.0.1
+demo-proxy.vdns@:    PROXY @ -> https://verus.io/
+demo-redirect.vdns@: A @ -> 127.0.0.1
+demo-redirect.vdns@: REDIRECT @ -> https://verus.io/ status 302
 ```
 
 The `vdns` CLI can prepare those writes:
 
 ```sh
-node dist/cli/index.js record set google.vdns@ A @ 142.250.181.238 --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
-node dist/cli/index.js record set chainvue.vdns@ A @ 127.0.0.1 --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
-node dist/cli/index.js record set chainvue.vdns@ REDIRECT @ http://chainvue.io/ --status 302 --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
-node dist/cli/index.js record set verus.vdns@ A @ 127.0.0.1 --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
-node dist/cli/index.js record set verus.vdns@ PROXY @ https://verus.io/ --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set demo-proxy.vdns@ A @ 127.0.0.1 --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set demo-proxy.vdns@ PROXY @ https://verus.io/ --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set demo-redirect.vdns@ A @ 127.0.0.1 --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
+node dist/cli/index.js record set demo-redirect.vdns@ REDIRECT @ https://verus.io/ --status 302 --ttl 300 --root vdns@ --tld vdns --verify --confirmations 1
 ```
 
 Start the local vDNS stack:
@@ -294,13 +292,13 @@ pnpm vdns:demo
 Expected checks:
 
 ```sh
-dscacheutil -q host -a name google.vdns
-dscacheutil -q host -a name chainvue.vdns
-curl -i --max-time 10 http://chainvue.vdns
-curl -I --max-time 20 http://verus.vdns
+dscacheutil -q host -a name demo-proxy.vdns
+dscacheutil -q host -a name demo-redirect.vdns
+curl -i --max-time 10 http://demo-redirect.vdns
+curl -I --max-time 20 http://demo-proxy.vdns
 ```
 
-`chainvue.vdns` should return `302` with `Location: http://chainvue.io/`.
+`demo-redirect.vdns` should return `302` with `Location: https://verus.io/`.
 
 Stop local services:
 
@@ -326,7 +324,7 @@ pnpm vdns:stop
 pnpm vdns:uninstall
 ```
 
-`pnpm vdns:install`, `pnpm vdns:start`, `pnpm vdns:stop`, and `pnpm vdns:uninstall` install and manage launchd jobs. The HTTP resolver and CoreDNS run as user LaunchAgents. The browser-style gateway runs as a root LaunchDaemon because `http://chainvue.vdns` requires binding privileged port `80`; HTTPS can also bind privileged port `443`.
+`pnpm vdns:install`, `pnpm vdns:start`, `pnpm vdns:stop`, and `pnpm vdns:uninstall` install and manage launchd jobs. The HTTP resolver and CoreDNS run as user LaunchAgents. The browser-style gateway runs as a root LaunchDaemon because browser-style URLs such as `http://demo-redirect.vdns` require binding privileged port `80`; HTTPS can also bind privileged port `443`.
 
 See [docs/macos-services.md](docs/macos-services.md) for installed plist paths, logs, troubleshooting, uninstall options, and alpha limitations.
 
@@ -382,12 +380,12 @@ Run the local web gateway in a second terminal:
 VDNS_PROXY_ENABLED=true VDNS_RESOLVER_URL=http://127.0.0.1:8080 VDNS_GATEWAY_PORT=8081 pnpm redirect:dev
 ```
 
-For the local gateway demo, `chainvue.vdns@` should contain `A @ -> 127.0.0.1` and `REDIRECT @ -> http://chainvue.io/`; `verus.vdns@` should contain `A @ -> 127.0.0.1` and `PROXY @ -> https://verus.io/`. With `VDNS_PROXY_ENABLED=true`, PROXY records are served before REDIRECT fallback. Then test:
+For the local gateway demo, `demo-redirect.vdns@` should contain `A @ -> 127.0.0.1` and `REDIRECT @ -> https://verus.io/`; `demo-proxy.vdns@` should contain `A @ -> 127.0.0.1` and `PROXY @ -> https://verus.io/`. With `VDNS_PROXY_ENABLED=true`, PROXY records are served before REDIRECT fallback. Then test:
 
 ```sh
 curl http://127.0.0.1:8081/health
-curl "http://127.0.0.1:8081/debug/resolve?host=chainvue.vdns"
-curl -i -H "Host: chainvue.vdns" http://127.0.0.1:8081/
+curl "http://127.0.0.1:8081/debug/resolve?host=demo-redirect.vdns"
+curl -i -H "Host: demo-redirect.vdns" http://127.0.0.1:8081/
 ```
 
 By default the web gateway only returns HTTP redirects. `REDIRECT` changes the browser URL to the target site and is the more robust mode. With `VDNS_PROXY_ENABLED=true`, `PROXY @` records are proxied before falling back to `REDIRECT @`; `PROXY` keeps the `.vdns` URL in the browser, supports only `GET` and `HEAD` in V1, and is experimental/best-effort. Proxying forwards paths and queries, follows a small number of validated upstream redirects server-side, strips hop-by-hop and problematic browser-security/session headers, rejects same-host loops and explicit localhost/private targets, and does not expose resolver/RPC credentials. Complex sites may still break because of CSP, cookies, absolute URLs, auth/OAuth, service workers, WebSockets, CORS, and the lack of HTTPS `.vdns`. `VDNS_PROXY_ALLOW_PRIVATE_TARGETS=true` is unsafe and only for advanced local development. DNS rebinding protection is not implemented in V1; literal private/internal IPs and obvious localhost names are blocked.
@@ -397,7 +395,7 @@ For normal local HTTP on macOS:
 ```sh
 pnpm build
 sudo scripts/macos/start-redirect-port80.sh
-curl -i --max-time 10 http://chainvue.vdns
+curl -i --max-time 10 http://demo-redirect.vdns
 ```
 
 Stop the port 80 redirect service with:
@@ -535,7 +533,7 @@ curl http://localhost:8080/resolve/VDNSTEST@
 
 `/debug/config` reports only safe RPC details such as whether a URL/auth is configured and the parseable URL host. It never returns credentials or the full RPC URL.
 
-Missing identities return `404` from `/resolve/:identity`, `/resolve-domain/:domain`, and `/debug/raw-identity/:identity`. Existing identities without `VDNS.vdns::record` return `records: []` with parser warnings.
+Missing identities return `404` from `/resolve/:identity`, `/resolve-domain/:domain`, and `/debug/raw-identity/:identity`. Existing identities without `vdns.vdns::vdns.record` return `records: []` with parser warnings.
 
 Example response:
 
@@ -644,7 +642,7 @@ google.vdns. 300 IN A 142.250.181.238
 For a name that currently has only a vDNS `REDIRECT` record:
 
 ```sh
-dig @127.0.0.1 -p 1053 chainvue.vdns A
+dig @127.0.0.1 -p 1053 demo-redirect.vdns A
 ```
 
 That should return `NOERROR` with no answers, because `REDIRECT` is not an `A` record.
@@ -761,18 +759,18 @@ dig @127.0.0.1 -p 1053 google.vdns A +short
 
 ## Making `http://*.vdns` Work On macOS
 
-macOS split-DNS and CoreDNS make `chainvue.vdns` resolve to `127.0.0.1`. A normal URL like `http://chainvue.vdns` then connects to port `80`, not port `8081`.
+macOS split-DNS and CoreDNS make `demo-redirect.vdns` resolve to `127.0.0.1`. A normal URL like `http://demo-redirect.vdns` then connects to port `80`, not port `8081`.
 
 If the redirect service is running on `8081`, this Host-header test can pass:
 
 ```sh
-curl -i -H "Host: chainvue.vdns" http://127.0.0.1:8081/
+curl -i -H "Host: demo-redirect.vdns" http://127.0.0.1:8081/
 ```
 
 while this still fails because no redirect service is listening on `127.0.0.1:80`:
 
 ```sh
-curl -i --max-time 10 http://chainvue.vdns
+curl -i --max-time 10 http://demo-redirect.vdns
 ```
 
 Start the built redirect service directly on port `80`:

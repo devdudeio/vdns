@@ -155,8 +155,8 @@ async function verifyHttps(): Promise<boolean> {
   const checks: Array<{ label: string; ok: boolean; message: string }> = [];
   const status = await caStatus();
   const enabled = (process.env.VDNS_HTTPS_ENABLED ?? "false").toLowerCase() === "true";
-  const proxyDomain = process.env.VDNS_DOCTOR_PROXY_DOMAIN ?? `verus.${process.env.VDNS_TLD ?? "vdns"}`;
-  const redirectDomain = process.env.VDNS_DOCTOR_REDIRECT_DOMAIN ?? `chainvue.${process.env.VDNS_TLD ?? "vdns"}`;
+  const proxyDomain = process.env.VDNS_DOCTOR_PROXY_DOMAIN ?? `demo-proxy.${process.env.VDNS_TLD ?? "vdns"}`;
+  const redirectDomain = process.env.VDNS_DOCTOR_REDIRECT_DOMAIN ?? `demo-redirect.${process.env.VDNS_TLD ?? "vdns"}`;
   const aDomain = process.env.VDNS_DOCTOR_A_DOMAIN ?? proxyDomain;
 
   checks.push({ label: "CA cert", ok: status.caCertExists, message: status.caCertExists ? status.paths.caCert : "missing" });

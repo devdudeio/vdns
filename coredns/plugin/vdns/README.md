@@ -57,7 +57,7 @@ Start the vDNS HTTP resolver in RPC mode:
 
 ```sh
 VDNS_MODE=rpc \
-VDNS_ROOT_IDENTITY=fum@ \
+VDNS_ROOT_IDENTITY=vdns@ \
 VDNS_TLD=vdns \
 VERUS_RPC_URL=http://192.168.0.106:18843 \
 VERUS_RPC_USER=... \

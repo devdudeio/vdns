@@ -100,14 +100,14 @@ else
 fi
 
 vdns_section "Resolution Checks"
-echo "$ dig @127.0.0.1 -p ${VDNS_DNS_PORT} google.${VDNS_TLD} A +short"
-vdns_timeout 5 dig +time=2 +tries=1 @127.0.0.1 -p "${VDNS_DNS_PORT}" "google.${VDNS_TLD}" A +short
-echo "$ dscacheutil -q host -a name google.${VDNS_TLD}"
-vdns_timeout 8 dscacheutil -q host -a name "google.${VDNS_TLD}"
-echo "$ dscacheutil -q host -a name chainvue.${VDNS_TLD}"
-vdns_timeout 8 dscacheutil -q host -a name "chainvue.${VDNS_TLD}"
+echo "$ dig @127.0.0.1 -p ${VDNS_DNS_PORT} demo-proxy.${VDNS_TLD} A +short"
+vdns_timeout 5 dig +time=2 +tries=1 @127.0.0.1 -p "${VDNS_DNS_PORT}" "demo-proxy.${VDNS_TLD}" A +short
+echo "$ dscacheutil -q host -a name demo-proxy.${VDNS_TLD}"
+vdns_timeout 8 dscacheutil -q host -a name "demo-proxy.${VDNS_TLD}"
+echo "$ dscacheutil -q host -a name demo-redirect.${VDNS_TLD}"
+vdns_timeout 8 dscacheutil -q host -a name "demo-redirect.${VDNS_TLD}"
 
 vdns_section "Gateway PROXY Check"
-echo "$ curl -I --max-time 10 http://chainvue.${VDNS_TLD}"
-vdns_timeout 12 curl -I --max-time 10 "http://chainvue.${VDNS_TLD}" 2>&1 |
+echo "$ curl -I --max-time 10 http://demo-redirect.${VDNS_TLD}"
+vdns_timeout 12 curl -I --max-time 10 "http://demo-redirect.${VDNS_TLD}" 2>&1 |
   awk 'BEGIN { IGNORECASE=1 } /^HTTP\// || /^x-vdns-/ { print }'

@@ -144,7 +144,7 @@ func TestServeDNSSupportedQTypes(t *testing.T) {
 
 func TestServeDNSNoRecordsReturnsNoErrorNoAnswers(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, `{"identity":"google.fum@","domain":"google.vdns","host":"@","records":[],"warnings":[]}`)
+		fmt.Fprint(w, `{"identity":"google.vdns@","domain":"google.vdns","host":"@","records":[],"warnings":[]}`)
 	}))
 	defer server.Close()
 
@@ -231,7 +231,7 @@ func serveDNS(t *testing.T, resolverURL string, qname string, qtype uint16) *dns
 }
 
 func recordResponse(record string) string {
-	return `{"identity":"google.fum@","domain":"google.vdns","host":"@","records":[` + record + `],"warnings":[]}`
+	return `{"identity":"google.vdns@","domain":"google.vdns","host":"@","records":[` + record + `],"warnings":[]}`
 }
 
 type resolverClientFunc func(context.Context, string, string) (*ResolveResult, error)

@@ -1,4 +1,16 @@
 export const VDNS_VDXF_KEYS = {
+  RECORD: "vdns.vdns::vdns.record",
+  DNS_A: "vdns.vdns::vdns.dns.a",
+  DNS_AAAA: "vdns.vdns::vdns.dns.aaaa",
+  DNS_CNAME: "vdns.vdns::vdns.dns.cname",
+  DNS_TXT: "vdns.vdns::vdns.dns.txt",
+  WEB_REDIRECT: "vdns.vdns::vdns.web.redirect",
+  WEB_PROXY: "vdns.vdns::vdns.web.proxy",
+  WEB_SITE: "vdns.vdns::vdns.web.site",
+  TLS_FINGERPRINT: "vdns.vdns::vdns.tls.fingerprint"
+} as const;
+
+export const LEGACY_VDNS_VDXF_KEYS = {
   RECORD: "VDNS.vdns::record",
   DNS_A: "VDNS.vdns::dns.a",
   DNS_AAAA: "VDNS.vdns::dns.aaaa",

@@ -75,13 +75,13 @@ Type-specific fields:
 
 ## Contentmultimap Shape
 
-Fixtures may use symbolic VDXF placeholder keys. Records are parsed from `contentmultimap["VDNS.vdns::record"]` in fixture mode, and the CLI can inspect records under resolved VDXF IDs.
+Fixtures may use symbolic VDXF placeholder keys. Records are parsed from `contentmultimap["vdns.vdns::vdns.record"]` in fixture mode, and the CLI can inspect records under resolved VDXF IDs. Older `VDNS.vdns::record` and `VNS.vrsc::record` entries are accepted only as migration fallbacks.
 
 ```json
 {
   "identity": "myname.vdns@",
   "contentmultimap": {
-    "VDNS.vdns::record": [
+    "vdns.vdns::vdns.record": [
       {
         "version": 1,
         "type": "A",

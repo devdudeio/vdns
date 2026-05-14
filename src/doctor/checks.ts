@@ -84,8 +84,8 @@ async function checkHttps(ctx: DoctorContext, execFile: ExecFile, fetchImpl: Fet
   results.push({ ...httpsPort, section: "HTTPS", strictFailure: strictHttps });
 
   if (enabled) {
-    const proxyDomain = ctx.env.VDNS_DOCTOR_PROXY_DOMAIN ?? `verus.${ctx.env.VDNS_TLD ?? "vdns"}`;
-    const redirectDomain = ctx.env.VDNS_DOCTOR_REDIRECT_DOMAIN ?? `chainvue.${ctx.env.VDNS_TLD ?? "vdns"}`;
+    const proxyDomain = ctx.env.VDNS_DOCTOR_PROXY_DOMAIN ?? `demo-proxy.${ctx.env.VDNS_TLD ?? "vdns"}`;
+    const redirectDomain = ctx.env.VDNS_DOCTOR_REDIRECT_DOMAIN ?? `demo-redirect.${ctx.env.VDNS_TLD ?? "vdns"}`;
     try {
       const response = await curlHead(execFile, `https://${proxyDomain}`);
       const proxy = response.headers["x-vdns-proxy"];
@@ -289,7 +289,7 @@ async function checkServices(ctx: DoctorContext, execFile: ExecFile, fetchImpl: 
   if (!dig) {
     results.push({ section: "Services", status: "WARN", label: "dig", message: "dig is unavailable", fix: "brew install bind" });
   } else {
-    const domain = ctx.env.VDNS_DOCTOR_A_DOMAIN ?? `google.${ctx.env.VDNS_TLD ?? "vdns"}`;
+    const domain = ctx.env.VDNS_DOCTOR_A_DOMAIN ?? `demo-proxy.${ctx.env.VDNS_TLD ?? "vdns"}`;
     const result = await execFile("dig", ["@127.0.0.1", "-p", dnsPort, domain, "A", "+short"], 5000);
     results.push({
       section: "Services",
@@ -367,7 +367,7 @@ async function checkMacDns(ctx: DoctorContext, execFile: ExecFile): Promise<Chec
 
   const dscacheutil = await commandExists(execFile, "dscacheutil");
   if (dscacheutil) {
-    const domain = ctx.env.VDNS_DOCTOR_A_DOMAIN ?? `google.${tld}`;
+    const domain = ctx.env.VDNS_DOCTOR_A_DOMAIN ?? `demo-proxy.${tld}`;
     const result = await execFile("dscacheutil", ["-q", "host", "-a", "name", domain], 5000);
     results.push({
       section: "macOS DNS",
@@ -381,8 +381,8 @@ async function checkMacDns(ctx: DoctorContext, execFile: ExecFile): Promise<Chec
 }
 
 async function checkWeb(ctx: DoctorContext, execFile: ExecFile, fetchImpl: FetchLike): Promise<CheckResult[]> {
-  const redirectDomain = ctx.env.VDNS_DOCTOR_REDIRECT_DOMAIN ?? `chainvue.${ctx.env.VDNS_TLD ?? "vdns"}`;
-  const proxyDomain = ctx.env.VDNS_DOCTOR_PROXY_DOMAIN ?? `verus.${ctx.env.VDNS_TLD ?? "vdns"}`;
+  const redirectDomain = ctx.env.VDNS_DOCTOR_REDIRECT_DOMAIN ?? `demo-redirect.${ctx.env.VDNS_TLD ?? "vdns"}`;
+  const proxyDomain = ctx.env.VDNS_DOCTOR_PROXY_DOMAIN ?? `demo-proxy.${ctx.env.VDNS_TLD ?? "vdns"}`;
   return [
     await checkPort(execFile, "Web gateway", "TCP", "80", "127.0.0.1"),
     await checkRedirect(fetchImpl, redirectDomain),
@@ -429,9 +429,9 @@ async function checkProxy(fetchImpl: FetchLike, domain: string): Promise<CheckRe
 async function checkRecords(ctx: DoctorContext, fetchImpl: FetchLike): Promise<CheckResult[]> {
   const resolverUrl = ctx.env.VDNS_RESOLVER_URL ?? `http://127.0.0.1:${ctx.env.PORT ?? "8080"}`;
   const domains = [
-    ["A", ctx.env.VDNS_DOCTOR_A_DOMAIN ?? `google.${ctx.env.VDNS_TLD ?? "vdns"}`],
-    ["REDIRECT", ctx.env.VDNS_DOCTOR_REDIRECT_DOMAIN ?? `chainvue.${ctx.env.VDNS_TLD ?? "vdns"}`],
-    ["PROXY", ctx.env.VDNS_DOCTOR_PROXY_DOMAIN ?? `verus.${ctx.env.VDNS_TLD ?? "vdns"}`]
+    ["A", ctx.env.VDNS_DOCTOR_A_DOMAIN ?? `demo-proxy.${ctx.env.VDNS_TLD ?? "vdns"}`],
+    ["REDIRECT", ctx.env.VDNS_DOCTOR_REDIRECT_DOMAIN ?? `demo-redirect.${ctx.env.VDNS_TLD ?? "vdns"}`],
+    ["PROXY", ctx.env.VDNS_DOCTOR_PROXY_DOMAIN ?? `demo-proxy.${ctx.env.VDNS_TLD ?? "vdns"}`]
   ] as const;
   const results: CheckResult[] = [];
   for (const [type, domain] of domains) {

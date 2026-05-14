@@ -59,15 +59,15 @@ Logs live in `~/.vdns/logs`.
 ## Demo Checks
 
 ```sh
-dig @127.0.0.1 -p 1053 google.vdns A +short
-dscacheutil -q host -a name google.vdns
-curl -i --max-time 10 http://chainvue.vdns
-curl -I --max-time 20 http://verus.vdns
+dig @127.0.0.1 -p 1053 demo-proxy.vdns A +short
+dscacheutil -q host -a name demo-proxy.vdns
+curl -i --max-time 10 http://demo-redirect.vdns
+curl -I --max-time 20 http://demo-proxy.vdns
 ```
 
-`chainvue.vdns` should return `302` with `Location: http://chainvue.io/`. `verus.vdns` should include `x-vdns-proxy: 1` and `x-vdns-proxy-target-host: verus.io`.
+`demo-redirect.vdns` should return `302` with `Location: https://verus.io/`. `demo-proxy.vdns` should include `x-vdns-proxy: 1` and `x-vdns-proxy-target-host: verus.io`.
 
-On macOS, `dig google.vdns` without `@127.0.0.1 -p 1053` may not use `/etc/resolver`. Use `dscacheutil` for system resolver behavior.
+On macOS, `dig demo-proxy.vdns` without `@127.0.0.1 -p 1053` may not use `/etc/resolver`. Use `dscacheutil` for system resolver behavior.
 
 ## Upgrade
 

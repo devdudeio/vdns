@@ -100,6 +100,9 @@ env_file_has_key() {
 
 env_template() {
   local root_identity="$1" tld="$2" rpc_url="$3" write_rpc_url="$4" write_rpc_user="$5" write_rpc_password="$6" https_enabled="$7" redirect_domain="$8"
+  local proxy_domain="demo-proxy.${tld}"
+  local a_domain="${proxy_domain}"
+  [[ -n "${redirect_domain}" ]] || redirect_domain="demo-redirect.${tld}"
   cat <<ENV
 VDNS_MODE=rpc
 VDNS_ROOT_IDENTITY=${root_identity}
@@ -138,10 +141,10 @@ VDNS_SITE_CACHE_ENABLED=true
 VDNS_SITE_MAX_FILE_BYTES=10485760
 VDNS_SITE_MAX_TOTAL_MANIFEST_BYTES=1048576
 VDNS_SITE_ALLOW_FILE_URI=false
+VDNS_DOCTOR_A_DOMAIN=${a_domain}
+VDNS_DOCTOR_PROXY_DOMAIN=${proxy_domain}
+VDNS_DOCTOR_REDIRECT_DOMAIN=${redirect_domain}
 ENV
-  if [[ -n "${redirect_domain}" ]]; then
-    echo "VDNS_DOCTOR_REDIRECT_DOMAIN=${redirect_domain}"
-  fi
 }
 
 write_env_template() {

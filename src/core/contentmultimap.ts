@@ -1,4 +1,4 @@
-import { LEGACY_VNS_VDXF_KEYS, VDNS_VDXF_KEYS, VERUS_DATA_DESCRIPTOR_KEY } from "./constants.js";
+import { LEGACY_VDNS_VDXF_KEYS, LEGACY_VNS_VDXF_KEYS, VDNS_VDXF_KEYS, VERUS_DATA_DESCRIPTOR_KEY } from "./constants.js";
 import { decodeJsonObjectData, encodeJsonObjectData } from "./objectDataCodec.js";
 import { validateRecord } from "./records.js";
 import type { IdentityPayload, VdnsRecord } from "./types.js";
@@ -55,7 +55,11 @@ export function extractVdnsRecords(
   const symbolicFallback = options.symbolicFallback ?? true;
   const recordKeys = Array.isArray(vdnsRecordKey) ? vdnsRecordKey : [vdnsRecordKey];
   const input = recordKeys.map((key) => identityPayload.contentmultimap?.[key]).find((entry) => entry !== undefined)
-    ?? (symbolicFallback ? identityPayload.contentmultimap?.[VDNS_VDXF_KEYS.RECORD] ?? identityPayload.contentmultimap?.[LEGACY_VNS_VDXF_KEYS.RECORD] : undefined);
+    ?? (symbolicFallback
+      ? identityPayload.contentmultimap?.[VDNS_VDXF_KEYS.RECORD]
+        ?? identityPayload.contentmultimap?.[LEGACY_VDNS_VDXF_KEYS.RECORD]
+        ?? identityPayload.contentmultimap?.[LEGACY_VNS_VDXF_KEYS.RECORD]
+      : undefined);
   if (input === undefined) {
     return { records: [], warnings: [`No vDNS records found for ${identityPayload.identity}`] };
   }

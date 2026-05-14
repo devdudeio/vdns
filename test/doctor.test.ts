@@ -91,10 +91,10 @@ describe("doctor internals", () => {
       if (url.includes("/resolve-domain/")) {
         return jsonResponse({ records: [] });
       }
-      if (url === "http://chainvue.vdns") {
+      if (url === "http://demo-redirect.vdns") {
         return new Response(null, { status: 404 });
       }
-      if (url === "http://verus.vdns") {
+      if (url === "http://demo-proxy.vdns") {
         return new Response(null, { status: 404 });
       }
       if (url === "http://127.0.0.1:18843") {

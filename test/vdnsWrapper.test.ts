@@ -138,6 +138,9 @@ describe("vdns wrapper", () => {
       const contents = await readFile(envFile, "utf8");
       expect(contents).toContain("VERUS_RPC_URL=https://api.verustest.net/");
       expect(contents).toContain("VDNS_HTTPS_ENABLED=true");
+      expect(contents).toContain("VDNS_DOCTOR_A_DOMAIN=demo-proxy.vdns");
+      expect(contents).toContain("VDNS_DOCTOR_PROXY_DOMAIN=demo-proxy.vdns");
+      expect(contents).toContain("VDNS_DOCTOR_REDIRECT_DOMAIN=demo-redirect.vdns");
       expect((await stat(envFile)).mode & 0o777).toBe(0o600);
     } finally {
       await rm(stateDir, { recursive: true, force: true });
@@ -190,6 +193,8 @@ describe("vdns wrapper", () => {
       expect(preserved).toContain("VERUS_RPC_URL=http://existing.example");
       expect(preserved).toContain("VDNS_HTTPS_ENABLED=false");
       expect(preserved).toContain("VDNS_ROOT_IDENTITY=vdns@");
+      expect(preserved).toContain("VDNS_DOCTOR_PROXY_DOMAIN=demo-proxy.vdns");
+      expect(preserved).toContain("VDNS_DOCTOR_REDIRECT_DOMAIN=demo-redirect.vdns");
       expect((preserved.match(/^VERUS_RPC_URL=/gm) ?? []).length).toBe(1);
 
       await runVdns([
